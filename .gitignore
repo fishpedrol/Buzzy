@@ -43,10 +43,8 @@ spikes/resultados/
 # Os .md já rastreados continuam no índice até serem removidos separadamente.
 *.md
 
-# Cópia do rascunho inicial do site, substituída pela página estática final.
-/site/src-copia-para-inspiracao/
-
-# Dependências e artefatos gerados pelo frontend.
+# Dependências de ferramentas locais.
 node_modules/
-/site/dist/
-/site/.vite/
+
+# O site terá um repositório independente.
+/site/
