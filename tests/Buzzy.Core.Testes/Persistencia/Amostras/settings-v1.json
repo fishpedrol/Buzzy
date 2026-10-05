@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "posicao": {
+    "chaveMonitor": "\\\\.\\DISPLAY2",
+    "telaDoMonitor": {
+      "esquerda": -1920,
+      "topo": 0,
+      "direita": 0,
+      "base": 1080
+    },
+    "fracaoX": 0.25,
+    "fracaoY": 1,
+    "ancoraAbsoluta": {
+      "x": -1440,
+      "y": 1032
+    }
+  },
+  "preferencias": {
+    "energia": "media",
+    "modoTelaCheia": true,
+    "atravessarMonitores": true
+  }
+}

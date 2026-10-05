@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+
+  <assemblyIdentity version="1.0.0.0" name="Buzzy.Verificacao.app" />
+
+  <!--
+    Manifesto da ferramenta de verificação (fora do produto). Vale também para o receptor de
+    teste, que é este mesmo executável com a opção interna receptor.
+
+    asInvoker: a ferramenta não pede elevação. O Buzzy recusa rodar elevado e herdaria a
+    elevação da ferramenta; por isso ela também aborta, sem abrir nada, se estiver elevada.
+  -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 e Windows 11, como o Buzzy.exe. -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+    </application>
+  </compatibility>
+
+  <!--
+    Per-Monitor V2, como o Buzzy.exe. Sem isto, o Windows entregaria a esta ferramenta
+    coordenadas virtualizadas (escaladas) nos monitores com escala diferente de 100%: os
+    cliques sintéticos e os testes de acerto não bateriam com os pontos do log do Buzzy, que
+    está em pixels físicos. A ferramenta confere o contexto na partida e aborta sem ele.
+  -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+    </windowsSettings>
+  </application>
+
+</assembly>

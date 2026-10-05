@@ -1,0 +1,35 @@
+<Project>
+
+  <!--
+    Configuração comum do produto, dos testes e das ferramentas do Buzzy.
+    Importada por src/, tests/ e tools/ (cada pasta tem um Directory.Build.props que aponta
+    para cá). Os protótipos descartáveis de spikes/ NÃO herdam este arquivo.
+  -->
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <NeutralLanguage>pt-BR</NeutralLanguage>
+    <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!--
+      Dependências (SECURITY.md 7 e 8): o repositório não usa nenhum pacote NuGet.
+      Mesmo assim, o restore grava lockfile e audita vulnerabilidades, para que qualquer
+      pacote futuro entre fixado e auditado. NU1900 (fonte de auditoria inacessível) não
+      vira erro, para o build funcionar sem rede.
+    -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- DEC-040, item 8: o restore reprova se o lockfile tiver de mudar (um pacote novo não entra em silêncio). -->
+    <RestoreLockedMode>true</RestoreLockedMode>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900</WarningsNotAsErrors>
+  </PropertyGroup>
+
+</Project>

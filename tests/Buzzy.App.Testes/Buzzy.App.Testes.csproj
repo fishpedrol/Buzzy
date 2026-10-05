@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Testes do aplicativo. Os testes comuns não abrem janelas (sprite, textos, estruturas
+    nativas). Os marcados com [Integracao] iniciam o Buzzy.exe de verdade e só rodam com a
+    opção de integração do executor, depois de avisar o usuário.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>Buzzy.App.Testes</RootNamespace>
+    <AssemblyName>Buzzy.App.Testes</AssemblyName>
+    <StartupObject>Buzzy.App.Testes.Programa</StartupObject>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+
+    <!--
+      Per-Monitor V2 e asInvoker no manifesto, como o Buzzy.exe: as coordenadas que os testes
+      leem ficam em pixels físicos, as mesmas do log de diagnóstico do Buzzy.
+    -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Buzzy.Testes.Executor\Buzzy.Testes.Executor.csproj" />
+    <ProjectReference Include="..\..\src\Buzzy.App\Buzzy.App.csproj" />
+    <ProjectReference Include="..\..\src\Buzzy.Core\Buzzy.Core.csproj" />
+  </ItemGroup>
+
+</Project>

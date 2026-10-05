@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Buzzy.App/Buzzy.App.csproj" />
+    <Project Path="src/Buzzy.Core/Buzzy.Core.csproj" />
+    <Project Path="src/Buzzy.Visual/Buzzy.Visual.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Buzzy.App.Testes/Buzzy.App.Testes.csproj" />
+    <Project Path="tests/Buzzy.Core.Testes/Buzzy.Core.Testes.csproj" />
+    <Project Path="tests/Buzzy.PortaoApis.Testes/Buzzy.PortaoApis.Testes.csproj" />
+    <Project Path="tests/Buzzy.Testes.Executor/Buzzy.Testes.Executor.csproj" />
+    <Project Path="tests/Buzzy.Verificacao/Buzzy.Verificacao.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Buzzy.Identidade/Buzzy.Identidade.csproj" />
+    <Project Path="tools/Buzzy.PortaoApis/Buzzy.PortaoApis.csproj" />
+    <Project Path="tools/Buzzy.ValidadorDeClipes/Buzzy.ValidadorDeClipes.csproj" />
+  </Folder>
+</Solution>

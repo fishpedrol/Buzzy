@@ -1,0 +1,86 @@
+# descricao: modo de tela cheia com dois monitores: transferência, ocultação, retorno, CMD_SHOW manual e arraste durante o modo
+# semente: 99
+> Loaded topologia=LadoALado energia=Media telaCheia=sim
+~ Booting -> Settling (BOOTING: configurações e topologia carregadas)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(1632,1032) retangulo=(1568,904)-(1696,1032)
+! MostrarJanela
+! AgendarDecisao atrasoMs=19305 geracao=1
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY1
+~ Idle -> Settling (FULLSCREEN_TARGETS_CHANGED: transfere para o monitor livre)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY2 ancora=(3552,1032) retangulo=(3488,904)-(3616,1032)
+! AgendarDecisao atrasoMs=8853 geracao=2
+= Idle ancora=(3552,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY1,\\.\DISPLAY2
+~ Idle -> Hidden (FULLSCREEN_TARGETS_CHANGED: nenhum monitor livre)
+! EsconderJanela
+! CancelarDecisao
+= Hidden(PorTelaCheia) ancora=(3552,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY2
+~ Hidden -> Settling (FULLSCREEN_TARGETS_CHANGED: reaparece no monitor livre)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(1632,1032) retangulo=(1568,904)-(1696,1032)
+! MostrarJanela
+! AgendarDecisao atrasoMs=9694 geracao=3
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=
+~ Idle -> Settling (FULLSCREEN_TARGETS_CHANGED(vazio): restaura a posição anterior)
+~ Settling -> Idle (SETTLING com apoio)
+! AgendarDecisao atrasoMs=19674 geracao=4
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY1,\\.\DISPLAY2
+~ Idle -> Hidden (FULLSCREEN_TARGETS_CHANGED: nenhum monitor livre)
+! EsconderJanela
+! CancelarDecisao
+= Hidden(PorTelaCheia) ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> CmdShow
+~ Hidden -> Settling (CMD_SHOW)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(1632,1032) retangulo=(1568,904)-(1696,1032)
+! MostrarJanela
+! AgendarDecisao atrasoMs=16351 geracao=5
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY1
+~ Idle -> Settling (FULLSCREEN_TARGETS_CHANGED: transfere para o monitor livre)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY2 ancora=(3552,1032) retangulo=(3488,904)-(3616,1032)
+! AgendarDecisao atrasoMs=15656 geracao=6
+= Idle ancora=(3552,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> Press x=3552 y=1000
+~ Idle -> Pressed (PRESS sobre pixel opaco)
+! CancelarDecisao
+= Pressed ancora=(3552,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> DragStart
+~ Pressed -> Dragging (DRAG_START)
+= Dragging ancora=(3552,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY1,\\.\DISPLAY2
+= Dragging ancora=(3552,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> DragMove x=600 y=1000
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(600,1032) retangulo=(536,904)-(664,1032)
+= Dragging ancora=(600,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> DragEnd x=600 y=1000
+~ Dragging -> Settling (DRAG_END)
+~ Settling -> Idle (SETTLING com apoio)
+! AgendarDecisao atrasoMs=13457 geracao=7
+! GravarPosicao posicao=\\.\DISPLAY1;0.3125;1;600;1032
+= Idle ancora=(600,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=
+= Idle ancora=(600,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY1
+~ Idle -> Settling (FULLSCREEN_TARGETS_CHANGED: transfere para o monitor livre)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY2 ancora=(2520,1032) retangulo=(2456,904)-(2584,1032)
+! AgendarDecisao atrasoMs=16432 geracao=8
+= Idle ancora=(2520,1032) monitor=\\.\DISPLAY2 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> SettingsChanged energia=Media telaCheia=nao
+~ Idle -> Settling (SETTINGS_CHANGED: modo de tela cheia desligado)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(600,1032) retangulo=(536,904)-(664,1032)
+! AgendarDecisao atrasoMs=13167 geracao=9
+= Idle ancora=(600,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> FullscreenTargetsChanged ocupados=\\.\DISPLAY2
+= Idle ancora=(600,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum

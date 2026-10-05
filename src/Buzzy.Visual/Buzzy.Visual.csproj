@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Apresentação vetorial do Buzzy (ARCHITECTURE.md 2.10; docs/IDENTIDADE_VISUAL.md): lê a
+    biblioteca de partes (subconjunto de SVG) e as poses (JSON) da identidade visual e compõe os
+    quadros com o WPF, no DPI pedido. Sem acesso ao sistema operacional além do WPF; sem pacotes.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Buzzy.Visual</RootNamespace>
+    <AssemblyName>Buzzy.Visual</AssemblyName>
+  </PropertyGroup>
+
+</Project>

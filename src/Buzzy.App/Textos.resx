@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Textos da interface do Buzzy, fora do código (Q-12: somente português do Brasil no MVP).
+  O personagem não exibe texto; estes são os rótulos do menu e da bandeja (Fase 1), do submenu da
+  emoção dominante (DEC-027) e do submenu dos itens do tamagotchi (DEC-028).
+-->
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MenuEsconder" xml:space="preserve">
+    <value>&amp;Esconder Buzzy</value>
+    <comment>Item do menu que esconde o personagem. O &amp; marca a tecla de acesso.</comment>
+  </data>
+  <data name="MenuMostrar" xml:space="preserve">
+    <value>&amp;Mostrar Buzzy</value>
+    <comment>Item do menu que mostra o personagem escondido.</comment>
+  </data>
+  <data name="MenuPausar" xml:space="preserve">
+    <value>&amp;Pausar movimento</value>
+  </data>
+  <data name="MenuRetomar" xml:space="preserve">
+    <value>&amp;Retomar movimento</value>
+  </data>
+  <data name="MenuSair" xml:space="preserve">
+    <value>&amp;Sair</value>
+    <comment>Item do menu que encerra o Buzzy.</comment>
+  </data>
+  <data name="DicaDaBandeja" xml:space="preserve">
+    <value>Buzzy</value>
+    <comment>Dica do ícone na bandeja e título das caixas de aviso.</comment>
+  </data>
+  <data name="AvisoElevado" xml:space="preserve">
+    <value>O Buzzy não roda como administrador. Abra-o de novo sem "Executar como administrador".</value>
+    <comment>Aviso mostrado quando o processo foi iniciado elevado (SECURITY.md 8, item 5).</comment>
+  </data>
+  <data name="MenuEmocaoDominante" xml:space="preserve">
+    <value>Emoção &amp;dominante</value>
+    <comment>Submenu da emoção dominante (DEC-027). No menu principal, D é só dele; I fica reservada para o submenu "Itens".</comment>
+  </data>
+  <data name="MenuEmocaoAutomatica" xml:space="preserve">
+    <value>&amp;Automática</value>
+    <comment>Sem emoção dominante: a cara varia como antes. As 15 opções do submenu têm teclas de acesso diferentes.</comment>
+  </data>
+  <data name="EmocaoNeutro" xml:space="preserve">
+    <value>&amp;Neutro</value>
+  </data>
+  <data name="EmocaoFeliz" xml:space="preserve">
+    <value>&amp;Feliz</value>
+  </data>
+  <data name="EmocaoRindo" xml:space="preserve">
+    <value>&amp;Rindo</value>
+  </data>
+  <data name="EmocaoCurioso" xml:space="preserve">
+    <value>&amp;Curioso</value>
+  </data>
+  <data name="EmocaoSurpreso" xml:space="preserve">
+    <value>&amp;Surpreso</value>
+  </data>
+  <data name="EmocaoAssustado" xml:space="preserve">
+    <value>Ass&amp;ustado</value>
+  </data>
+  <data name="EmocaoSonolento" xml:space="preserve">
+    <value>S&amp;onolento</value>
+  </data>
+  <data name="EmocaoBocejando" xml:space="preserve">
+    <value>&amp;Bocejando</value>
+  </data>
+  <data name="EmocaoDormindo" xml:space="preserve">
+    <value>&amp;Dormindo</value>
+  </data>
+  <data name="EmocaoTravesso" xml:space="preserve">
+    <value>&amp;Travesso</value>
+  </data>
+  <data name="EmocaoEntediado" xml:space="preserve">
+    <value>&amp;Entediado</value>
+  </data>
+  <data name="EmocaoPensativo" xml:space="preserve">
+    <value>&amp;Pensativo</value>
+  </data>
+  <data name="EmocaoEmpolgado" xml:space="preserve">
+    <value>E&amp;mpolgado</value>
+  </data>
+  <data name="EmocaoDeterminado" xml:space="preserve">
+    <value>Determ&amp;inado</value>
+  </data>
+  <data name="MenuItens" xml:space="preserve">
+    <value>&amp;Itens</value>
+    <comment>Submenu dos itens do tamagotchi (DEC-028), só com a chave ligada. No menu principal, I é só dele.</comment>
+  </data>
+  <data name="MenuRecolherItens" xml:space="preserve">
+    <value>&amp;Recolher itens</value>
+    <comment>Tira todos os itens da tela. As 14 linhas do submenu dos itens têm teclas de acesso diferentes.</comment>
+  </data>
+  <data name="MenuConteudoAdulto" xml:space="preserve">
+    <value>Conteúdo &amp;adulto</value>
+    <comment>Liga ou desliga o conteúdo adulto do tamagotchi (DEC-033), com a marca quando ligado. No menu principal, A é só dele.</comment>
+  </data>
+  <data name="MenuModoTelaCheia" xml:space="preserve">
+    <value>Desviar da &amp;tela cheia</value>
+    <comment>Liga ou desliga o modo de tela cheia (Q-09; DEC-034), com a marca quando ligado: com um jogo ou vídeo em tela cheia, o Buzzy vai para outro monitor ou se esconde. No menu principal, T é só dele.</comment>
+  </data>
+  <data name="ItemBanana" xml:space="preserve">
+    <value>&amp;Banana</value>
+    <comment>Itens do submenu, na ordem do enum Item: só o nome de cada um, sem descrição (DEC-028, tom de desenho animado).</comment>
+  </data>
+  <data name="ItemAgua" xml:space="preserve">
+    <value>Á&amp;gua</value>
+  </data>
+  <data name="ItemVodka" xml:space="preserve">
+    <value>&amp;Vodka</value>
+  </data>
+  <data name="ItemCerveja" xml:space="preserve">
+    <value>&amp;Cerveja</value>
+  </data>
+  <data name="ItemBaseado" xml:space="preserve">
+    <value>Ba&amp;seado</value>
+  </data>
+  <data name="ItemCigarro" xml:space="preserve">
+    <value>C&amp;igarro</value>
+  </data>
+  <data name="ItemCocaina" xml:space="preserve">
+    <value>C&amp;ocaína</value>
+  </data>
+  <data name="ItemMd" xml:space="preserve">
+    <value>&amp;MD</value>
+  </data>
+  <data name="ItemLancaPerfume" xml:space="preserve">
+    <value>&amp;Lança-perfume</value>
+  </data>
+  <data name="ItemCafe" xml:space="preserve">
+    <value>Ca&amp;fé</value>
+  </data>
+  <data name="ItemEnergetico" xml:space="preserve">
+    <value>E&amp;nergético</value>
+  </data>
+  <data name="ItemCogumelo" xml:space="preserve">
+    <value>Cog&amp;umelo</value>
+  </data>
+  <data name="ItemBala" xml:space="preserve">
+    <value>B&amp;ala</value>
+  </data>
+  <data name="MenuEnergia" xml:space="preserve">
+    <value>E&amp;nergia…</value>
+    <comment>Abre o painel compacto de energia (DEC-038, item 4); desabilitado com o Buzzy escondido. No menu principal, N é só dele.</comment>
+  </data>
+  <data name="MenuConfiguracoes" xml:space="preserve">
+    <value>&amp;Configurações…</value>
+    <comment>Abre a janela de configurações (DEC-038, item 5). No menu principal, C é só dele.</comment>
+  </data>
+  <data name="PainelTitulo" xml:space="preserve">
+    <value>Energia do Buzzy</value>
+    <comment>Título do painel de energia, lido pelo Narrador.</comment>
+  </data>
+  <data name="EnergiaGrupo" xml:space="preserve">
+    <value>Energia</value>
+    <comment>Título do grupo de energia, no painel e nas configurações.</comment>
+  </data>
+  <data name="EnergiaBaixa" xml:space="preserve">
+    <value>_Baixa (mais tranquila)</value>
+    <comment>Opção de energia; _ marca a tecla de acesso do WPF.</comment>
+  </data>
+  <data name="EnergiaMedia" xml:space="preserve">
+    <value>_Média (equilibrada e padrão)</value>
+    <comment>Opção de energia.</comment>
+  </data>
+  <data name="EnergiaAlta" xml:space="preserve">
+    <value>_Alta (mais ativa)</value>
+    <comment>Opção de energia.</comment>
+  </data>
+  <data name="PainelAjuda" xml:space="preserve">
+    <value>Setas escolhem. Esc ou Enter fecha.</value>
+    <comment>Texto de ajuda do grupo de energia no painel.</comment>
+  </data>
+  <data name="ConfigTitulo" xml:space="preserve">
+    <value>Configurações do Buzzy</value>
+    <comment>Título da janela de configurações.</comment>
+  </data>
+  <data name="ConfigComportamento" xml:space="preserve">
+    <value>Comportamento</value>
+    <comment>Grupo das configurações.</comment>
+  </data>
+  <data name="ConfigAparencia" xml:space="preserve">
+    <value>Aparência</value>
+    <comment>Grupo das configurações.</comment>
+  </data>
+  <data name="ConfigWindows" xml:space="preserve">
+    <value>Windows</value>
+    <comment>Grupo das configurações.</comment>
+  </data>
+  <data name="ConfigEnergiaAjuda" xml:space="preserve">
+    <value>Mais energia: ele anda, brinca e olha as janelas mais vezes.</value>
+    <comment>Texto de ajuda do grupo de energia nas configurações.</comment>
+  </data>
+  <data name="ConfigTelaCheia" xml:space="preserve">
+    <value>Desviar da _tela cheia</value>
+    <comment>Caixa do modo de tela cheia (Q-09).</comment>
+  </data>
+  <data name="ConfigTelaCheiaAjuda" xml:space="preserve">
+    <value>Vai para outro monitor, ou se esconde, quando um jogo ou vídeo ocupa a tela.</value>
+    <comment>Ajuda da caixa do modo de tela cheia.</comment>
+  </data>
+  <data name="ConfigAdulto" xml:space="preserve">
+    <value>C_onteúdo adulto</value>
+    <comment>Caixa do conteúdo adulto (DEC-033).</comment>
+  </data>
+  <data name="ConfigAdultoAjuda" xml:space="preserve">
+    <value>Itens e efeitos adultos do tamagotchi.</value>
+    <comment>Ajuda da caixa do conteúdo adulto.</comment>
+  </data>
+  <data name="ConfigTamanho" xml:space="preserve">
+    <value>Tamanho do Buzzy</value>
+    <comment>Grupo do tamanho (DEC-038, item 9).</comment>
+  </data>
+  <data name="ConfigTamanhoPequeno" xml:space="preserve">
+    <value>_Pequeno</value>
+    <comment>Opção de tamanho.</comment>
+  </data>
+  <data name="ConfigTamanhoMedio" xml:space="preserve">
+    <value>Mé_dio (padrão)</value>
+    <comment>Opção de tamanho.</comment>
+  </data>
+  <data name="ConfigTamanhoGrande" xml:space="preserve">
+    <value>_Grande</value>
+    <comment>Opção de tamanho.</comment>
+  </data>
+  <data name="ConfigTamanhoProximaVez" xml:space="preserve">
+    <value>Vale na próxima vez que o Buzzy abrir.</value>
+    <comment>Aviso quando o tamanho escolhido difere do que está em vigor.</comment>
+  </data>
+  <data name="ConfigTopo" xml:space="preserve">
+    <value>_Sempre no topo</value>
+    <comment>Caixa do sempre no topo (Q-03).</comment>
+  </data>
+  <data name="ConfigTopoAjuda" xml:space="preserve">
+    <value>Desligado, ele pode ficar atrás das janelas. Clique no ícone do Buzzy na área de notificação para trazê-lo à frente.</value>
+    <comment>Ajuda da caixa do sempre no topo.</comment>
+  </data>
+  <data name="ConfigInicio" xml:space="preserve">
+    <value>_Iniciar com o Windows</value>
+    <comment>Caixa do início com o Windows (Q-04).</comment>
+  </data>
+  <data name="ConfigInicioDesativado" xml:space="preserve">
+    <value>Desativado nas Configurações do Windows (Aplicativos > Inicialização). O Buzzy não abre sozinho até você reativá-lo lá. Desmarque para tirá-lo da lista.</value>
+    <comment>Estado do início desativado pelo Windows.</comment>
+  </data>
+  <data name="ConfigInicioOutraCopia" xml:space="preserve">
+    <value>Outra cópia do Buzzy está no início do Windows. Marque para usar esta.</value>
+    <comment>Estado do início com o valor de outra cópia.</comment>
+  </data>
+  <data name="ConfigInicioIndisponivel" xml:space="preserve">
+    <value>Indisponível nesta execução.</value>
+    <comment>Estado do início sem o registro ou com erro.</comment>
+  </data>
+  <data name="ConfigInicioFalhou" xml:space="preserve">
+    <value>Não deu para mudar agora. Tente de novo.</value>
+  </data>
+  <data name="ConfigInicioAjuda" xml:space="preserve">
+    <value>Abre o Buzzy quando você entra no Windows.</value>
+  </data>
+  <data name="ConfigInicioSimulado" xml:space="preserve">
+    <value>(simulado: perfil de teste)</value>
+    <comment>Sufixo do estado com o perfil de teste.</comment>
+  </data>
+  <data name="ConfigFechar" xml:space="preserve">
+    <value>_Fechar</value>
+    <comment>Botão que fecha as configurações; Esc também.</comment>
+  </data>
+</root>

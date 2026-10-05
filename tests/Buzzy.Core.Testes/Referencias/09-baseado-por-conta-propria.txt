@@ -1,0 +1,76 @@
+# descricao: o baseado por conta própria (pedido do usuário de 2026-10-01, 19:10), de desenho animado: na agenda, a ação FumarBaseado e a troca de cara; com a semente 2, a primeira decisão é o baseado: ele fuma sozinho, sem item no mundo, com o uso do baseado da tabela (fumar, 210 passos, no chão) e a onda Chapado 2, e a carga conta uma substância, sem sorteio; chapado, não acende outro (no pico, nos níveis 2 e 1, e na queda, a agenda só troca a cara); a onda acaba e a carga volta a 0; a primeira decisão depois dela é o baseado de novo, e o clique o interrompe: o uso acaba e a onda continua; depois da reação, a subida vira pico e, chapado, a agenda só troca a cara. A ordem respeita o tempo real onde ele obriga: na energia Média, a subida (10 s desde o começo do uso) acaba antes da decisão seguinte ao uso ou à reação, que vence 12,8 s ou mais depois deles; no resto, a história é roteirizada, com uma decisão por fase do chapado (no tempo real são várias, todas só de cara)
+# semente: 2
+# queda-fisica: sim
+# movimento: sim
+# tamagotchi: sim
+# acoes: TrocarExpressao,FumarBaseado
+> Loaded topologia=UmMonitor energia=Media telaCheia=sim
+~ Booting -> Settling (BOOTING: configurações e topologia carregadas)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(1632,1032) retangulo=(1568,904)-(1696,1032)
+! MostrarJanela
+! AgendarDecisao atrasoMs=19413 geracao=1
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> AutonomyTimer
+~ Idle -> Using (IDLE + AUTONOMY_TIMER: Fumar Baseado por conta própria)
+! LigarRelogio
+! AgendarOnda atrasoMs=10000 geracao=1
+= Using ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=sim sinal=Nenhum onda=Chapado/Subida/2 carga=1 uso=Baseado/Fumar/0de210/Chao
+> Tick vezes=210
+~ Using -> Settling (USING: fim do uso de Baseado)
+~ Settling -> Idle (SETTLING com apoio)
+! DesligarRelogio
+! AgendarDecisao atrasoMs=14886 geracao=2
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Subida/2 carga=1
+> ItemEffectTimer
+~ Idle -> Idle (ITEM_EFFECT_TIMER: onda Chapado/Subida/2 -> Chapado/Pico/2)
+! AgendarOnda atrasoMs=110000 geracao=2
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Chapado gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Pico/2 carga=1
+> AutonomyTimer
+! AgendarDecisao atrasoMs=21244 geracao=3
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Chapado gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Pico/2 carga=1
+> ItemEffectTimer
+~ Idle -> Idle (ITEM_EFFECT_TIMER: onda Chapado/Pico/2 -> Chapado/Pico/1)
+! AgendarOnda atrasoMs=110000 geracao=3
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Chapado gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Pico/1 carga=1
+> AutonomyTimer
+! AgendarDecisao atrasoMs=13677 geracao=4
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Chapado gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Pico/1 carga=1
+> ItemEffectTimer
+~ Idle -> Idle (ITEM_EFFECT_TIMER: onda Chapado/Pico/1 -> Chapado/Queda/1)
+! AgendarOnda atrasoMs=112500 geracao=4
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Sonolento gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Queda/1 carga=1
+> AutonomyTimer
+! AgendarDecisao atrasoMs=15134 geracao=5
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Queda/1 carga=1
+> ItemEffectTimer
+~ Idle -> Idle (ITEM_EFFECT_TIMER: onda Chapado/Queda/1 -> fim)
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum
+> AutonomyTimer
+~ Idle -> Using (IDLE + AUTONOMY_TIMER: Fumar Baseado por conta própria)
+! LigarRelogio
+! AgendarOnda atrasoMs=10000 geracao=5
+= Using ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=sim sinal=Nenhum onda=Chapado/Subida/2 carga=1 uso=Baseado/Fumar/0de210/Chao
+> Tick vezes=60
+= Using ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=sim sinal=Nenhum onda=Chapado/Subida/2 carga=1 uso=Baseado/Fumar/60de210/Chao
+> Press x=1632 y=1000
+~ Using -> Pressed (PRESS sobre pixel opaco)
+! DesligarRelogio
+= Pressed ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Subida/2 carga=1
+> Click
+~ Pressed -> Reacting (CLICK)
+! LigarRelogio
+= Reacting ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Feliz gesto=Nenhum pausada=nao painel=nao energia=Media relogio=sim sinal=FoiClicado onda=Chapado/Subida/2 carga=1
+> Tick vezes=36
+~ Reacting -> Settling (REACTING: fim da reação)
+~ Settling -> Idle (SETTLING com apoio)
+! DesligarRelogio
+! AgendarDecisao atrasoMs=30018 geracao=6
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Pensativo gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Subida/2 carga=1
+> ItemEffectTimer
+~ Idle -> Idle (ITEM_EFFECT_TIMER: onda Chapado/Subida/2 -> Chapado/Pico/2)
+! AgendarOnda atrasoMs=110000 geracao=6
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Chapado gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Pico/2 carga=1
+> AutonomyTimer
+! AgendarDecisao atrasoMs=31440 geracao=7
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Chapado gesto=Nenhum pausada=nao painel=nao energia=Media relogio=nao sinal=Nenhum onda=Chapado/Pico/2 carga=1

@@ -1,0 +1,74 @@
+# descricao: estados de movimento com os sinais que a Fase 4 vai emitir: andar, parede, escalar, borda, pendurar, soltar, cair e pousar; queda física ligada
+# semente: 4242
+# queda-fisica: sim
+# acoes: Andar,Escalar,Pular
+> Loaded topologia=UmMonitor energia=Alta telaCheia=sim
+~ Booting -> Settling (BOOTING: configurações e topologia carregadas)
+~ Settling -> Idle (SETTLING com apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(1632,1032) retangulo=(1568,904)-(1696,1032)
+! MostrarJanela
+! AgendarDecisao atrasoMs=9049 geracao=1
+= Idle ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Direita expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=nao sinal=Nenhum
+> AutonomyTimer
+~ Idle -> Walking (IDLE + AUTONOMY_TIMER: andar)
+! LigarRelogio
+= Walking ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> MovementSignal sinal=Parede
+~ Walking -> Climbing (WALKING: parede)
+! AgendarDecisao atrasoMs=9486 geracao=2
+= Climbing ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> MovementSignal sinal=Parede
+= Climbing ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> MovementSignal sinal=Parede
+= Climbing ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> MovementSignal sinal=BordaSuperior
+~ Climbing -> Hanging (CLIMBING: alcança borda superior apoiável)
+! AgendarDecisao atrasoMs=8299 geracao=3
+= Hanging ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> AutonomyTimer
+~ Hanging -> Hanging (HANGING + AUTONOMY_TIMER)
+! AgendarDecisao atrasoMs=4339 geracao=4
+= Hanging ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> MovementSignal sinal=ContatoComOChao
+= Hanging ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> Tick vezes=12
+= Hanging ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> Press x=1632 y=1000
+~ Hanging -> Pressed (PRESS sobre pixel opaco)
+! DesligarRelogio
+! CancelarDecisao
+= Pressed ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=nao sinal=Nenhum
+> DragStart
+~ Pressed -> Dragging (DRAG_START)
+= Dragging ancora=(1632,1032) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=nao sinal=Nenhum
+> DragMove x=800 y=300
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(800,332) retangulo=(736,204)-(864,332)
+= Dragging ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=nao sinal=Nenhum
+> DragEnd x=800 y=300
+~ Dragging -> Settling (DRAG_END)
+~ Settling -> Falling (SETTLING sem apoio)
+! LigarRelogio
+! GravarPosicao posicao=\\.\DISPLAY1;0.416667;0.321705;800;332
+= Falling ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> Tick vezes=5
+= Falling ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> Press x=800 y=280
+~ Falling -> Pressed (PRESS sobre pixel opaco)
+! DesligarRelogio
+= Pressed ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Neutro gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=nao sinal=Nenhum
+> Click
+~ Pressed -> Reacting (CLICK)
+! LigarRelogio
+= Reacting ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Feliz gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=FoiClicado
+> Tick vezes=36
+~ Reacting -> Settling (REACTING: fim da reação)
+~ Settling -> Falling (SETTLING sem apoio)
+= Falling ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Feliz gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum
+> MovementSignal sinal=ContatoComOChao
+~ Falling -> Landing (FALLING: contato com o chão)
+= Landing ancora=(800,332) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Feliz gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Pousou
+> TopologyChanged topologia=BarraNoTopo
+~ Landing -> Settling (TOPOLOGY_CHANGED)
+~ Settling -> Falling (SETTLING sem apoio)
+! MoverJanela monitor=\\.\DISPLAY1 ancora=(800,380) retangulo=(736,252)-(864,380)
+= Falling ancora=(800,380) monitor=\\.\DISPLAY1 tamanho=128x128 direcao=Esquerda expressao=Feliz gesto=Nenhum pausada=nao painel=nao energia=Alta relogio=sim sinal=Nenhum

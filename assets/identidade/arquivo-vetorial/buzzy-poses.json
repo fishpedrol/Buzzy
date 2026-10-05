@@ -1,0 +1,2283 @@
+{
+  "descricao": "Buzzy — poses-chave e expressões (fonte editável). Partes em buzzy-partes.svg. Referência: docs/IDENTIDADE_VISUAL.md.",
+  "versao": 1,
+  "quadro": {
+    "largura": 128,
+    "altura": 128,
+    "ancoraX": 64,
+    "ancoraY": 128
+  },
+  "comoLer": [
+    "Cada pose é uma árvore de nós. Um nó desenha uma parte do SVG com a transformação translate(pos) rotate(rot) scale(esc), em graus no sentido horário, relativa ao nó pai.",
+    "As coordenadas da raiz têm origem na âncora (centro da borda inferior do quadro, entre os pés); y para cima é negativo.",
+    "'atras' são filhos desenhados antes da parte do nó; 'frente', depois. A ordem das listas é a ordem de desenho.",
+    "Parte começando com @ é trocada pela camada da expressão ativa: @olhos, @sobrancelhas, @boca, @topete (frente) e @olhoLado, @bocaLado, @topeteLado (perfil). 'topete' na pose sobrepõe o topete da expressão.",
+    "Deslocamento vertical de pulo, queda e reação é feito movendo a janela (Fases 4 e 6); por isso as poses mantêm o corpo dentro do quadro de 128 × 128 DIP."
+  ],
+  "expressoes": {
+    "neutro": {
+      "olhos": "olhos-abertos",
+      "sobrancelhas": "sobrancelhas-neutras",
+      "boca": "boca-sorriso",
+      "topete": "topete-normal",
+      "olhoLado": "olho-lado-aberto",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    },
+    "feliz": {
+      "olhos": "olhos-felizes",
+      "sobrancelhas": "sobrancelhas-neutras",
+      "boca": "boca-aberta",
+      "topete": "topete-normal",
+      "olhoLado": "olho-lado-feliz",
+      "bocaLado": "boca-lado-aberta",
+      "topeteLado": "topete-lado-normal"
+    },
+    "rindo": {
+      "olhos": "olhos-felizes",
+      "sobrancelhas": "sobrancelhas-erguidas",
+      "boca": "boca-risada",
+      "topete": "topete-erico",
+      "olhoLado": "olho-lado-feliz",
+      "bocaLado": "boca-lado-aberta",
+      "topeteLado": "topete-lado-erico"
+    },
+    "curioso": {
+      "olhos": "olhos-lado",
+      "sobrancelhas": "sobrancelhas-uma-erguida",
+      "boca": "boca-canto",
+      "topete": "topete-normal",
+      "olhoLado": "olho-lado-aberto",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    },
+    "surpreso": {
+      "olhos": "olhos-arregalados",
+      "sobrancelhas": "sobrancelhas-erguidas",
+      "boca": "boca-o",
+      "topete": "topete-erico",
+      "olhoLado": "olho-lado-arregalado",
+      "bocaLado": "boca-lado-o",
+      "topeteLado": "topete-lado-erico"
+    },
+    "assustado": {
+      "olhos": "olhos-arregalados",
+      "sobrancelhas": "sobrancelhas-preocupadas",
+      "boca": "boca-ondulada",
+      "topete": "topete-erico",
+      "olhoLado": "olho-lado-arregalado",
+      "bocaLado": "boca-lado-o",
+      "topeteLado": "topete-lado-erico"
+    },
+    "sonolento": {
+      "olhos": "olhos-sonolentos",
+      "sobrancelhas": "sobrancelhas-caidas",
+      "boca": "boca-reta",
+      "topete": "topete-caido",
+      "olhoLado": "olho-lado-feliz",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    },
+    "bocejando": {
+      "olhos": "olhos-fechados",
+      "sobrancelhas": "sobrancelhas-caidas",
+      "boca": "boca-o",
+      "topete": "topete-caido",
+      "olhoLado": "olho-lado-feliz",
+      "bocaLado": "boca-lado-o",
+      "topeteLado": "topete-lado-normal"
+    },
+    "dormindo": {
+      "olhos": "olhos-fechados",
+      "sobrancelhas": "sobrancelhas-nenhuma",
+      "boca": "boca-reta-pequena",
+      "topete": "topete-caido",
+      "olhoLado": "olho-lado-feliz",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    },
+    "travesso": {
+      "olhos": "olhos-piscada",
+      "sobrancelhas": "sobrancelhas-uma-erguida",
+      "boca": "boca-lingua",
+      "topete": "topete-normal",
+      "olhoLado": "olho-lado-feliz",
+      "bocaLado": "boca-lado-aberta",
+      "topeteLado": "topete-lado-normal"
+    },
+    "entediado": {
+      "olhos": "olhos-entediados",
+      "sobrancelhas": "sobrancelhas-retas",
+      "boca": "boca-reta",
+      "topete": "topete-caido",
+      "olhoLado": "olho-lado-aberto",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    },
+    "pensativo": {
+      "olhos": "olhos-cima",
+      "sobrancelhas": "sobrancelhas-uma-erguida",
+      "boca": "boca-canto",
+      "topete": "topete-normal",
+      "olhoLado": "olho-lado-aberto",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    },
+    "empolgado": {
+      "olhos": "olhos-estrela",
+      "sobrancelhas": "sobrancelhas-erguidas",
+      "boca": "boca-aberta",
+      "topete": "topete-erico",
+      "olhoLado": "olho-lado-aberto",
+      "bocaLado": "boca-lado-aberta",
+      "topeteLado": "topete-lado-erico"
+    },
+    "determinado": {
+      "olhos": "olhos-abertos",
+      "sobrancelhas": "sobrancelhas-bravas",
+      "boca": "boca-firme",
+      "topete": "topete-normal",
+      "olhoLado": "olho-lado-concentrado",
+      "bocaLado": "boca-lado-sorriso",
+      "topeteLado": "topete-lado-normal"
+    }
+  },
+  "poses": {
+    "parado": {
+      "vista": "frente",
+      "estado": "IDLE",
+      "expressao": "neutro",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -22
+          ],
+          "atras": [
+            {
+              "parte": "cauda-espiral",
+              "pos": [
+                10,
+                -8
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 24,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -6
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -24,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 6
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -36
+              ],
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "reagindo": {
+      "vista": "frente",
+      "estado": "REACTING",
+      "expressao": "feliz",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -24
+          ],
+          "atras": [
+            {
+              "parte": "cauda-espiral",
+              "pos": [
+                10,
+                -8
+              ],
+              "rot": -14
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "rot": 16,
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ],
+              "rot": -16
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 140,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -18
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -140,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 18
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -33
+              ],
+              "rot": -6,
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "caindo": {
+      "vista": "frente",
+      "estado": "FALLING",
+      "expressao": "assustado",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -24
+          ],
+          "atras": [
+            {
+              "parte": "cauda-reta",
+              "pos": [
+                10,
+                -8
+              ],
+              "rot": -18
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "rot": 10,
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ],
+              "rot": -22
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 150,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 24
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -140,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -30
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -30
+              ],
+              "rot": 5,
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "pousando": {
+      "vista": "frente",
+      "estado": "LANDING",
+      "expressao": "determinado",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -19
+          ],
+          "esc": [
+            1.1,
+            0.87
+          ],
+          "atras": [
+            {
+              "parte": "cauda-espiral",
+              "pos": [
+                10,
+                -8
+              ],
+              "rot": 18
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -9,
+                0
+              ],
+              "rot": 8,
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                9,
+                0
+              ],
+              "rot": -8
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 66,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -24
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -66,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 24
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -35
+              ],
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "pendurado": {
+      "vista": "frente",
+      "estado": "HANGING",
+      "expressao": "empolgado",
+      "topete": "topete-caido",
+      "notaAncora": "Âncora de uso: topo dos punhos, na borda superior.",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -38
+          ],
+          "atras": [
+            {
+              "parte": "cauda-caida",
+              "pos": [
+                8,
+                -6
+              ],
+              "rot": -14
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "rot": 10,
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ],
+              "rot": -6
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -15,
+                -40
+              ],
+              "rot": 180,
+              "frente": [
+                {
+                  "parte": "antebraco-agarrando",
+                  "pos": [
+                    0,
+                    20
+                  ]
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                15,
+                -40
+              ],
+              "rot": 180,
+              "frente": [
+                {
+                  "parte": "antebraco-agarrando",
+                  "pos": [
+                    0,
+                    20
+                  ]
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -24
+              ],
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "sentado": {
+      "vista": "frente",
+      "estado": "RESTING",
+      "expressao": "neutro",
+      "raiz": [
+        {
+          "parte": "tronco-sentado",
+          "pos": [
+            0,
+            -13
+          ],
+          "atras": [
+            {
+              "parte": "cauda-espiral",
+              "pos": [
+                13,
+                -3
+              ],
+              "rot": 20
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -14,
+                -28
+              ],
+              "rot": 36,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ]
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                14,
+                -28
+              ],
+              "rot": -36,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ]
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "perna-sentada",
+              "pos": [
+                -9,
+                -6
+              ],
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-sentada",
+              "pos": [
+                9,
+                -6
+              ]
+            },
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -33
+              ],
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "dormindo": {
+      "vista": "frente",
+      "estado": "RESTING",
+      "expressao": "dormindo",
+      "raiz": [
+        {
+          "parte": "tronco-sentado",
+          "pos": [
+            0,
+            -13
+          ],
+          "atras": [
+            {
+              "parte": "cauda-espiral",
+              "pos": [
+                13,
+                -3
+              ],
+              "rot": 24
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -14,
+                -28
+              ],
+              "rot": 39,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -4
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                14,
+                -28
+              ],
+              "rot": -39,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 4
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "perna-sentada",
+              "pos": [
+                -9,
+                -6
+              ],
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-sentada",
+              "pos": [
+                9,
+                -6
+              ]
+            },
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -31
+              ],
+              "rot": 14,
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "segurado": {
+      "vista": "frente",
+      "estado": "DRAGGING",
+      "expressao": "travesso",
+      "notaAncora": "Âncora de uso: ponto de agarre (topete); o corpo balança pendurado.",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -23
+          ],
+          "atras": [
+            {
+              "parte": "cauda-caida",
+              "pos": [
+                8,
+                -8
+              ],
+              "rot": -48
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "rot": -4,
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ],
+              "rot": 10
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 34,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 12
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -28,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -18
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -35
+              ],
+              "rot": -9,
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "olhando": {
+      "vista": "frente",
+      "estado": "gesto: olhar ao redor",
+      "expressao": "curioso",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -22
+          ],
+          "atras": [
+            {
+              "parte": "cauda-interrogacao",
+              "pos": [
+                10,
+                -8
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 24,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -6
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -36
+              ],
+              "rot": 4,
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -165,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -42
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "cocando": {
+      "vista": "frente",
+      "estado": "gesto: coçar-se",
+      "expressao": "pensativo",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -22
+          ],
+          "atras": [
+            {
+              "parte": "cauda-interrogacao",
+              "pos": [
+                10,
+                -8
+              ],
+              "rot": 6
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -24,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 6
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -36
+              ],
+              "rot": 7,
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 158,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 8
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "espreguicando": {
+      "vista": "frente",
+      "estado": "gesto: espreguiçar-se",
+      "expressao": "bocejando",
+      "raiz": [
+        {
+          "parte": "tronco-frente",
+          "pos": [
+            0,
+            -22
+          ],
+          "atras": [
+            {
+              "parte": "cauda-reta",
+              "pos": [
+                10,
+                -8
+              ],
+              "rot": -8
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                -8,
+                0
+              ],
+              "esc": [
+                -1,
+                1
+              ]
+            },
+            {
+              "parte": "perna-frente",
+              "pos": [
+                8,
+                0
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                -13,
+                -30
+              ],
+              "rot": 168,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -6
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                13,
+                -30
+              ],
+              "rot": -168,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": 6
+                }
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "cabeca-frente",
+              "pos": [
+                0,
+                -36
+              ],
+              "atras": [
+                {
+                  "parte": "@topete"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhos"
+                },
+                {
+                  "parte": "@sobrancelhas"
+                },
+                {
+                  "parte": "nariz-frente"
+                },
+                {
+                  "parte": "@boca"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "andando-1": {
+      "vista": "lado",
+      "estado": "WALKING",
+      "expressao": "neutro",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            0,
+            -20.8
+          ],
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                1,
+                -30
+              ],
+              "rot": -30,
+              "frente": [
+                {
+                  "parte": "antebraco-sombra",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -22
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": 24,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": -24
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado",
+              "pos": [
+                -9,
+                -8
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": -24,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 24
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                4,
+                -36
+              ],
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                3,
+                -30
+              ],
+              "rot": 32,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -24
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "andando-2": {
+      "vista": "lado",
+      "estado": "WALKING",
+      "expressao": "neutro",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            0,
+            -21.9
+          ],
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                1,
+                -30
+              ],
+              "rot": -6,
+              "frente": [
+                {
+                  "parte": "antebraco-sombra",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -18
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": 6,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": -6
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado-balanco",
+              "pos": [
+                -9,
+                -8
+              ]
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": -4,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 4
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                4,
+                -36
+              ],
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                3,
+                -30
+              ],
+              "rot": 8,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -18
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "andando-3": {
+      "vista": "lado",
+      "estado": "WALKING",
+      "expressao": "neutro",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            0,
+            -20.8
+          ],
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                1,
+                -30
+              ],
+              "rot": 28,
+              "frente": [
+                {
+                  "parte": "antebraco-sombra",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -14
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": -24,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 24
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado",
+              "pos": [
+                -9,
+                -8
+              ],
+              "rot": 6
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": 24,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": -24
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                4,
+                -36
+              ],
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                3,
+                -30
+              ],
+              "rot": -30,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -26
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "andando-4": {
+      "vista": "lado",
+      "estado": "WALKING",
+      "expressao": "neutro",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            0,
+            -21.9
+          ],
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                1,
+                -30
+              ],
+              "rot": 6,
+              "frente": [
+                {
+                  "parte": "antebraco-sombra",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -18
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": -6,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 6
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado-balanco",
+              "pos": [
+                -9,
+                -8
+              ],
+              "rot": -4
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": 4,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": -4
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                4,
+                -36
+              ],
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                3,
+                -30
+              ],
+              "rot": -8,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -20
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "impulso": {
+      "vista": "lado",
+      "estado": "JUMPING (antecipação)",
+      "expressao": "determinado",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            -2,
+            -18.1
+          ],
+          "rot": 14,
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                1,
+                -30
+              ],
+              "rot": 50,
+              "frente": [
+                {
+                  "parte": "antebraco-sombra",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -20
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": -58,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 44
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado",
+              "pos": [
+                -9,
+                -8
+              ],
+              "rot": -12
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": -70,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 56
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                4,
+                -36
+              ],
+              "rot": -10,
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                3,
+                -30
+              ],
+              "rot": 58,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -26
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "no-ar": {
+      "vista": "lado",
+      "estado": "JUMPING (extensão)",
+      "expressao": "empolgado",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            -4,
+            -27
+          ],
+          "rot": 20,
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                1,
+                -30
+              ],
+              "rot": -124,
+              "frente": [
+                {
+                  "parte": "antebraco-sombra",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -16
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": 52,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": -52
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado-balanco",
+              "pos": [
+                -9,
+                -8
+              ],
+              "rot": 14
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": 34,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": -34
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                3,
+                -33
+              ],
+              "rot": -16,
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                3,
+                -30
+              ],
+              "rot": -142,
+              "frente": [
+                {
+                  "parte": "antebraco",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -12
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "escalando-1": {
+      "vista": "lado",
+      "estado": "CLIMBING",
+      "expressao": "determinado",
+      "parede": 56,
+      "notaAncora": "Olhando para a parede à direita (x = 56 DIP a partir da âncora); âncora de uso: contato com a parede.",
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            22,
+            -24
+          ],
+          "rot": -6,
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                2,
+                -30
+              ],
+              "rot": -120,
+              "frente": [
+                {
+                  "parte": "antebraco-agarrando",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -20
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": -20,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 20
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado",
+              "pos": [
+                -9,
+                -8
+              ],
+              "rot": 30
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": -50,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 50
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                2,
+                -36
+              ],
+              "rot": -8,
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                4,
+                -30
+              ],
+              "rot": -140,
+              "frente": [
+                {
+                  "parte": "antebraco-agarrando",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -10
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "escalando-2": {
+      "vista": "lado",
+      "estado": "CLIMBING",
+      "expressao": "determinado",
+      "parede": 56,
+      "raiz": [
+        {
+          "parte": "tronco-lado",
+          "pos": [
+            22,
+            -26
+          ],
+          "rot": -6,
+          "atras": [
+            {
+              "parte": "braco-superior-sombra",
+              "pos": [
+                2,
+                -30
+              ],
+              "rot": -146,
+              "frente": [
+                {
+                  "parte": "antebraco-agarrando",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -8
+                }
+              ]
+            },
+            {
+              "parte": "coxa-lado-sombra",
+              "pos": [
+                -1,
+                0
+              ],
+              "rot": -52,
+              "frente": [
+                {
+                  "parte": "pe-lado-sombra",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 52
+                }
+              ]
+            },
+            {
+              "parte": "cauda-lado",
+              "pos": [
+                -9,
+                -8
+              ],
+              "rot": 38
+            }
+          ],
+          "frente": [
+            {
+              "parte": "coxa-lado",
+              "pos": [
+                1,
+                0
+              ],
+              "rot": -18,
+              "frente": [
+                {
+                  "parte": "pe-lado",
+                  "pos": [
+                    0,
+                    14
+                  ],
+                  "rot": 18
+                }
+              ]
+            },
+            {
+              "parte": "cabeca-lado",
+              "pos": [
+                2,
+                -36
+              ],
+              "rot": -8,
+              "atras": [
+                {
+                  "parte": "@topeteLado"
+                }
+              ],
+              "frente": [
+                {
+                  "parte": "@olhoLado"
+                },
+                {
+                  "parte": "@bocaLado"
+                }
+              ]
+            },
+            {
+              "parte": "braco-superior",
+              "pos": [
+                4,
+                -30
+              ],
+              "rot": -118,
+              "frente": [
+                {
+                  "parte": "antebraco-agarrando",
+                  "pos": [
+                    0,
+                    20
+                  ],
+                  "rot": -24
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Aplicativo Buzzy (Fase 1: shell do desktop). WPF, C#, .NET 10 (DEC-006).
+    Toda chamada ao Windows fica em Plataforma/ (adaptador de plataforma, DEC-007);
+    o comportamento puro fica em Buzzy.Core. Nenhum pacote NuGet.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>Buzzy</AssemblyName>
+    <RootNamespace>Buzzy.App</RootNamespace>
+    <Version>0.1.0</Version>
+    <Product>Buzzy</Product>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+
+    <!-- A janela e a aplicação são construídas em código, sem XAML, para ficarem auditáveis. -->
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <StartupObject>Buzzy.App.Programa</StartupObject>
+
+    <!-- Per-Monitor V2 e asInvoker declarados no manifesto (ARCHITECTURE.md 2.13.3, SECURITY.md 2). -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Buzzy.Core\Buzzy.Core.csproj" />
+    <!-- Pixel art do Buzzy (DEC-018 e DEC-019): o sprite parado e o ícone da bandeja. -->
+    <ProjectReference Include="..\Buzzy.Visual\Buzzy.Visual.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Buzzy.App.Testes" />
+    <!-- O manifesto de clipes da apresentação (DEC-036), embutido; a validação do build o confere. -->
+    <EmbeddedResource Include="Apresentacao\clipes.json" LogicalName="Buzzy.App.Apresentacao.clipes.json" />
+  </ItemGroup>
+
+  <!--
+    Portão de APIs proibidas (SECURITY.md 3.2 e 8, item 1), executado depois de cada build
+    do aplicativo. A referência ao projeto só garante que o portão esteja compilado antes;
+    o assembly dele não entra no Buzzy. Violação ou erro de leitura reprovam o build.
+    Para diagnosticar sem o portão: dotnet build -p:PularPortaoDeApis=true
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\tools\Buzzy.PortaoApis\Buzzy.PortaoApis.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false"
+                      SkipGetTargetFrameworkProperties="true"
+                      SetTargetFramework="TargetFramework=net10.0" />
+  </ItemGroup>
+
+  <Target Name="PortaoDeApisProibidas" AfterTargets="Build" Condition="'$(PularPortaoDeApis)' != 'true'">
+    <PropertyGroup>
+      <_BuzzyPortao>$(MSBuildThisFileDirectory)..\..\tools\Buzzy.PortaoApis\bin\$(Configuration)\net10.0\Buzzy.PortaoApis.dll</_BuzzyPortao>
+    </PropertyGroup>
+    <Exec Command="dotnet &quot;$(_BuzzyPortao)&quot; --binarios &quot;$(OutDir).&quot; --fonte &quot;$(MSBuildThisFileDirectory).&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Core&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Visual&quot; --manifesto &quot;$(MSBuildThisFileDirectory)app.manifest&quot;"
+          StdOutEncoding="utf-8"
+          StdErrEncoding="utf-8" />
+  </Target>
+
+  <!--
+    Validação do manifesto de clipes (Fase 6, passo F6-P3; DEC-036, item 4), depois de cada build do
+    aplicativo, como o portão: situação sem clipe, pose ou cara ausente na arte, ou quadro com alfa
+    fora de 0 e 255 reprovam o build. A referência ao projeto só garante que a ferramenta esteja
+    compilada antes; o assembly dela não entra no Buzzy.
+    Para diagnosticar sem ela: dotnet build -p:PularValidacaoDeClipes=true
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\tools\Buzzy.ValidadorDeClipes\Buzzy.ValidadorDeClipes.csproj"
+                      ReferenceOutputAssembly="false"
+                      Private="false" />
+  </ItemGroup>
+
+  <Target Name="ValidacaoDoManifestoDeClipes" AfterTargets="Build" Condition="'$(PularValidacaoDeClipes)' != 'true'">
+    <PropertyGroup>
+      <_BuzzyValidadorDeClipes>$(MSBuildThisFileDirectory)..\..\tools\Buzzy.ValidadorDeClipes\bin\$(Configuration)\net10.0-windows\Buzzy.ValidadorDeClipes.dll</_BuzzyValidadorDeClipes>
+    </PropertyGroup>
+    <Exec Command="dotnet &quot;$(_BuzzyValidadorDeClipes)&quot; --manifesto &quot;$(MSBuildThisFileDirectory)Apresentacao\clipes.json&quot;"
+          StdOutEncoding="utf-8"
+          StdErrEncoding="utf-8" />
+  </Target>
+
+</Project>

@@ -1,0 +1,52 @@
+# .gitignore mínimo do Buzzy (Fase 0: ainda não há stack; ampliar quando ela for escolhida)
+
+# Sistema operacional
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editores e IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Segredos e chaves (DEC-040, item 8): nunca versionados; a bateria procura os padrões no repositório.
+*.pfx
+*.p12
+*.snk
+*.pem
+*.key
+.env
+.env.*
+
+# Temporários e logs
+*.tmp
+*.log
+
+# Build do .NET / WPF (introduzido na Etapa 0B, com os protótipos em spikes/)
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Resultados de execução dos protótipos: gerados por rodada, não versionados.
+# A evidência que precisa sobreviver é resumida em docs/DEVELOPMENT_LOG.md.
+spikes/resultados/
+
+# Resultados das medições do aplicativo (tools/medir-desempenho.ps1): gerados por rodada,
+# não versionados. A evidência que precisa sobreviver é resumida em docs/DEVELOPMENT_LOG.md.
+/resultados/
+
+# Documentos Markdown novos não são adicionados ao Git, conforme pedido do usuário.
+# Os .md já rastreados continuam no índice até serem removidos separadamente.
+*.md
+
+# Cópia do rascunho inicial do site, substituída pela página estática final.
+/site/src-copia-para-inspiracao/
+
+# Dependências e artefatos gerados pelo frontend.
+node_modules/
+/site/dist/
+/site/.vite/

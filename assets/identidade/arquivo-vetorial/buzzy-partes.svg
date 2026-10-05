@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Buzzy — biblioteca de partes vetoriais (fonte editável da identidade visual).
+  Referência: docs/IDENTIDADE_VISUAL.md. Poses e expressões: buzzy-poses.json.
+
+  Convenções:
+  - Cada parte é um <g id="..."> dentro de <defs>, desenhada em coordenadas locais com o pivô
+    (a articulação) em (0,0). Unidade: DIP. y cresce para baixo, como no SVG.
+  - Cores e traços vêm das classes CSS abaixo (a paleta). Não use cor solta nas partes.
+  - Vista "frente" e vista "lado" (perfil olhando para a direita; a esquerda é espelho).
+  - Subconjunto lido pelo renderizador do Buzzy: g, path, circle, ellipse, atributos id, class,
+    transform. O bloco "Prévia" no fim usa <use> só para abrir o arquivo num navegador.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="-70 -134 140 140" width="560" height="560">
+  <title>Buzzy — biblioteca de partes</title>
+  <style>
+    .pelo { fill: #574AA0; stroke: #211B42; stroke-width: 2.2; stroke-linejoin: round; }
+    .pelo-sombra { fill: #43397E; stroke: #211B42; stroke-width: 2.2; stroke-linejoin: round; }
+    .rosto { fill: #F6DFC6; stroke: #211B42; stroke-width: 2.2; stroke-linejoin: round; }
+    .rosto-sombra { fill: #E4C3A2; stroke: #211B42; stroke-width: 2.2; stroke-linejoin: round; }
+    .mascara { fill: #F6DFC6; }
+    .orelha { fill: #EFC0A8; }
+    .esclera { fill: #FFFFFF; stroke: #211B42; stroke-width: 1.6; }
+    .iris { fill: #3CCFA3; stroke: #22A882; stroke-width: 1; }
+    .pupila { fill: #211B42; }
+    .brilho { fill: #FFFFFF; }
+    .palpebra { fill: #574AA0; stroke: #211B42; stroke-width: 1.6; stroke-linejoin: round; }
+    .traco { fill: none; stroke: #211B42; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .traco-fino { fill: none; stroke: #211B42; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .boca { fill: #6B2344; stroke: #211B42; stroke-width: 1.8; stroke-linejoin: round; }
+    .lingua { fill: #E8768F; stroke: #211B42; stroke-width: 1.4; stroke-linejoin: round; }
+    .dente { fill: #FFFFFF; }
+    .cauda-contorno { fill: none; stroke: #211B42; stroke-width: 11.4; stroke-linecap: round; stroke-linejoin: round; }
+    .cauda-pelo { fill: none; stroke: #574AA0; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+    .cauda-ponta { fill: none; stroke: #3CCFA3; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+
+  <defs>
+    <!-- ================================================================ CABEÇA — FRENTE
+         Pivô: pescoço (centro da base da cabeça). Cabeça: círculo de raio 27, centro (0,-26). -->
+    <g id="cabeca-frente">
+      <circle class="pelo" cx="-27.5" cy="-24" r="10.5"/>
+      <circle class="orelha" cx="-27.8" cy="-23.4" r="5.8"/>
+      <circle class="pelo" cx="27.5" cy="-24" r="10.5"/>
+      <circle class="orelha" cx="27.8" cy="-23.4" r="5.8"/>
+      <circle class="pelo" cx="0" cy="-26" r="27"/>
+      <path class="mascara" d="M 0,-37 C -5,-45 -20.5,-44 -20.5,-29 C -20.5,-16 -10.5,-4.5 0,-2.5 C 10.5,-4.5 20.5,-16 20.5,-29 C 20.5,-44 5,-45 0,-37 Z"/>
+    </g>
+
+    <!-- Topete (desenhado atrás da cabeça; a base some sob o círculo). -->
+    <g id="topete-normal">
+      <path class="pelo" d="M -13,-45 C -18,-57 -10,-67 -3,-65 C -5.5,-60 -2.5,-56.5 0.5,-54.5 C 0.5,-65 10,-70.5 16.5,-67 C 11.5,-63 10,-58 11,-53.5 C 15,-59 22.5,-60 25.5,-55.5 C 19.5,-53.5 16.5,-49 14,-43 Z"/>
+    </g>
+    <g id="topete-erico">
+      <path class="pelo" d="M -12,-45 C -17,-58 -12,-69 -6,-70 C -7,-63 -4,-58 -1,-55 C -1,-67 5,-75 11,-74 C 8,-67 8,-60 9,-55 C 13,-63 20,-67 25,-64 C 19,-59 16,-51 14,-43 Z"/>
+    </g>
+    <g id="topete-caido">
+      <path class="pelo" d="M -14,-44 C -21,-52 -21,-61 -14,-62 C -13,-58 -9,-55 -4,-54 C -6,-61 -1,-66 6,-64 C 5,-60 7,-56 10,-54 C 13,-59 20,-58 24,-53 C 20,-51 17,-47 15,-42 Z"/>
+    </g>
+
+    <!-- Olhos — frente. Centros em (-9,-29) e (9,-29). -->
+    <g id="olhos-abertos">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <ellipse class="esclera" cx="9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-8" cy="-28" r="5.1"/>
+      <circle class="iris" cx="8" cy="-28" r="5.1"/>
+      <circle class="pupila" cx="-7.6" cy="-27.6" r="3"/>
+      <circle class="pupila" cx="7.6" cy="-27.6" r="3"/>
+      <circle class="brilho" cx="-9.6" cy="-30.4" r="1.7"/>
+      <circle class="brilho" cx="6.4" cy="-30.4" r="1.7"/>
+    </g>
+    <g id="olhos-lado">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <ellipse class="esclera" cx="9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-5.6" cy="-28.4" r="5.1"/>
+      <circle class="iris" cx="12.4" cy="-28.4" r="5.1"/>
+      <circle class="pupila" cx="-4.6" cy="-28.2" r="3"/>
+      <circle class="pupila" cx="13.4" cy="-28.2" r="3"/>
+      <circle class="brilho" cx="-6.8" cy="-30.8" r="1.7"/>
+      <circle class="brilho" cx="11.2" cy="-30.8" r="1.7"/>
+    </g>
+    <g id="olhos-cima">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <ellipse class="esclera" cx="9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-7.2" cy="-31.6" r="5.1"/>
+      <circle class="iris" cx="10.8" cy="-31.6" r="5.1"/>
+      <circle class="pupila" cx="-6.8" cy="-32.4" r="3"/>
+      <circle class="pupila" cx="11.2" cy="-32.4" r="3"/>
+      <circle class="brilho" cx="-8.6" cy="-33.8" r="1.5"/>
+      <circle class="brilho" cx="9.4" cy="-33.8" r="1.5"/>
+    </g>
+    <g id="olhos-arregalados">
+      <ellipse class="esclera" cx="-9.5" cy="-30" rx="8" ry="9.8"/>
+      <ellipse class="esclera" cx="9.5" cy="-30" rx="8" ry="9.8"/>
+      <circle class="iris" cx="-9" cy="-29.5" r="3.9"/>
+      <circle class="iris" cx="9" cy="-29.5" r="3.9"/>
+      <circle class="pupila" cx="-9" cy="-29.5" r="1.9"/>
+      <circle class="pupila" cx="9" cy="-29.5" r="1.9"/>
+      <circle class="brilho" cx="-10.6" cy="-31.6" r="1.2"/>
+      <circle class="brilho" cx="7.4" cy="-31.6" r="1.2"/>
+    </g>
+    <g id="olhos-estrela">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <ellipse class="esclera" cx="9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-8" cy="-28" r="5.1"/>
+      <circle class="iris" cx="8" cy="-28" r="5.1"/>
+      <circle class="pupila" cx="-7.6" cy="-27.6" r="3"/>
+      <circle class="pupila" cx="7.6" cy="-27.6" r="3"/>
+      <path class="brilho" d="M -9.4,-34 L -8.4,-31.2 L -5.6,-30.2 L -8.4,-29.2 L -9.4,-26.4 L -10.4,-29.2 L -13.2,-30.2 L -10.4,-31.2 Z"/>
+      <path class="brilho" d="M 6.6,-34 L 7.6,-31.2 L 10.4,-30.2 L 7.6,-29.2 L 6.6,-26.4 L 5.6,-29.2 L 2.8,-30.2 L 5.6,-31.2 Z"/>
+    </g>
+    <g id="olhos-felizes">
+      <path class="traco" d="M -15,-27.5 Q -9,-36 -3,-27.5"/>
+      <path class="traco" d="M 3,-27.5 Q 9,-36 15,-27.5"/>
+    </g>
+    <g id="olhos-fechados">
+      <path class="traco" d="M -15,-29 Q -9,-24 -3,-29"/>
+      <path class="traco" d="M 3,-29 Q 9,-24 15,-29"/>
+    </g>
+    <g id="olhos-sonolentos">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <ellipse class="esclera" cx="9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-8" cy="-25.8" r="4.8"/>
+      <circle class="iris" cx="8" cy="-25.8" r="4.8"/>
+      <circle class="pupila" cx="-7.6" cy="-25" r="2.8"/>
+      <circle class="pupila" cx="7.6" cy="-25" r="2.8"/>
+      <path class="palpebra" d="M -16.4,-29 C -16.4,-40 -1.6,-40 -1.6,-29 C -6,-27 -12,-27 -16.4,-29 Z"/>
+      <path class="palpebra" d="M 1.6,-29 C 1.6,-40 16.4,-40 16.4,-29 C 12,-27 6,-27 1.6,-29 Z"/>
+    </g>
+    <g id="olhos-entediados">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <ellipse class="esclera" cx="9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-6.8" cy="-26.4" r="4.6"/>
+      <circle class="iris" cx="11.2" cy="-26.4" r="4.6"/>
+      <circle class="pupila" cx="-6.2" cy="-26" r="2.7"/>
+      <circle class="pupila" cx="11.8" cy="-26" r="2.7"/>
+      <path class="palpebra" d="M -16.4,-28 C -16.4,-40 -1.6,-40 -1.6,-28 C -6,-26.4 -12,-26.4 -16.4,-28 Z"/>
+      <path class="palpebra" d="M 1.6,-28 C 1.6,-40 16.4,-40 16.4,-28 C 12,-26.4 6,-26.4 1.6,-28 Z"/>
+    </g>
+    <g id="olhos-piscada">
+      <ellipse class="esclera" cx="-9" cy="-29" rx="7" ry="8.5"/>
+      <circle class="iris" cx="-8" cy="-28" r="5.1"/>
+      <circle class="pupila" cx="-7.6" cy="-27.6" r="3"/>
+      <circle class="brilho" cx="-9.6" cy="-30.4" r="1.7"/>
+      <path class="traco" d="M 3,-27.5 Q 9,-35 15,-27.5"/>
+    </g>
+
+    <!-- Sobrancelhas — frente. -->
+    <g id="sobrancelhas-neutras">
+      <path class="traco" d="M -14.5,-40.5 Q -9.5,-43 -4.5,-41"/>
+      <path class="traco" d="M 4.5,-41 Q 9.5,-43 14.5,-40.5"/>
+    </g>
+    <g id="sobrancelhas-erguidas">
+      <path class="traco" d="M -14.5,-43.5 Q -9.5,-47.5 -4.5,-44"/>
+      <path class="traco" d="M 4.5,-44 Q 9.5,-47.5 14.5,-43.5"/>
+    </g>
+    <g id="sobrancelhas-uma-erguida">
+      <path class="traco" d="M -14.5,-40.5 Q -9.5,-42 -4.5,-40.5"/>
+      <path class="traco" d="M 4.5,-44 Q 9.5,-48.5 14.5,-44.5"/>
+    </g>
+    <g id="sobrancelhas-preocupadas">
+      <path class="traco" d="M -14.5,-39.5 Q -9.5,-41 -4.5,-45"/>
+      <path class="traco" d="M 4.5,-45 Q 9.5,-41 14.5,-39.5"/>
+    </g>
+    <g id="sobrancelhas-bravas">
+      <path class="traco" d="M -14.5,-44 L -4.5,-40"/>
+      <path class="traco" d="M 4.5,-40 L 14.5,-44"/>
+    </g>
+    <g id="sobrancelhas-caidas">
+      <path class="traco" d="M -14.5,-38.5 Q -9.5,-40.5 -4.5,-39.5"/>
+      <path class="traco" d="M 4.5,-39.5 Q 9.5,-40.5 14.5,-38.5"/>
+    </g>
+    <g id="sobrancelhas-retas">
+      <path class="traco" d="M -14,-40.5 L -5,-40.5"/>
+      <path class="traco" d="M 5,-40.5 L 14,-40.5"/>
+    </g>
+    <g id="sobrancelhas-nenhuma"/>
+
+    <!-- Nariz e bocas — frente. -->
+    <g id="nariz-frente">
+      <ellipse class="pupila" cx="-2.8" cy="-17.5" rx="1.4" ry="1.1"/>
+      <ellipse class="pupila" cx="2.8" cy="-17.5" rx="1.4" ry="1.1"/>
+    </g>
+    <g id="boca-sorriso">
+      <path class="traco" d="M -9,-13 Q 0,-4.5 9,-13"/>
+      <path class="traco-fino" d="M -10.5,-14.5 Q -9.5,-12.6 -8.2,-12.2"/>
+      <path class="traco-fino" d="M 10.5,-14.5 Q 9.5,-12.6 8.2,-12.2"/>
+    </g>
+    <g id="boca-firme">
+      <path class="traco" d="M -7.5,-12 Q 0,-7.5 7.5,-12"/>
+    </g>
+    <g id="boca-aberta">
+      <path class="boca" d="M -10,-14 Q 0,-1.5 10,-14 Q 0,-10.5 -10,-14 Z"/>
+      <path class="lingua" d="M -4.5,-6.2 Q 0,-10 4.5,-6.2 Q 0,-3.6 -4.5,-6.2 Z"/>
+      <path class="dente" d="M -8.3,-13.2 L -6.2,-9.8 L -5.2,-12.4 Z"/>
+      <path class="dente" d="M 8.3,-13.2 L 6.2,-9.8 L 5.2,-12.4 Z"/>
+    </g>
+    <g id="boca-risada">
+      <path class="boca" d="M -12,-15 Q 0,2 12,-15 Q 0,-11 -12,-15 Z"/>
+      <path class="lingua" d="M -6,-4.4 Q 0,-9.4 6,-4.4 Q 0,-1.2 -6,-4.4 Z"/>
+      <path class="dente" d="M -9.8,-14 L -7.4,-10 L -6.3,-13.1 Z"/>
+      <path class="dente" d="M 9.8,-14 L 7.4,-10 L 6.3,-13.1 Z"/>
+    </g>
+    <g id="boca-canto">
+      <path class="traco" d="M -2,-11.5 Q 3,-12 7.5,-14.5"/>
+    </g>
+    <g id="boca-o">
+      <ellipse class="boca" cx="0" cy="-10" rx="3.8" ry="4.8"/>
+    </g>
+    <g id="boca-ondulada">
+      <path class="traco" d="M -8,-10.5 Q -5.3,-13.5 -2.6,-10.5 Q 0,-7.5 2.6,-10.5 Q 5.3,-13.5 8,-10.5"/>
+    </g>
+    <g id="boca-reta">
+      <path class="traco" d="M -6,-11.5 L 6,-11.5"/>
+    </g>
+    <g id="boca-reta-pequena">
+      <path class="traco" d="M -3.2,-11.5 L 3.2,-11.5"/>
+    </g>
+    <g id="boca-lingua">
+      <path class="lingua" d="M 1,-11.6 C 1,-6 7.4,-6 7.4,-11.2 Z"/>
+      <path class="traco" d="M -8.5,-12.5 Q 0,-6.5 8.5,-12.5"/>
+    </g>
+
+    <!-- ================================================================ CABEÇA — PERFIL (olhando à direita)
+         Pivô: pescoço. Cabeça: círculo de raio 26, centro (0,-26). -->
+    <g id="cabeca-lado">
+      <circle class="pelo" cx="-15.5" cy="-25" r="10"/>
+      <circle class="orelha" cx="-15.8" cy="-24.5" r="5.4"/>
+      <circle class="pelo" cx="0" cy="-26" r="26"/>
+      <path class="mascara" d="M 3.5,-41 C 14,-45 24.5,-37 24.5,-25 C 24.5,-15 18,-6 9,-4.5 C 4,-4 1.5,-9 2.5,-15 C 3.5,-22 -1,-35 3.5,-41 Z"/>
+      <ellipse class="rosto" cx="20" cy="-16" rx="9.5" ry="7.6"/>
+      <ellipse class="pupila" cx="27" cy="-18.8" rx="1.7" ry="1.3"/>
+    </g>
+    <g id="topete-lado-normal">
+      <path class="pelo" d="M 8,-44 C 5,-58 -8,-66 -14,-61 C -9,-59 -6.5,-55.5 -5,-52 C -11,-57.5 -21,-57 -24.5,-50.5 C -18,-50.5 -14.5,-47 -12.5,-42 C -16,-45 -22,-43 -24,-38 C -16,-38 -11,-34 -7,-30 Z"/>
+    </g>
+    <g id="topete-lado-erico">
+      <path class="pelo" d="M 8,-44 C 7,-60 -2,-69 -9,-66 C -5,-62 -3.5,-57 -3,-52 C -8,-60 -17,-62 -22,-57 C -15,-55 -12,-49 -11,-43 C -15,-47 -22,-46 -25,-41 C -17,-40 -11,-35 -7,-30 Z"/>
+    </g>
+    <g id="olho-lado-aberto">
+      <ellipse class="esclera" cx="12" cy="-30.5" rx="5.2" ry="7.6"/>
+      <circle class="iris" cx="14" cy="-30" r="3.9"/>
+      <circle class="pupila" cx="15" cy="-29.6" r="2.3"/>
+      <circle class="brilho" cx="12.9" cy="-32.6" r="1.3"/>
+      <path class="traco" d="M 7,-41 Q 12,-43.5 17,-40.5"/>
+    </g>
+    <g id="olho-lado-feliz">
+      <path class="traco" d="M 7,-29 Q 12,-36 17,-29"/>
+      <path class="traco" d="M 7,-41 Q 12,-43.5 17,-40.5"/>
+    </g>
+    <g id="olho-lado-arregalado">
+      <ellipse class="esclera" cx="12" cy="-31" rx="6" ry="8.6"/>
+      <circle class="iris" cx="13" cy="-31" r="3.1"/>
+      <circle class="pupila" cx="13" cy="-31" r="1.6"/>
+      <circle class="brilho" cx="11.8" cy="-33" r="1"/>
+      <path class="traco" d="M 6.5,-44 Q 12,-47.5 17.5,-44"/>
+    </g>
+    <g id="olho-lado-concentrado">
+      <ellipse class="esclera" cx="12" cy="-30.5" rx="5.2" ry="7.6"/>
+      <circle class="iris" cx="14.2" cy="-30" r="3.9"/>
+      <circle class="pupila" cx="15.2" cy="-29.6" r="2.3"/>
+      <circle class="brilho" cx="13.1" cy="-32.6" r="1.3"/>
+      <path class="traco" d="M 7,-40 L 17,-37.5"/>
+    </g>
+    <g id="boca-lado-sorriso">
+      <path class="traco" d="M 26,-12.5 Q 20.5,-7.5 13.5,-11.5"/>
+    </g>
+    <g id="boca-lado-aberta">
+      <path class="boca" d="M 26.5,-13 Q 20,-2.5 12.5,-11 Q 19,-10.2 26.5,-13 Z"/>
+      <path class="lingua" d="M 16,-7 Q 19.5,-9.6 22.5,-6.8 Q 19,-4.8 16,-7 Z"/>
+    </g>
+    <g id="boca-lado-o">
+      <ellipse class="boca" cx="22" cy="-10.5" rx="2.8" ry="3.6"/>
+    </g>
+
+    <!-- ================================================================ CORPO
+         Tronco — pivô no centro do quadril; o pescoço fica em (0,-36). -->
+    <g id="tronco-frente">
+      <ellipse class="pelo" cx="0" cy="-18" rx="18" ry="20"/>
+      <ellipse class="mascara" cx="0" cy="-15" rx="11.5" ry="14"/>
+    </g>
+    <g id="tronco-lado">
+      <ellipse class="pelo" cx="0" cy="-18" rx="14" ry="20"/>
+      <ellipse class="mascara" cx="5.5" cy="-15" rx="8" ry="13.5"/>
+    </g>
+    <g id="tronco-sentado">
+      <ellipse class="pelo" cx="0" cy="-17" rx="19" ry="18"/>
+      <ellipse class="mascara" cx="0" cy="-14.5" rx="12" ry="12.5"/>
+    </g>
+
+    <!-- Braços compridos, marca de primata: do ombro à ponta da mão ~48 DIP.
+         Braço superior — pivô no ombro; o cotovelo fica em (0,20). -->
+    <g id="braco-superior">
+      <path class="pelo" d="M -5,0 C -5,-4 5,-4 5,0 L 4.2,19.5 C 4.2,22 -4.2,22 -4.2,19.5 Z"/>
+    </g>
+    <g id="braco-superior-sombra">
+      <path class="pelo-sombra" d="M -5,0 C -5,-4 5,-4 5,0 L 4.2,19.5 C 4.2,22 -4.2,22 -4.2,19.5 Z"/>
+    </g>
+    <!-- Antebraço com a mão — pivô no cotovelo; a mão fica em torno de (0,22). -->
+    <g id="antebraco">
+      <path class="pelo" d="M -4.2,0 C -4.2,-3 4.2,-3 4.2,0 L 3.6,17 C 3.6,19.5 -3.6,19.5 -3.6,17 Z"/>
+      <circle class="rosto" cx="0" cy="22" r="6.3"/>
+      <path class="traco-fino" d="M -2.1,24.6 L -1.5,27.4"/>
+      <path class="traco-fino" d="M 2.1,24.6 L 1.5,27.4"/>
+    </g>
+    <g id="antebraco-sombra">
+      <path class="pelo-sombra" d="M -4.2,0 C -4.2,-3 4.2,-3 4.2,0 L 3.6,17 C 3.6,19.5 -3.6,19.5 -3.6,17 Z"/>
+      <circle class="rosto-sombra" cx="0" cy="22" r="6.3"/>
+    </g>
+    <!-- Antebraço com a mão fechada, agarrando (escalar, pendurar). O topo do punho fica em y = 28. -->
+    <g id="antebraco-agarrando">
+      <path class="pelo" d="M -4.2,0 C -4.2,-3 4.2,-3 4.2,0 L 3.6,17 C 3.6,19.5 -3.6,19.5 -3.6,17 Z"/>
+      <path class="rosto" d="M -6.4,19 C -6.4,15.5 6.4,15.5 6.4,19 L 6.4,24.5 C 6.4,28.5 -6.4,28.5 -6.4,24.5 Z"/>
+      <path class="traco-fino" d="M -2.1,19.5 L -2.1,25.5"/>
+      <path class="traco-fino" d="M 2.1,19.5 L 2.1,25.5"/>
+    </g>
+
+    <!-- Pernas — pivô no quadril; a borda visual da sola (com metade do contorno) fica em y = 22.
+         Pé apontando para a direita. -->
+    <g id="perna-frente">
+      <ellipse class="pelo" cx="0" cy="8" rx="7.2" ry="9.5"/>
+      <ellipse class="rosto" cx="3" cy="15.9" rx="10" ry="5"/>
+      <path class="traco-fino" d="M 8.5,13.4 L 8.5,15.9"/>
+      <path class="traco-fino" d="M 5.5,13.1 L 5.5,15.7"/>
+    </g>
+    <!-- Perfil: coxa (pivô no quadril; o tornozelo fica em (0,14)) e pé com rotação própria
+         (pivô no tornozelo; a borda visual da sola fica 8 abaixo dele), para o pé ficar plano no
+         chão enquanto a perna gira na caminhada. -->
+    <g id="coxa-lado">
+      <ellipse class="pelo" cx="0" cy="7" rx="7" ry="9"/>
+    </g>
+    <g id="coxa-lado-sombra">
+      <ellipse class="pelo-sombra" cx="0" cy="7" rx="7" ry="9"/>
+    </g>
+    <g id="pe-lado">
+      <ellipse class="rosto" cx="5" cy="2.4" rx="10" ry="4.5"/>
+    </g>
+    <g id="pe-lado-sombra">
+      <ellipse class="rosto-sombra" cx="5" cy="2.4" rx="10" ry="4.5"/>
+    </g>
+    <!-- Perna dobrada (sentado): coxa para a frente, pé virado para cima. -->
+    <g id="perna-sentada">
+      <ellipse class="pelo" cx="3" cy="5" rx="10" ry="7.5"/>
+      <ellipse class="rosto" cx="10" cy="9" rx="5.2" ry="8"/>
+    </g>
+
+    <!-- ================================================================ CAUDA
+         Pivô na base da cauda. Traço grosso: contorno, pelo e ponta menta. -->
+    <g id="cauda-espiral">
+      <path class="cauda-contorno" d="M 0,0 C 16,4 28,-6 28,-22 C 28,-33 17,-37 12,-29 C 8,-23 14,-17 20,-21"/>
+      <path class="cauda-pelo" d="M 0,0 C 16,4 28,-6 28,-22 C 28,-33 17,-37 12,-29"/>
+      <path class="cauda-ponta" d="M 12,-29 C 8,-23 14,-17 20,-21"/>
+    </g>
+    <g id="cauda-interrogacao">
+      <path class="cauda-contorno" d="M 0,0 C 14,0 22,-12 21,-26 C 20,-38 6,-42 2,-34 C 0,-30 3,-27 7,-28"/>
+      <path class="cauda-pelo" d="M 0,0 C 14,0 22,-12 21,-26 C 20,-38 6,-42 2,-34"/>
+      <path class="cauda-ponta" d="M 2,-34 C 0,-30 3,-27 7,-28"/>
+    </g>
+    <g id="cauda-reta">
+      <path class="cauda-contorno" d="M 0,0 C 12,-2 24,-10 32,-24 C 36,-31 38,-38 38,-44"/>
+      <path class="cauda-pelo" d="M 0,0 C 12,-2 24,-10 32,-24"/>
+      <path class="cauda-ponta" d="M 32,-24 C 36,-31 38,-38 38,-44"/>
+    </g>
+    <g id="cauda-caida">
+      <path class="cauda-contorno" d="M 0,0 C 10,6 14,18 12,30 C 11,38 4,42 1,37 C -1,33 3,30 6,33"/>
+      <path class="cauda-pelo" d="M 0,0 C 10,6 14,18 12,30 C 11,38 4,42 1,37"/>
+      <path class="cauda-ponta" d="M 1,37 C -1,33 3,30 6,33"/>
+    </g>
+    <g id="cauda-lado">
+      <path class="cauda-contorno" d="M 0,0 C -16,2 -27,-8 -26,-23 C -25,-34 -13,-37 -10,-28 C -8,-22 -14,-18 -18,-22"/>
+      <path class="cauda-pelo" d="M 0,0 C -16,2 -27,-8 -26,-23 C -25,-34 -13,-37 -10,-28"/>
+      <path class="cauda-ponta" d="M -10,-28 C -8,-22 -14,-18 -18,-22"/>
+    </g>
+    <g id="cauda-lado-balanco">
+      <path class="cauda-contorno" d="M 0,0 C -14,4 -28,-2 -30,-17 C -32,-29 -21,-34 -17,-26 C -14,-20 -19,-15 -24,-18"/>
+      <path class="cauda-pelo" d="M 0,0 C -14,4 -28,-2 -30,-17 C -32,-29 -21,-34 -17,-26"/>
+      <path class="cauda-ponta" d="M -17,-26 C -14,-20 -19,-15 -24,-18"/>
+    </g>
+  </defs>
+
+  <!-- Prévia para navegadores (o renderizador do Buzzy lê só as partes em defs). -->
+  <g id="previa">
+    <use xlink:href="#cauda-espiral" transform="translate(10,-30)"/>
+    <use xlink:href="#perna-frente" transform="translate(-8,-22) scale(-1,1)"/>
+    <use xlink:href="#perna-frente" transform="translate(8,-22)"/>
+    <use xlink:href="#braco-superior" transform="translate(-13,-52) rotate(14)"/>
+    <use xlink:href="#antebraco" transform="translate(-13,-52) rotate(14) translate(0,20) rotate(-10)"/>
+    <use xlink:href="#braco-superior" transform="translate(13,-52) rotate(-14)"/>
+    <use xlink:href="#antebraco" transform="translate(13,-52) rotate(-14) translate(0,20) rotate(10)"/>
+    <use xlink:href="#tronco-frente" transform="translate(0,-22)"/>
+    <use xlink:href="#topete-normal" transform="translate(0,-58)"/>
+    <use xlink:href="#cabeca-frente" transform="translate(0,-58)"/>
+    <use xlink:href="#olhos-abertos" transform="translate(0,-58)"/>
+    <use xlink:href="#sobrancelhas-neutras" transform="translate(0,-58)"/>
+    <use xlink:href="#nariz-frente" transform="translate(0,-58)"/>
+    <use xlink:href="#boca-sorriso" transform="translate(0,-58)"/>
+  </g>
+</svg>
