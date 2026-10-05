@@ -47,4 +47,4 @@ spikes/resultados/
 node_modules/
 
 # O site terá um repositório independente.
-/site/
+site/
