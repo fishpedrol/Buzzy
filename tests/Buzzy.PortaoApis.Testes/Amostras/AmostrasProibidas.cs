@@ -226,6 +226,24 @@ internal static class ReferenciasProibidas
         using Microsoft.Win32.RegistryKey? chave = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(@"Software\BuzzyAmostra");
     }
 
+    // F9-P10 (DEC-042): o que vem vazio ou lança num executável de arquivo único.
+    internal static void ArquivoUnico()
+    {
+        System.Reflection.Assembly eu = typeof(ReferenciasProibidas).Assembly;
+        _ = eu.Location;
+#pragma warning disable SYSLIB0012, SYSLIB0044 // CodeBase e EscapedCodeBase são obsoletos: a amostra precisa da referência.
+        _ = eu.CodeBase;
+        _ = eu.EscapedCodeBase;
+        _ = new System.Reflection.AssemblyName("Amostra").CodeBase;
+        _ = new System.Reflection.AssemblyName("Amostra").EscapedCodeBase;
+#pragma warning restore SYSLIB0012, SYSLIB0044
+        _ = eu.GetFile("amostra");
+        _ = eu.GetFiles();
+        _ = Marshal.GetHINSTANCE(eu.ManifestModule);
+        _ = eu.ManifestModule.Name;
+        _ = eu.ManifestModule.FullyQualifiedName;
+    }
+
     internal static void CodigoDinamico()
     {
         _ = System.Reflection.Assembly.Load(Array.Empty<byte>());

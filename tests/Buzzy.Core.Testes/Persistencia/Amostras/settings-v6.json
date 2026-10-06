@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 6,
+  "posicao": {
+    "chaveMonitor": "\\\\.\\DISPLAY2",
+    "telaDoMonitor": {
+      "esquerda": -1920,
+      "topo": 0,
+      "direita": 0,
+      "base": 1080
+    },
+    "fracaoX": 0.25,
+    "fracaoY": 1,
+    "ancoraAbsoluta": {
+      "x": -1440,
+      "y": 1032
+    },
+    "esconderijo": "nenhum",
+    "presoPeloUsuario": false
+  },
+  "preferencias": {
+    "energia": "media",
+    "modoTelaCheia": true,
+    "atravessarMonitores": true,
+    "emocaoDominante": "automatica",
+    "conteudoAdulto": false,
+    "sempreNoTopo": true,
+    "escala": "media",
+    "itensAdultosHabilitados": [
+      "vodka",
+      "cerveja",
+      "baseado",
+      "cigarro"
+    ]
+  }
+}

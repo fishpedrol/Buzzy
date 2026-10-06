@@ -160,13 +160,20 @@ internal sealed class IsolamentoTestes : IDisposable
         string[] fontes = [.. new[] { "tests", "tools" }.SelectMany(p => Directory.GetFiles(Path.Combine(Caminhos.Raiz, p), "*.*", SearchOption.AllDirectories))
             .Where(f => (f.EndsWith(".cs", StringComparison.Ordinal) || f.EndsWith(".ps1", StringComparison.Ordinal))
                 && !Regex.IsMatch(f, @"[\\/](obj|bin)[\\/]|[\\/]Buzzy\.PortaoApis(\.Testes)?[\\/]")
-                && Path.GetFileName(f) is not ("IsolamentoTestes.cs" or "InicioComOWindowsTestes.cs" or "CercasDoPortaoTestes.cs"))];
+                && Path.GetFileName(f) is not ("IsolamentoTestes.cs" or "InicioComOWindowsTestes.cs" or "CercasDoPortaoTestes.cs" or "verificar-gravacoes.ps1" or "VerificarGravacoesTestes.cs"))];
         // InicioComOWindowsTestes só lê a fonte do adaptador (a contenção na fonte), sem chamar nenhum método dele nem o Windows.
         string contencao = File.ReadAllText(Path.Combine(Caminhos.Raiz, "tests", "Buzzy.App.Testes", "InicioComOWindowsTestes.cs"));
         Afirmar.Falso(Regex.IsMatch(contencao, @"DllImport|LibraryImport|Microsoft\.Win32|DaExecucao\([^()]*\)\.(?!Modo\b)"), "a contenção do início só lê a fonte (do real, só o modo)");
         // CercasDoPortaoTestes (DEC-040, item 6) também só lê a fonte: cita o registro como texto, nos padrões.
         string cercas = File.ReadAllText(Path.Combine(Caminhos.Raiz, "tests", "Buzzy.App.Testes", "CercasDoPortaoTestes.cs"));
         Afirmar.Falso(Regex.IsMatch(cercas, @"\[(DllImport|LibraryImport)\(|using Microsoft\.Win32|RegistryKey\."), "as cercas do portão só leem a fonte");
+        // tools\verificar-gravacoes.ps1 (DEC-040, item 10) cita o registro como texto, nos caminhos do Process Monitor: só lê um CSV.
+        string analisador = File.ReadAllText(Path.Combine(Caminhos.Raiz, "tools", "verificar-gravacoes.ps1"));
+        Afirmar.Falso(Regex.IsMatch(analisador, @"Microsoft\.Win32|RegistryKey|\breg(\.exe)?\s+(add|delete|import|query)|-ItemProperty|HKCU:|HKLM:|Start-Process|Invoke-WebRequest", RegexOptions.IgnoreCase), "o analisador só lê o CSV");
+        Afirmar.Contem("Import-Csv", analisador);
+        // VerificarGravacoesTestes cita o registro só nas linhas de CSV que monta, e roda só o analisador sobre elas.
+        string testesDoAnalisador = File.ReadAllText(Path.Combine(Caminhos.Raiz, "tests", "Buzzy.App.Testes", "VerificarGravacoesTestes.cs"));
+        Afirmar.Falso(Regex.IsMatch(testesDoAnalisador, @"\[(DllImport|LibraryImport)\(|using Microsoft\.Win32|RegistryKey\.|Registry\.(CurrentUser|LocalMachine)"), "os testes do analisador não tocam o registro");
         Afirmar.Verdadeiro(fontes.Length > 50, $"achou as fontes ({fontes.Length})");
         var registro = new Regex(@"advapi32|Microsoft\.Win32\.Registry|RegistryKey|Registry\.CurrentUser|HKCU:|HKEY_|\breg(\.exe)?\s+(add|delete|import)|-ItemProperty", RegexOptions.IgnoreCase);
         Afirmar.Sequencia(["RegistroReal.cs", "empacotar.ps1", "medir-desempenho.ps1"],
@@ -239,7 +246,10 @@ internal sealed class IsolamentoTestes : IDisposable
             .ToDictionary(f => Path.GetRelativePath(pasta, f), File.ReadAllText, StringComparer.Ordinal);
         string[] Onde(string padrao) => [.. fontes.Where(f => Regex.IsMatch(f.Value, padrao)).Select(f => f.Key).Order(StringComparer.Ordinal)];
 
-        Afirmar.Sequencia(["ArquivoDeConfiguracoesTestes.cs", @"Integracao\BuzzyEmTeste.cs", "ValidacaoDeClipesNoBuildTestes.cs"], Onde(@"Process\.Start\("), "quem inicia processos");
+        Afirmar.Sequencia(["ArquivoDeConfiguracoesTestes.cs", @"Integracao\BuzzyEmTeste.cs", "ValidacaoDeClipesNoBuildTestes.cs", "VerificarGravacoesTestes.cs"], Onde(@"Process\.Start\("), "quem inicia processos");
+        // VerificarGravacoesTestes inicia só o PowerShell com o analisador do CSV (DEC-040, item 10), nunca o Buzzy.
+        string analisa = fontes["VerificarGravacoesTestes.cs"];
+        Afirmar.Verdadeiro(Regex.Matches(analisa, @"new ProcessStartInfo\(""([^""]+)""\)").All(m => m.Groups[1].Value == "powershell.exe") && analisa.Contains("verificar-gravacoes.ps1", StringComparison.Ordinal), "os testes do analisador só rodam o analisador");
         Afirmar.Sequencia(["Caminhos.cs", "CaminhosTestes.cs", @"Integracao\BuzzyEmTeste.cs"], Onde(@"\bExeDoBuzzy\("), "quem usa o caminho do Buzzy.exe");
         Afirmar.Sequencia([], Onde(@"new\s+ProcessStartInfo\s*(\(\s*\)|\{)|\.StartInfo\b|UseShellExecute\s*=\s*true"), "ProcessStartInfo sem o executável, StartInfo ou shell");
 
@@ -341,7 +351,7 @@ internal sealed class IsolamentoTestes : IDisposable
             Afirmar.Contem(trecho, funcao, "LimparPerfilDeTeste");
     }
 
-    // Fase 9, F9-P5 (DEC-040, item 9): o empacotamento abre o Buzzy da pasta extraída só com o perfil de teste "zip",
+    // Fase 9, F9-P5 e F9-P10 (DEC-040, item 9; DEC-042): o empacotamento abre o Buzzy da pasta temporária só com o perfil de teste "pacote",
     // limpo entre duas conferências de que nenhum Buzzy está aberto, com a foto dos arquivos e do registro reais antes e
     // depois (falha se mudarem), nunca elevado, fecha só a janela do PID que abriu e não publica nada.
     [Teste]
@@ -349,8 +359,8 @@ internal sealed class IsolamentoTestes : IDisposable
     {
         string[] linhas = File.ReadAllLines(Path.Combine(Caminhos.Raiz, "tools", "empacotar.ps1"));
         int[] Linhas(string trecho) => [.. linhas.Select((l, i) => (l, i)).Where(x => x.l.Contains(trecho, StringComparison.Ordinal)).Select(x => x.i)];
-        Afirmar.Sequencia(["$perfilDeTeste = 'zip'"], linhas.Select(l => l.Trim()).Where(l => l.StartsWith("$perfilDeTeste = ", StringComparison.Ordinal)), "o perfil, numa atribuição só");
-        Afirmar.Verdadeiro(PastaDeDados.NomeDePerfilValido("zip"), "nome de perfil válido");
+        Afirmar.Sequencia(["$perfilDeTeste = 'pacote'"], linhas.Select(l => l.Trim()).Where(l => l.StartsWith("$perfilDeTeste = ", StringComparison.Ordinal)), "o perfil, numa atribuição só");
+        Afirmar.Verdadeiro(PastaDeDados.NomeDePerfilValido("pacote"), "nome de perfil válido");
         int abrir = Linhas("[Diagnostics.Process]::Start($info)").Single();
         Afirmar.Verdadeiro(Linhas("$info.Arguments = '--diagnostico --perfil-de-teste ' + $perfilDeTeste").Any(i => i < abrir), "abre com o perfil de teste");
         int limpar = Linhas("LimparPerfilDeTeste $pastaLocal $perfilDeTeste").Single();
@@ -362,6 +372,11 @@ internal sealed class IsolamentoTestes : IDisposable
         Afirmar.Verdadeiro(Linhas("WindowsBuiltInRole]::Administrator").Single() < abrir, "recusa rodar elevado antes de abrir");
         Afirmar.Verdadeiro(Linhas("GetWindowThreadProcessId($candidato").Length == 1 && Linhas("PostMessage($hwnd, 0x0010").Length == 1, "WM_CLOSE só para a janela do PID aberto");
         Afirmar.Falso(linhas.Any(l => Regex.IsMatch(l, @"Invoke-WebRequest|Invoke-RestMethod|Publish-|gh release|git push", RegexOptions.IgnoreCase)), "nada é publicado nem enviado");
+        // No .exe único, só apaga a pasta de extração que a própria execução criou, direto em %TEMP%\.net\Buzzy, sem link.
+        string fim = string.Join("\n", linhas.SkipWhile(l => !l.Contains("} finally {", StringComparison.Ordinal)));
+        Afirmar.Contem("$extracoesAntes -notcontains $_", string.Join("\n", linhas), "a pasta nova é a que não existia antes");
+        foreach (string trecho in new[] { "ReparsePoint", "(Split-Path -Parent $extracaoNova) -eq $extracaoDoRuntime", "Remove-Item -LiteralPath $extracaoNova" })
+            Afirmar.Contem(trecho, fim, "a limpeza da extração");
     }
 
     [Teste]

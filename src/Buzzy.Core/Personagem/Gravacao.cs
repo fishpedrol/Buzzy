@@ -43,6 +43,7 @@ public static class Gravacao
             ExpressionChange e => $"ExpressionChange expressao={e.Expressao}",
             CmdSetDominantEmotion e => $"CmdSetDominantEmotion emocao={e.Emocao?.ToString() ?? Automatica}",
             CmdSetAdultContent e => $"CmdSetAdultContent ligado={SimNao(e.Ligado)}",
+            CmdSetAdultItemEnabled e => $"CmdSetAdultItemEnabled item={e.Item} ligado={SimNao(e.Ligado)}",
             CmdSetFullscreenMode e => $"CmdSetFullscreenMode ligado={SimNao(e.Ligado)}",
             CmdSetEnergy e => $"CmdSetEnergy nivel={e.Nivel}",
             CmdSetAlwaysOnTop e => $"CmdSetAlwaysOnTop ligado={SimNao(e.Ligado)}",
@@ -129,6 +130,7 @@ public static class Gravacao
             "ExpressionChange" => new ExpressionChange(Enum.Parse<Expressao>(Campo("expressao"))),
             "CmdSetDominantEmotion" => new CmdSetDominantEmotion(LerEmocao(Campo("emocao"))),
             "CmdSetAdultContent" => new CmdSetAdultContent(SimOuNao("ligado", Campo("ligado"))),
+            "CmdSetAdultItemEnabled" => new CmdSetAdultItemEnabled(LerValor<Item>("item", Campo("item"), "não é um item"), SimOuNao("ligado", Campo("ligado"))),
             "CmdSetFullscreenMode" => new CmdSetFullscreenMode(SimOuNao("ligado", Campo("ligado"))),
             "CmdSetEnergy" => new CmdSetEnergy(LerValor<NivelDeEnergia>("nivel", Campo("nivel"), "não é um nível de energia")),
             "CmdSetAlwaysOnTop" => new CmdSetAlwaysOnTop(SimOuNao("ligado", Campo("ligado"))),
@@ -260,14 +262,31 @@ public static class Gravacao
 
     /// <summary>
     /// Preferências como <c>energia=Media telaCheia=sim</c>, com <c>travessia=nao</c> só quando a travessia
-    /// está desligada, <c>emocao=Feliz</c> só com a emoção dominante escolhida (DEC-027), e <c>topo=nao</c> e
-    /// <c>escala=Grande</c> só fora do padrão (DEC-038): com o padrão, as linhas são as de antes da Fase 5 (referências
-    /// gravadas 01 a 05).
+    /// está desligada, <c>emocao=Feliz</c> só com a emoção dominante escolhida (DEC-027), <c>topo=nao</c> e
+    /// <c>escala=Grande</c> só fora do padrão (DEC-038), e <c>adultos=Vodka,Cerveja</c> (ou <c>adultos=nenhum</c>) só
+    /// quando a seleção individual não é a dos nove (DEC-041): a ausência vale os nove, como antes da DEC-041, e as
+    /// referências gravadas 01 a 09 continuam as mesmas, mesmo com o padrão do arquivo de configurações mudado.
     /// </summary>
     private static string DescreverPreferencias(Preferencias p)
         => $"energia={p.Energia} telaCheia={SimNao(p.ModoTelaCheia)}" + (p.AtravessarMonitores ? "" : " travessia=nao")
             + (p.EmocaoDominante is { } emocao ? $" emocao={emocao}" : "") + (p.ConteudoAdulto ? "" : " adulto=nao")
-            + (p.SempreNoTopo ? "" : " topo=nao") + (p.Escala == EscalaDoPersonagem.Media ? "" : $" escala={p.Escala}");
+            + (p.SempreNoTopo ? "" : " topo=nao") + (p.Escala == EscalaDoPersonagem.Media ? "" : $" escala={p.Escala}")
+            + (p.ItensAdultosHabilitados == Preferencias.TodosOsItensAdultos ? "" : $" adultos={DescreverItensAdultos(p.ItensAdultosHabilitados)}");
+
+    private static string DescreverItensAdultos(ConjuntoDeItens itens)
+    {
+        string[] nomes = [.. TabelaDoTamagotchi.Itens.Where(i => TabelaDoTamagotchi.Adulto(i) && itens.Contem(i)).Select(i => i.ToString())];
+        return nomes.Length == 0 ? "nenhum" : string.Join(',', nomes);
+    }
+
+    private static ConjuntoDeItens LerItensAdultos(string valor)
+    {
+        ConjuntoDeItens itens = ConjuntoDeItens.Vazio;
+        if (valor == "nenhum") return itens;
+        foreach (string nome in valor.Split(','))
+            itens = itens.Com(LerValor<Item>("adultos", nome, "não é um item"));
+        return itens;
+    }
 
     /// <summary>Lê o que <see cref="DescreverPreferencias"/> escreve; um campo ausente vale o padrão.</summary>
     private static Preferencias LerPreferencias(Dictionary<string, string> campos) => new(
@@ -279,6 +298,7 @@ public static class Gravacao
         ConteudoAdulto = !campos.TryGetValue("adulto", out string? adulto) || SimOuNao("adulto", adulto),
         SempreNoTopo = !campos.TryGetValue("topo", out string? topo) || SimOuNao("topo", topo),
         Escala = campos.TryGetValue("escala", out string? escala) ? LerValor<EscalaDoPersonagem>("escala", escala, "não é uma escala") : EscalaDoPersonagem.Media,
+        ItensAdultosHabilitados = campos.TryGetValue("adultos", out string? adultos) ? LerItensAdultos(adultos) : Preferencias.TodosOsItensAdultos,
     };
 
     /// <summary>

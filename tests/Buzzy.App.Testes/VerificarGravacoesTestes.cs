@@ -51,10 +51,15 @@ internal sealed class VerificarGravacoesTestes
             Linha("WriteFile", @"C:\Users\Teste\Documents\falhou.txt", resultado: "ACCESS DENIED"),
             Linha("ReadFile", @"C:\Windows\win.ini"),
             Linha("CreateFile", @"C:\Windows\Fonts\arial.ttf", detalhe: "Desired Access: Generic Read, Disposition: Open"),
-            Linha("WriteFile", @"C:\Users\Teste\Documents\de-outro.txt", processo: "Explorer.EXE"));
+            Linha("WriteFile", @"C:\Users\Teste\Documents\de-outro.txt", processo: "Explorer.EXE"),
+            Linha("RegSetValue", @"HKU\S-1-5-21-1111-2222-3333-1001\Software\Microsoft\Windows\CurrentVersion\Run\Buzzy"),
+            Linha("RegSetValue", @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run\Buzzy"),
+            Linha("RegSetValue", @"HKU\S-1-5-21-1111-2222-3333-1001_Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache\y"),
+            Linha("RegSetInfoKey", @"HKLM\System\CurrentControlSet\Control\Nls", detalhe: "KeySetInformationClass: KeySetHandleTagsInformation, Length: 0"),
+            Linha("CreateFile", @"C:\Users\Teste\Documents\so-leitura.txt", detalhe: "Desired Access: Read Attributes, Synchronize, Disposition: Open, OpenResult: Opened"));
         Afirmar.Igual(0, codigo, saida);
-        Afirmar.Contem("Do Buzzy (pasta de dados e Run\\Buzzy): 4", saida);
-        Afirmar.Contem("Do Windows em nome do processo: 2", saida);
+        Afirmar.Contem("Do Buzzy (pasta de dados e Run\\Buzzy): 6", saida);
+        Afirmar.Contem("Do Windows em nome do processo: 3", saida);
         Afirmar.Contem("INESPERADAS: 0", saida);
     }
 
@@ -68,6 +73,12 @@ internal sealed class VerificarGravacoesTestes
             Linha("RegSetValue", @"HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Outro"),
             Linha("RegCreateKey", @"HKCU\Software\Buzzy"),
             Linha("SetRenameInformationFile", @"C:\Users\Teste\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\Buzzy.lnk"),
+            Linha("RegSetValue", @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run\Buzzy"),
+            Linha("RegSetValue", @"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarAl"),
+            Linha("WriteFile", @"C:\Users\Teste\Documents\D3DSCache\x.bin"),
+            Linha("CreateFile", @"C:\Users\Teste\Documents\novo.txt", detalhe: "Desired Access: Read Attributes, Synchronize, Disposition: OpenIf, OpenResult: Created"),
+            Linha("CreateFile", @"C:\Users\Teste\Documents\escrever.txt", detalhe: "Desired Access: Read Attributes, Write Data, Synchronize, Disposition: Open, OpenResult: Opened"),
+            Linha("RegSetInfoKey", @"HKCU\Software\Buzzy", detalhe: "KeySetInformationClass: KeyWriteTimeInformation"),
         })
         {
             (int codigo, string saida) = Rodar(Linha("WriteFile", PastaLocal + @"\Buzzy\settings.json.tmp"), inesperada);

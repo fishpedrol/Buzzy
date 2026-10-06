@@ -26,12 +26,13 @@ internal static class ConteudoAdultoTestes
 
     // ---------------------------------------------------------------- a preferência
 
-    // Ligada por padrão; os itens adultos são os nove da decisão, e os quatro de alívio ficam.
+    // Desligada por padrão desde a DEC-041 (decisão do usuário de 2026-10-05, que substitui o padrão ligado da DEC-033); os
+    // itens adultos são os nove da decisão, e os quatro de alívio ficam.
     [Teste]
-    public static void Padrao_Ligado_EOsItensAdultosSaoOsNoveDaDecisao()
+    public static void Padrao_Desligado_EOsItensAdultosSaoOsNoveDaDecisao()
     {
-        Afirmar.Verdadeiro(Preferencias.Padrao.ConteudoAdulto, "ligado por padrão");
-        Afirmar.Verdadeiro(new Preferencias(NivelDeEnergia.Baixa, false).ConteudoAdulto, "ligado também numa preferência nova");
+        Afirmar.Falso(Preferencias.Padrao.ConteudoAdulto, "desligado por padrão");
+        Afirmar.Falso(new Preferencias(NivelDeEnergia.Baixa, false).ConteudoAdulto, "desligado também numa preferência nova");
         Afirmar.Sequencia(Adultos, TabelaDoTamagotchi.Itens.Where(TabelaDoTamagotchi.Adulto), "os adultos, na ordem do menu");
         Afirmar.Sequencia(Livres, TabelaDoTamagotchi.Itens.Where(i => !TabelaDoTamagotchi.Adulto(i)), "os que ficam, na ordem do menu");
     }
@@ -57,8 +58,8 @@ internal static class ConteudoAdultoTestes
     [Teste]
     public static void AntesDaCarga_Ignorado()
     {
-        Resultado r = Maquina.Aplicar(EstadoDoNucleo.Inicial(1), new CmdSetAdultContent(false), SemFisica());
-        Afirmar.Verdadeiro(r.Estado.Preferencias.ConteudoAdulto, "continua ligado");
+        Resultado r = Maquina.Aplicar(EstadoDoNucleo.Inicial(1), new CmdSetAdultContent(true), SemFisica());
+        Afirmar.Falso(r.Estado.Preferencias.ConteudoAdulto, "continua como o padrão, desligado");
         Afirmar.Igual(0, r.Efeitos.Count, "nenhum efeito");
     }
 
@@ -267,9 +268,20 @@ internal static class ConteudoAdultoTestes
             Afirmar.Igual($"CmdSetAdultContent ligado={(ligado ? "sim" : "nao")}", linha, "a linha do comando");
             Afirmar.Igual(new CmdSetAdultContent(ligado), Gravacao.Ler(linha, Topo, s).Single(), "lida de volta");
         }
-        string desligada = Gravacao.Escrever(new SettingsChanged(Preferencias.Padrao with { ConteudoAdulto = false }), Nome);
+        string desligada = Gravacao.Escrever(new SettingsChanged(PreferenciasDeTeste.Completas with { ConteudoAdulto = false }), Nome);
         Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim adulto=nao", desligada, "desligada aparece");
         Afirmar.Falso(((SettingsChanged)Gravacao.Ler(desligada, Topo, s).Single()).Preferencias.ConteudoAdulto, "lida de volta");
-        Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim", Gravacao.Escrever(new SettingsChanged(Preferencias.Padrao), Nome), "ligada não aparece");
+        Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim", Gravacao.Escrever(new SettingsChanged(PreferenciasDeTeste.Completas), Nome), "ligada não aparece");
+        // DEC-041: a seleção só aparece fora dos nove, e volta igual.
+        string soMd = Gravacao.Escrever(new SettingsChanged(PreferenciasDeTeste.Completas with { ItensAdultosHabilitados = ConjuntoDeItens.Vazio.Com(Item.Md) }), Nome);
+        Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim adultos=Md", soMd, "a seleção fora dos nove aparece");
+        Afirmar.Igual(ConjuntoDeItens.Vazio.Com(Item.Md), ((SettingsChanged)Gravacao.Ler(soMd, Topo, s).Single()).Preferencias.ItensAdultosHabilitados, "lida de volta");
+        string nenhum = Gravacao.Escrever(new SettingsChanged(PreferenciasDeTeste.Completas with { ItensAdultosHabilitados = ConjuntoDeItens.Vazio }), Nome);
+        Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim adultos=nenhum", nenhum, "nenhum");
+        Afirmar.Igual(ConjuntoDeItens.Vazio, ((SettingsChanged)Gravacao.Ler(nenhum, Topo, s).Single()).Preferencias.ItensAdultosHabilitados, "nenhum lido de volta");
+        string comando = Gravacao.Escrever(new CmdSetAdultItemEnabled(Item.Bala, false), Nome);
+        Afirmar.Igual(new CmdSetAdultItemEnabled(Item.Bala, false), Gravacao.Ler(comando, Topo, s).Single(), $"o comando do item, ida e volta ({comando})");
+        string religar = Gravacao.Escrever(new CmdSetAdultItemEnabled(Item.Md, true), Nome);
+        Afirmar.Igual(new CmdSetAdultItemEnabled(Item.Md, true), Gravacao.Ler(religar, Topo, s).Single(), $"religar, ida e volta ({religar})");
     }
 }

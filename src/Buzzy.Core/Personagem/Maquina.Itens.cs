@@ -73,8 +73,8 @@ public static partial class Maquina
         private void InvocarItem(Item item)
         {
             if (!Enum.IsDefined(item) || !_s.Carregado || !_s.Estado.Visivel() || _s.Topologia is null || _s.Lugar is null || _cfg.MaximoDeItens < 1) return;
-            // Com o conteúdo adulto desligado (DEC-033), um item adulto não nasce.
-            if (!_s.Preferencias.ConteudoAdulto && ItemAdulto(item)) return;
+            // A chave geral e a seleção individual (DEC-033/041) são ambas exigidas para invocar um item adulto.
+            if (ItemAdulto(item) && (!_s.Preferencias.ConteudoAdulto || !_s.Preferencias.ItensAdultosHabilitados.Contem(item))) return;
             while (_s.Itens.Quantidade >= _cfg.MaximoDeItens)
             {
                 if (_s.Itens.Todos.FirstOrDefault(i => !i.NaMao) is not { } maisAntigo) return;
@@ -224,12 +224,13 @@ public static partial class Maquina
         /// <summary>
         /// Se ele pode fumar um baseado por conta própria agora (<see cref="AcoesAutonomas.FumarBaseado"/>; pedido do usuário
         /// de 2026-10-01, 19:10): só com a chave do tamagotchi ligada, em IDLE, no chão (a âncora na borda de baixo da área
-        /// útil do monitor dele), com o conteúdo adulto ligado (DEC-033), sem estar escondido, com a autonomia livre, sem item na mão do usuário e sem a onda Chapado
+        /// útil do monitor dele), com o conteúdo adulto ligado e o baseado selecionado (DEC-033/041), sem estar escondido, com a autonomia livre, sem item na mão do usuário e sem a onda Chapado
         /// ou a paranoia na frente, para ele não emendar. A agenda só decide visível, com a autonomia livre e sem item na mão;
         /// a regra repete as três condições para valer sozinha.
         /// </summary>
         private bool PodeFumarPorContaPropria
-            => _cfg.Tamagotchi && _s.Preferencias.ConteudoAdulto && _s.Estado == Estado.Idle && _s.Esconderijo == LadoDoEsconderijo.Nenhum
+            => _cfg.Tamagotchi && _s.Preferencias.ConteudoAdulto && _s.Preferencias.ItensAdultosHabilitados.Contem(Item.Baseado)
+                && _s.Estado == Estado.Idle && _s.Esconderijo == LadoDoEsconderijo.Nenhum
                 && !_s.AutonomiaPausada && !_s.PainelAberto && !AtentoAoItem
                 && _s.Lugar is { } lugar && lugar.Ancora.Y == lugar.Monitor.AreaUtil.Base
                 && !(ComOnda && _s.Onda!.Tipo is Onda.Chapado or Onda.Paranoico);

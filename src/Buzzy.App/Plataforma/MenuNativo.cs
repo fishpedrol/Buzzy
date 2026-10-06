@@ -63,7 +63,15 @@ internal readonly record struct EscolhaDoMenu(ComandoDoMenu Comando, Expressao? 
 /// <param name="PainelDeEnergia">Se o painel de energia existe (DEC-038): "Energia…", desabilitado com o Buzzy escondido.</param>
 /// <param name="Configuracoes">Se as configurações existem (DEC-038): "Configurações…".</param>
 internal sealed record ModeloDoMenu(bool BuzzyVisivel, bool MovimentoPausado, Expressao? EmocaoDominante, bool AltoContraste, bool Tamagotchi, int ItensNaTela = 0, bool ConteudoAdulto = true, bool ModoTelaCheia = true,
-    bool PainelDeEnergia = false, bool Configuracoes = false);
+    bool PainelDeEnergia = false, bool Configuracoes = false)
+{
+    /// <summary>
+    /// Os itens adultos permitidos individualmente (DEC-041): no menu, um adulto só aparece com a chave geral ligada e ele
+    /// marcado. Os padrões deste modelo mostram tudo (a chave ligada e os nove): em produção, os dois valores vêm sempre do
+    /// estado do núcleo (<see cref="MenuNativo"/> ao abrir), e o padrão do arquivo de configurações não mora aqui.
+    /// </summary>
+    internal ConjuntoDeItens ItensAdultosHabilitados { get; init; } = Preferencias.TodosOsItensAdultos;
+}
 
 /// <summary>O tipo de uma linha do menu.</summary>
 internal enum TipoDeEntrada
@@ -193,7 +201,8 @@ internal static class MenuNativo
         for (int i = 0; i < TabelaDoTamagotchi.Itens.Count; i++)
         {
             Item item = TabelaDoTamagotchi.Itens[i];
-            if (!modelo.ConteudoAdulto && TabelaDoTamagotchi.Adulto(item)) continue;
+            if (TabelaDoTamagotchi.Adulto(item)
+                && (!modelo.ConteudoAdulto || !modelo.ItensAdultosHabilitados.Contem(item))) continue;
             itens.Add(new(TipoDeEntrada.Comando, Textos.Item(item), IdDoPrimeiroItem + i,
                 Item: modelo.AltoContraste ? null : PoseDoPersonagem.NomeDoItem(item)));
         }
@@ -211,10 +220,11 @@ internal static class MenuNativo
     internal static ModeloDoMenu ModeloAoAbrir(Nucleo? nucleo, bool visivel, bool altoContraste)
         => new(visivel, nucleo?.Estado.AutonomiaPausada ?? false, nucleo?.Estado.Preferencias.EmocaoDominante,
             AltoContraste: altoContraste, Tamagotchi: nucleo?.Configuracao.Tamagotchi ?? false, ItensNaTela: nucleo?.Estado.Itens.Quantidade ?? 0,
-            ConteudoAdulto: nucleo?.Estado.Preferencias.ConteudoAdulto ?? true,
+            ConteudoAdulto: (nucleo?.Estado.Preferencias ?? Preferencias.Padrao).ConteudoAdulto,
             ModoTelaCheia: nucleo?.Estado.Preferencias.ModoTelaCheia ?? true,
             PainelDeEnergia: nucleo?.Configuracao.PainelDeEnergiaDisponivel ?? false,
-            Configuracoes: nucleo?.Configuracao.ConfiguracoesDisponiveis ?? false);
+            Configuracoes: nucleo?.Configuracao.ConfiguracoesDisponiveis ?? false)
+        { ItensAdultosHabilitados = (nucleo?.Estado.Preferencias ?? Preferencias.Padrao).ItensAdultosHabilitados };
 
     /// <summary>
     /// O DPI dos ícones do menu: o do monitor em que ele abre (o que contém o ponto ou, num vão, o mais próximo), e não o do

@@ -36,7 +36,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void Banana_PeloMenuDoPersonagem_AJanelaApareceSemAtivar_CaiEParaNoChaoAoLadoELogoAbaixoDele()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         MonitorDoDesktop principal = Principal();
         RetanguloPx corpo = b.RetanguloDaJanela();
@@ -84,7 +84,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void ArrasteAteOPersonagem_EleUsaOItemEAJanelaSome_EOPressNoMeioDoUsoVaiParaPressedNoMesmoEvento()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
         ItemNaTela banana = Invocar(b, () => AbrirPeloPersonagem(b, personagem), 'b', "Banana");
@@ -121,7 +121,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void LancaPerfume_OTemporizadorDaOndaDisparaUmaVezEReagenda_EOPendenteECanceladoAoSair()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
         ItemNaTela lanca = Invocar(b, () => AbrirPeloPersonagem(b, personagem), 'l', "LancaPerfume");
@@ -167,7 +167,7 @@ internal sealed class ItensIntegracaoTestes
         // vai para a frente. No fim do uso que a começou, ele olha pro teto na hora (a pose da arte, com a cara dela e o suor
         // por cima); depois, parado, a cara paranoica com o suor. A água acalma um passo: o pico vira queda.
         ulong semente = SementeEmQueOPrimeiroSorteioDaParanoiaSai();
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(semente: semente);
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(semente: semente, comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
         DadosDaOnda paranoia = TabelaDoTamagotchi.DaOnda(Onda.Paranoico);
@@ -248,7 +248,7 @@ internal sealed class ItensIntegracaoTestes
         DadosDaOnda chapado = TabelaDoTamagotchi.DaOnda(Onda.Chapado);
         string Ms(TimeSpan t) => ((long)t.TotalMilliseconds).ToString(CultureInfo.InvariantCulture);
 
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(pausado: false, semente: semente);
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(pausado: false, semente: semente, comOsNoveAdultos: true);
         b.Esperar(e => e.Chave == "NUCLEO" && e["semente"] == semente.ToString(CultureInfo.InvariantCulture), 5000, "semente aplicada");
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
@@ -284,7 +284,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void SoltarLonge_OItemCaiDeOndeFoiSolto_SemUso()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         RetanguloPx area = Principal().AreaUtil;
         RetanguloPx corpo = b.RetanguloDaJanela();
@@ -327,7 +327,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void BotaoDireitoNumItem_AbreOMenu_ERecolherFechaAsJanelas_EOMenuDaBandejaTambemInvoca()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         RetanguloPx area = Principal().AreaUtil;
         long inicio = BuzzyEmTeste.MarcaDoLog();
@@ -362,7 +362,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void EsconderEMostrar_AsJanelasDosItensAcompanham_EVoltamLogoAbaixoDoPersonagem()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
         ItemNaTela cerveja = Invocar(b, () => AbrirPeloPersonagem(b, personagem), 'c', "Cerveja");
@@ -413,7 +413,7 @@ internal sealed class ItensIntegracaoTestes
     public void ArrastarOPersonagemComUmItemNaTela_OItemNaoSeMexe_EContinuaLogoAbaixoDele()
     {
         // Revisão de regras, lacuna 5: o arraste do personagem tem árbitro próprio; os itens à vista não são tocados por ele.
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         RetanguloPx area = Principal().AreaUtil;
         RetanguloPx corpo = b.RetanguloDaJanela();
@@ -460,7 +460,7 @@ internal sealed class ItensIntegracaoTestes
         // Revisão de correção, achado 2: o menu tira a captura antes de esconder, mas o Windows minimizar o personagem (ou a
         // sessão bloquear) chega ao núcleo com o item na mão. O núcleo encerra o gesto (LIBERAR_CAPTURA_DO_ITEM): a janela
         // solta o mouse, o árbitro dos itens esquece o gesto e o soltar que chega depois não vira nada.
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         RetanguloPx area = Principal().AreaUtil;
         long inicio = BuzzyEmTeste.MarcaDoLog();
@@ -522,7 +522,7 @@ internal sealed class ItensIntegracaoTestes
         // nelas: só muda quando o item aparece, no gesto sobre ele e quando o personagem reaparece (DEC-028, item 22;
         // SECURITY.md 2), e a conferência tardia é um temporizador (revisão do bloco P6-P9). Posta acima do personagem por
         // outro agente, a banana fica lá.
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
         ItemNaTela banana = Invocar(b, () => AbrirPeloPersonagem(b, personagem), 'b', "Banana");
@@ -565,7 +565,7 @@ internal sealed class ItensIntegracaoTestes
     [Teste]
     public void SairComItensNaTelaEUmNaMao_Codigo0_ACapturaSoltaENenhumaJanelaFicaViva()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx personagem = Preparar(b);
         long inicio = BuzzyEmTeste.MarcaDoLog();
         ItemNaTela banana = Invocar(b, () => AbrirPeloPersonagem(b, personagem), 'b', "Banana");
@@ -605,7 +605,7 @@ internal sealed class ItensIntegracaoTestes
     public void ConteudoAdulto_PeloMenu_TiraAVodka_EscondeOsAdultos_EVoltaAoReabrir()
     {
         string icones = System.Windows.SystemParameters.HighContrast ? "0" : "18";
-        using (BuzzyEmTeste b = BuzzyEmTeste.Iniciar())
+        using (BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true))
         {
             PontoPx personagem = Preparar(b);
             long inicio = BuzzyEmTeste.MarcaDoLog();

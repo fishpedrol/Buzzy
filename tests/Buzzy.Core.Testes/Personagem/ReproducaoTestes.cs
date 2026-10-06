@@ -168,14 +168,14 @@ internal static class ReproducaoTestes
             new SettingsChanged(new Preferencias(NivelDeEnergia.Baixa, false)), new SettingsChanged(new Preferencias(NivelDeEnergia.Alta, true, AtravessarMonitores: false)),
             new MovementSignal(SinalDeMovimento.BordaSuperior),
             new AutonomyTimer(12), new ExpressionChange(Expressao.Travesso),
-            new Loaded(umMonitor, new PosicaoDoPersonagem(TopologiasDeExemplo.Display1, 0.5, 1, new PontoPx(960, 1032)), Preferencias.Padrao),
-            new Loaded(umMonitor, new PosicaoDoPersonagem(TopologiasDeExemplo.Display2, 0.25, 1, new PontoPx(-1440, 1032)) { TelaDoMonitor = new RetanguloPx(-1920, 0, 0, 1080) }, Preferencias.Padrao),
+            new Loaded(umMonitor, new PosicaoDoPersonagem(TopologiasDeExemplo.Display1, 0.5, 1, new PontoPx(960, 1032)), PreferenciasDeTeste.Completas),
+            new Loaded(umMonitor, new PosicaoDoPersonagem(TopologiasDeExemplo.Display2, 0.25, 1, new PontoPx(-1440, 1032)) { TelaDoMonitor = new RetanguloPx(-1920, 0, 0, 1080) }, PreferenciasDeTeste.Completas),
             new Loaded(umMonitor, null, new Preferencias(NivelDeEnergia.Baixa, false, AtravessarMonitores: false)),
             new TopologyChanged(umMonitor),
             new CmdSetDominantEmotion(Expressao.Determinado), new CmdSetDominantEmotion(null), new CmdSetDominantEmotion((Expressao)99),
             new SettingsChanged(new Preferencias(NivelDeEnergia.Alta, true) { EmocaoDominante = Expressao.Travesso }),
-            new Loaded(umMonitor, null, Preferencias.Padrao with { EmocaoDominante = Expressao.Pensativo }),
-            new Loaded(umMonitor, new PosicaoDoPersonagem(TopologiasDeExemplo.Display1, 0.5, 0.2, new PontoPx(960, 206)), Preferencias.Padrao) { Esconderijo = LadoDoEsconderijo.Esquerda, PresoPeloUsuario = true },
+            new Loaded(umMonitor, null, PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Pensativo }),
+            new Loaded(umMonitor, new PosicaoDoPersonagem(TopologiasDeExemplo.Display1, 0.5, 0.2, new PontoPx(960, 206)), PreferenciasDeTeste.Completas) { Esconderijo = LadoDoEsconderijo.Esquerda, PresoPeloUsuario = true },
             new ItemEffectTimer(5), new ItemEffectTimer(0), new ExpressionChange(Expressao.Bebado),
             new CmdSummonItem(Item.LancaPerfume), new CmdSummonItem((Item)13), new CmdClearItems(), new ItemPress(2, new PontoPx(-3, 8)), new ItemDragStart(2),
             new ItemDragMove(2, new PontoPx(1700, 990)), new ItemDragEnd(2, new PontoPx(1701, 991)), new ItemRelease(7),
@@ -201,12 +201,12 @@ internal static class ReproducaoTestes
         // DEC-038: topo=nao e escala=Grande só fora do padrão; com o padrão, as linhas de antes; ida e volta pelo texto.
         Topologia umMonitor = TopologiasDeExemplo.UmMonitor;
         EstadoDoNucleo estado = EstadoDoNucleo.Inicial(1);
-        Preferencias fora = Preferencias.Padrao with { SempreNoTopo = false, Escala = EscalaDoPersonagem.Grande };
+        Preferencias fora = PreferenciasDeTeste.Completas with { SempreNoTopo = false, Escala = EscalaDoPersonagem.Grande };
         Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim topo=nao escala=Grande", Gravacao.DescreverEfeito(new GravarPreferencias(fora)), "fora do padrão");
-        Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim", Gravacao.DescreverEfeito(new GravarPreferencias(Preferencias.Padrao)), "padrão: como antes");
+        Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim", Gravacao.DescreverEfeito(new GravarPreferencias(PreferenciasDeTeste.Completas)), "padrão: como antes");
         Afirmar.Igual(new SettingsChanged(fora), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim topo=nao escala=Grande", _ => umMonitor, estado).Single(), "ida e volta");
-        Afirmar.Igual(new SettingsChanged(Preferencias.Padrao with { Escala = EscalaDoPersonagem.Pequena }), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim escala=Pequena", _ => umMonitor, estado).Single(), "só a escala");
-        Afirmar.Igual(new SettingsChanged(Preferencias.Padrao), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim topo=sim", _ => umMonitor, estado).Single(), "topo=sim");
+        Afirmar.Igual(new SettingsChanged(PreferenciasDeTeste.Completas with { Escala = EscalaDoPersonagem.Pequena }), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim escala=Pequena", _ => umMonitor, estado).Single(), "só a escala");
+        Afirmar.Igual(new SettingsChanged(PreferenciasDeTeste.Completas), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim topo=sim", _ => umMonitor, estado).Single(), "topo=sim");
         Afirmar.Lanca<FormatException>(() => Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim topo=talvez", _ => umMonitor, estado), "topo=talvez");
         Afirmar.Lanca<FormatException>(() => Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim escala=Enorme", _ => umMonitor, estado), "escala=Enorme");
     }
@@ -216,23 +216,23 @@ internal static class ReproducaoTestes
     {
         Topologia umMonitor = TopologiasDeExemplo.UmMonitor;
         EstadoDoNucleo estado = EstadoDoNucleo.Inicial(1);
-        var desligada = new Preferencias(NivelDeEnergia.Alta, false, AtravessarMonitores: false);
+        var desligada = new Preferencias(NivelDeEnergia.Alta, false, AtravessarMonitores: false).Completa();
 
         Afirmar.Igual("SettingsChanged energia=Alta telaCheia=nao travessia=nao", Gravacao.Escrever(new SettingsChanged(desligada), _ => "UmMonitor"), "SETTINGS_CHANGED");
         Afirmar.Igual("Loaded topologia=UmMonitor energia=Media telaCheia=sim travessia=nao",
-            Gravacao.Escrever(new Loaded(umMonitor, null, Preferencias.Padrao with { AtravessarMonitores = false }), _ => "UmMonitor"), "Loaded");
+            Gravacao.Escrever(new Loaded(umMonitor, null, PreferenciasDeTeste.Completas with { AtravessarMonitores = false }), _ => "UmMonitor"), "Loaded");
         Afirmar.Igual("GravarPreferencias energia=Alta telaCheia=nao travessia=nao", Gravacao.DescreverEfeito(new GravarPreferencias(desligada)), "efeito");
 
         Afirmar.Igual("SettingsChanged energia=Alta telaCheia=nao", Gravacao.Escrever(new SettingsChanged(desligada with { AtravessarMonitores = true }), _ => "UmMonitor"), "ligada: como antes");
-        Afirmar.Igual("Loaded topologia=UmMonitor energia=Media telaCheia=sim", Gravacao.Escrever(new Loaded(umMonitor, null, Preferencias.Padrao), _ => "UmMonitor"), "padrão: como antes");
-        Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim", Gravacao.DescreverEfeito(new GravarPreferencias(Preferencias.Padrao)), "efeito com o padrão: como antes");
+        Afirmar.Igual("Loaded topologia=UmMonitor energia=Media telaCheia=sim", Gravacao.Escrever(new Loaded(umMonitor, null, PreferenciasDeTeste.Completas), _ => "UmMonitor"), "padrão: como antes");
+        Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim", Gravacao.DescreverEfeito(new GravarPreferencias(PreferenciasDeTeste.Completas)), "efeito com o padrão: como antes");
 
         // Ida e volta; sem o campo vale o padrão (ligada), e só "sim" e "nao" são aceitos.
         Afirmar.Igual(new SettingsChanged(desligada), Gravacao.Ler("SettingsChanged energia=Alta telaCheia=nao travessia=nao", _ => umMonitor, estado).Single(), "desligada");
-        Afirmar.Igual(new SettingsChanged(Preferencias.Padrao), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim", _ => umMonitor, estado).Single(), "sem o campo, ligada");
-        Afirmar.Igual(new SettingsChanged(Preferencias.Padrao), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim travessia=sim", _ => umMonitor, estado).Single(), "travessia=sim");
+        Afirmar.Igual(new SettingsChanged(PreferenciasDeTeste.Completas), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim", _ => umMonitor, estado).Single(), "sem o campo, ligada");
+        Afirmar.Igual(new SettingsChanged(PreferenciasDeTeste.Completas), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim travessia=sim", _ => umMonitor, estado).Single(), "travessia=sim");
         Loaded carga = (Loaded)Gravacao.Ler("Loaded topologia=UmMonitor energia=Baixa telaCheia=sim travessia=nao", _ => umMonitor, estado).Single();
-        Afirmar.Igual(new Preferencias(NivelDeEnergia.Baixa, true, false), carga.Preferencias, "Loaded com a travessia desligada");
+        Afirmar.Igual(new Preferencias(NivelDeEnergia.Baixa, true, false).Completa(), carga.Preferencias, "Loaded com a travessia desligada");
         Afirmar.Lanca<FormatException>(() => Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim travessia=talvez", _ => umMonitor, estado), "travessia=talvez");
     }
 
@@ -244,7 +244,7 @@ internal static class ReproducaoTestes
     {
         Topologia umMonitor = TopologiasDeExemplo.UmMonitor;
         EstadoDoNucleo estado = EstadoDoNucleo.Inicial(1);
-        Preferencias feliz = Preferencias.Padrao with { EmocaoDominante = Expressao.Feliz };
+        Preferencias feliz = PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Feliz };
         string Escrever(Evento e) => Gravacao.Escrever(e, _ => "UmMonitor");
 
         Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim emocao=Feliz", Escrever(new SettingsChanged(feliz)), "SETTINGS_CHANGED");
@@ -253,12 +253,12 @@ internal static class ReproducaoTestes
         Afirmar.Igual("CmdSetDominantEmotion emocao=Feliz", Escrever(new CmdSetDominantEmotion(Expressao.Feliz)), "comando");
         Afirmar.Igual("CmdSetDominantEmotion emocao=Automatica", Escrever(new CmdSetDominantEmotion(null)), "comando com a automática");
 
-        Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim", Escrever(new SettingsChanged(Preferencias.Padrao)), "automática: como antes");
-        Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim", Gravacao.DescreverEfeito(new GravarPreferencias(Preferencias.Padrao)), "efeito com a automática: como antes");
+        Afirmar.Igual("SettingsChanged energia=Media telaCheia=sim", Escrever(new SettingsChanged(PreferenciasDeTeste.Completas)), "automática: como antes");
+        Afirmar.Igual("GravarPreferencias energia=Media telaCheia=sim", Gravacao.DescreverEfeito(new GravarPreferencias(PreferenciasDeTeste.Completas)), "efeito com a automática: como antes");
 
         // Ida e volta; sem o campo vale a automática; um nome que não é de Expressao não é lido.
         Afirmar.Igual(new SettingsChanged(feliz), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim emocao=Feliz", _ => umMonitor, estado).Single(), "com a emoção");
-        Afirmar.Igual(new SettingsChanged(Preferencias.Padrao), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim", _ => umMonitor, estado).Single(), "sem o campo, automática");
+        Afirmar.Igual(new SettingsChanged(PreferenciasDeTeste.Completas), Gravacao.Ler("SettingsChanged energia=Media telaCheia=sim", _ => umMonitor, estado).Single(), "sem o campo, automática");
         Afirmar.Igual(new CmdSetDominantEmotion(null), Gravacao.Ler("CmdSetDominantEmotion emocao=Automatica", _ => umMonitor, estado).Single(), "comando com a automática");
         Afirmar.Lanca<FormatException>(() => Gravacao.Ler("CmdSetDominantEmotion", _ => umMonitor, estado), "comando sem a emoção");
         Afirmar.Lanca<FormatException>(() => Gravacao.Ler("CmdSetDominantEmotion emocao=Zangado", _ => umMonitor, estado), "emocao=Zangado");
@@ -292,12 +292,12 @@ internal static class ReproducaoTestes
         var posicao = new PosicaoDoPersonagem(TopologiasDeExemplo.Display1, 0.5, 1, new PontoPx(960, 1032)) { TelaDoMonitor = TopologiasDeExemplo.Ret(0, 0, 1920, 1080) };
         string Escrever(Evento e) => Gravacao.Escrever(e, _ => "UmMonitor");
 
-        var comPostura = new Loaded(umMonitor, posicao, Preferencias.Padrao) { Esconderijo = LadoDoEsconderijo.Direita, PresoPeloUsuario = true };
+        var comPostura = new Loaded(umMonitor, posicao, PreferenciasDeTeste.Completas) { Esconderijo = LadoDoEsconderijo.Direita, PresoPeloUsuario = true };
         Afirmar.Igual(@"Loaded topologia=UmMonitor energia=Media telaCheia=sim posicao=\\.\DISPLAY1;0.5;1;960;1032;0;0;1920;1080 esconderijo=Direita preso=sim", Escrever(comPostura), "Loaded com a postura");
         Loaded lido = (Loaded)Gravacao.Ler(Escrever(comPostura), _ => umMonitor, estado).Single();
         Afirmar.Igual((posicao, LadoDoEsconderijo.Direita, true), (lido.PosicaoSalva, lido.Esconderijo, lido.PresoPeloUsuario), "ida e volta");
         Afirmar.Igual(@"Loaded topologia=UmMonitor energia=Media telaCheia=sim posicao=\\.\DISPLAY1;0.5;1;960;1032;0;0;1920;1080",
-            Escrever(new Loaded(umMonitor, posicao, Preferencias.Padrao)), "Loaded sem postura: como antes");
+            Escrever(new Loaded(umMonitor, posicao, PreferenciasDeTeste.Completas)), "Loaded sem postura: como antes");
         Loaded semPostura = (Loaded)Gravacao.Ler("Loaded topologia=UmMonitor", _ => umMonitor, estado).Single();
         Afirmar.Igual((LadoDoEsconderijo.Nenhum, false), (semPostura.Esconderijo, semPostura.PresoPeloUsuario), "sem os campos: nenhuma borda e solto");
 

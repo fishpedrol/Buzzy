@@ -217,6 +217,18 @@
     <value>Itens e efeitos adultos do tamagotchi.</value>
     <comment>Ajuda da caixa do conteúdo adulto.</comment>
   </data>
+  <data name="ConfigItensAdultos" xml:space="preserve">
+    <value>Itens adultos</value>
+    <comment>Título da lista de itens configuráveis nas Configurações.</comment>
+  </data>
+  <data name="ConfigItensAdultosAjuda" xml:space="preserve">
+    <value>Escolha o que fica disponível no menu. As marcas são preservadas com o conteúdo adulto desligado.</value>
+    <comment>Ajuda da lista de itens adultos.</comment>
+  </data>
+  <data name="ConfigItemAdultoAjuda" xml:space="preserve">
+    <value>Desmarcar remove este item da tela e do menu e encerra só o uso e o efeito dele.</value>
+    <comment>Ajuda de cada caixa de item adulto.</comment>
+  </data>
   <data name="ConfigTamanho" xml:space="preserve">
     <value>Tamanho do Buzzy</value>
     <comment>Grupo do tamanho (DEC-038, item 9).</comment>

@@ -146,7 +146,7 @@ internal static class ItensTestes
         for (ulong semente = 1; semente < 50; semente++)
         {
             var c = new Cenario(SemFisica(), semente);
-            c.Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao));
+            c.Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, PreferenciasDeTeste.Completas));
             c.AplicarCom(SemFisica() with { Acoes = AcoesAutonomas.Andar }, new AutonomyTimer(c.Atual.Geracao));
             if (c.Atual.Direcao != Direcao.Esquerda) continue;
             c.Aplicar(new Press(Cenario.PontoOpaco), new DragStart(), new DragMove(new PontoPx(960, 1000)), new DragEnd(new PontoPx(960, 1000)));
@@ -733,7 +733,7 @@ internal static class ItensTestes
             DosItens(c.Efeitos), "as janelas voltam");
 
         // Com o modo desligado, a tela cheia não esconde nada.
-        Cenario semModo = Cenario.Parado(SemFisica(), TopologiasDeExemplo.LadoALado).Aplicar(new SettingsChanged(new Preferencias(NivelDeEnergia.Media, false)));
+        Cenario semModo = Cenario.Parado(SemFisica(), TopologiasDeExemplo.LadoALado).Aplicar(new SettingsChanged(new Preferencias(NivelDeEnergia.Media, false).Completa()));
         ItemNoMundo noDois = InvocarEAssentar(semModo, Item.Bala);
         semModo.ArrastarItem(noDois.Id, new PontoPx(2500, 1032));
         semModo.Aplicar(new FullscreenTargetsChanged(new MonitoresOcupados([TopologiasDeExemplo.Display2])));

@@ -148,6 +148,8 @@ internal static class InvariantesTestes
         // A chave do conteúdo adulto (DEC-033): desligada no meio do fluxo, com algo em curso, recusando item adulto e
         // terminando um uso adulto (invariante 30).
         "30: desligado no meio do fluxo", "30: desligado com algo do tamagotchi em curso", "30: item adulto recusado", "30: o uso adulto termina ao desligar",
+        // A seleção individual (DEC-041): um item desmarcado com instância, uso ou carga dele em curso (invariante 36).
+        "36: desmarcado com algo dele em curso",
     ];
 
     /// <summary>Situações da execução com o tamagotchi e a emoção dominante (as da emoção, com itens e ondas).</summary>
@@ -211,6 +213,22 @@ internal static class InvariantesTestes
         /// <summary>Os itens de substância distintos do episódio, na ordem do enum.</summary>
         public SortedSet<Item> Distintas { get; } = [];
 
+        /// <summary>Quantas vezes cada item entrou no episódio, para desfazer um item desmarcado (DEC-041).</summary>
+        public Dictionary<Item, int> PorItem { get; } = [];
+
+        /// <summary>
+        /// Um item adulto desmarcado (DEC-041, item 3): sai da carga, dos distintos e da sintética; o sorteio feito fica feito.
+        /// Sem nenhum item no episódio, a carga volta toda a zero, como no fim do episódio.
+        /// </summary>
+        public void TirarItem(Item item, Item[] sinteticos)
+        {
+            if (!PorItem.Remove(item, out int vezes)) return;
+            Carga = Math.Max(0, Carga - vezes);
+            Distintas.Remove(item);
+            Sintetica = Distintas.Any(sinteticos.Contains);
+            if (PorItem.Count == 0) ZerarACarga();
+        }
+
         /// <summary>Se o episódio é uma mistura com sintética: uma sintética e pelo menos dois itens distintos.</summary>
         public bool MisturaComSintetica => Sintetica && Distintas.Count >= 2;
 
@@ -229,6 +247,7 @@ internal static class InvariantesTestes
             Carga = 0;
             Sintetica = false;
             Distintas.Clear();
+            PorItem.Clear();
             Sorteada = false;
         }
 
@@ -966,6 +985,21 @@ internal static class InvariantesTestes
                 Contar("30: desligado com algo do tamagotchi em curso");
         }
 
+        // ------------------------------------------------ 36: um item adulto desmarcado não está no mundo nem em uso (DEC-041)
+        if (depois.Carregado)
+        {
+            Verificar(depois.Itens.Todos.All(i => cfg.TabelaDeItens(i.Item).Alivio || depois.Preferencias.ItensAdultosHabilitados.Contem(i.Item)),
+                () => $"invariante 36: {onde()}: item desmarcado no mundo ({depois.Itens}; marcados {depois.Preferencias.ItensAdultosHabilitados})");
+            Verificar(depois.Uso is not { } emUso || cfg.TabelaDeItens(emUso.Item).Alivio || depois.Preferencias.ItensAdultosHabilitados.Contem(emUso.Item),
+                () => $"invariante 36: {onde()}: usando {depois.Uso?.Item}, desmarcado");
+            Verificar(depois.Carga.PorItem.Total == depois.Carga.Substancias
+                && Preferencias.TodosOsItensAdultos.Itens.All(i => (depois.Carga.PorItem.Contagem(i) > 0) == depois.Carga.Distintas.Contem(i)),
+                () => $"invariante 36: {onde()}: a proveniência da carga não bate ({depois.Carga})");
+            if (evento is CmdSetAdultItemEnabled { Ligado: false } d && antes.Preferencias.ItensAdultosHabilitados.Contem(d.Item)
+                && (antes.Itens.Todos.Any(i => i.Item == d.Item) || antes.Uso?.Item == d.Item || antes.Carga.Distintas.Contem(d.Item)))
+                Contar("36: desmarcado com algo dele em curso");
+        }
+
         // ------------------------------------------------ 28: os itens no mundo e as janelas deles
         Verificar(depois.Itens.Quantidade <= cfg.MaximoDeItens, () => $"invariante 28: {onde()}: {depois.Itens.Quantidade} itens");
         foreach (ItemNoMundo item in depois.Itens.Todos)
@@ -1048,6 +1082,10 @@ internal static class InvariantesTestes
                 CmdClearItems => MotivoDaRemocao.Recolhido,
                 // Desligar o conteúdo adulto (DEC-033) recolhe só os itens adultos.
                 CmdSetAdultContent { Ligado: false } or SettingsChanged { Preferencias.ConteudoAdulto: false } when !cfg.TabelaDeItens(antes.Itens.PorId(remocao.Id)!.Item).Alivio => MotivoDaRemocao.Recolhido,
+                // Desmarcar um item adulto (DEC-041) recolhe só as instâncias dele.
+                CmdSetAdultItemEnabled { Ligado: false } desmarcado when antes.Itens.PorId(remocao.Id)!.Item == desmarcado.Item => MotivoDaRemocao.Recolhido,
+                SettingsChanged mudancaDosItens when !cfg.TabelaDeItens(antes.Itens.PorId(remocao.Id)!.Item).Alivio
+                    && !mudancaDosItens.Preferencias.ItensAdultosHabilitados.Contem(antes.Itens.PorId(remocao.Id)!.Item) => MotivoDaRemocao.Recolhido,
                 CmdSummonItem => MotivoDaRemocao.Substituido,
                 _ => (MotivoDaRemocao)(-1),
             };
@@ -1059,11 +1097,17 @@ internal static class InvariantesTestes
         if (evento is CmdSummonItem invocacao)
         {
             bool aceita = antes.Carregado && antes.Estado.Visivel() && Enum.IsDefined(invocacao.Item) && antes.Lugar is not null;
-            // Com o conteúdo adulto desligado (DEC-033), um item adulto também é ignorado.
+            // Com o conteúdo adulto desligado (DEC-033), um item adulto também é ignorado; e, com ele ligado, um item adulto
+            // desmarcado individualmente (DEC-041).
             if (aceita && !antes.Preferencias.ConteudoAdulto && !cfg.TabelaDeItens(invocacao.Item).Alivio)
             {
                 aceita = false;
                 Contar("30: item adulto recusado");
+            }
+            if (aceita && !cfg.TabelaDeItens(invocacao.Item).Alivio && !antes.Preferencias.ItensAdultosHabilitados.Contem(invocacao.Item))
+            {
+                aceita = false;
+                Contar("DEC-041: item adulto desmarcado recusado");
             }
             if (!aceita)
             {
@@ -1268,7 +1312,11 @@ internal static class InvariantesTestes
             // Desligar o conteúdo adulto (DEC-033) termina o uso adulto e tira as ondas de substância no mesmo evento.
             bool desligouOAdulto = antes.Preferencias.ConteudoAdulto && !depois.Preferencias.ConteudoAdulto;
             if (desligouOAdulto) Contar("30: o uso adulto termina ao desligar");
-            Verificar(desligouOAdulto || (depois.Onda == antes.Onda && depois.OndaDeFundo == antes.OndaDeFundo), () => $"C16: {onde()}: o uso acabou e a onda mudou ({antes.Onda} → {depois.Onda})");
+            // Desmarcar um item adulto (DEC-041, item 3) também tira a parte dele das ondas, no mesmo evento.
+            bool desmarcouUmItem = (evento is CmdSetAdultItemEnabled { Ligado: false } d && antes.Preferencias.ItensAdultosHabilitados.Contem(d.Item))
+                || (evento is SettingsChanged s && antes.Preferencias.ItensAdultosHabilitados.Itens.Any(i => !s.Preferencias.ItensAdultosHabilitados.Contem(i)));
+            if (desmarcouUmItem) Contar("DEC-041: o uso termina ao desmarcar o item");
+            Verificar(desligouOAdulto || desmarcouUmItem || (depois.Onda == antes.Onda && depois.OndaDeFundo == antes.OndaDeFundo), () => $"C16: {onde()}: o uso acabou e a onda mudou ({antes.Onda} → {depois.Onda})");
             bool peloFim = transicoes.Count > 0 && transicoes[0].Regra.StartsWith("USING: fim do uso", StringComparison.Ordinal);
             if (peloFim)
             {
@@ -1386,6 +1434,12 @@ internal static class InvariantesTestes
         // de substância (pela transcrição; a paranoia é de substância). A paranoia só começa num uso de substância de um
         // episódio de mistura com sintética, e só pelo sorteio; na frente, o episódio é uma mistura com sintética que já
         // sorteou; e ela nunca fica no fundo: a precedência dela é a maior.
+        // Desmarcar um item adulto (DEC-041), pelo comando ou por SETTINGS_CHANGED com a chave geral ligada, tira a parte dele.
+        if (evento is CmdSetAdultItemEnabled { Ligado: false } itemDesmarcado && antes.Preferencias.ItensAdultosHabilitados.Contem(itemDesmarcado.Item))
+            rastro.TirarItem(itemDesmarcado.Item, ItensSinteticos);
+        if (evento is SettingsChanged { } novasPreferencias)
+            foreach (Item saiu in antes.Preferencias.ItensAdultosHabilitados.Itens.Where(i => !novasPreferencias.Preferencias.ItensAdultosHabilitados.Contem(i)).ToArray())
+                rastro.TirarItem(saiu, ItensSinteticos);
         bool comSubstancia = (depois.Onda is { } daFrente && OndasDeSubstancia.Contains(daFrente.Tipo))
             || (depois.OndaDeFundo is { } doFundo && OndasDeSubstancia.Contains(doFundo.Tipo));
         if (!comSubstancia && rastro.Carga > 0)
@@ -1574,6 +1628,7 @@ internal static class InvariantesTestes
         rastro.Carga++;
         rastro.Sintetica |= ItensSinteticos.Contains(item);
         rastro.Distintas.Add(item);
+        rastro.PorItem[item] = rastro.PorItem.GetValueOrDefault(item) + 1;
         if (frente is { Tipo: Onda.Paranoico })
         {
             int nivel = Math.Min(3, frente.Nivel + 1);
@@ -2285,6 +2340,17 @@ internal static class InvariantesTestes
                 bool adulto = sombraDoTamagotchi.Estado.Preferencias.ConteudoAdulto;
                 if (sombraDoTamagotchi.Estado.Gesto == Gesto.Nenhum && doTamagotchi.Next(adulto ? 40 : 6) == 0)
                     EntregarAoTamagotchi([new CmdSetAdultContent(!adulto)]);
+                // A seleção individual (DEC-041), também num lote só dela: um item desmarcado de vez em quando, e religado
+                // logo, para o resto do fluxo continuar com ele.
+                if (sombraDoTamagotchi.Estado.Gesto == Gesto.Nenhum && doTamagotchi.Next(30) == 0)
+                {
+                    Item[] adultos = [.. Preferencias.TodosOsItensAdultos.Itens];
+                    Item escolhido = adultos[doTamagotchi.Next(adultos.Length)];
+                    bool marcado = sombraDoTamagotchi.Estado.Preferencias.ItensAdultosHabilitados.Contem(escolhido);
+                    EntregarAoTamagotchi([new CmdSetAdultItemEnabled(escolhido, !marcado)]);
+                }
+                foreach (Item desmarcado in Preferencias.TodosOsItensAdultos.Itens.Where(i => !sombraDoTamagotchi.Estado.Preferencias.ItensAdultosHabilitados.Contem(i)))
+                    if (doTamagotchi.Next(4) == 0) EntregarAoTamagotchi([new CmdSetAdultItemEnabled(desmarcado, true)]);
                 EntregarAoTamagotchi([.. lote.Select(e => Adaptar(e, sombra.Estado, sombraDoTamagotchi.Estado, doTamagotchi))]);
             }
 
@@ -2553,7 +2619,7 @@ internal static class InvariantesTestes
         5 => new Resumed(),
         6 => NovaTopologia(rnd, gerador, ref topologia),
         7 => TelaCheia(rnd, topologia),
-        8 => new SettingsChanged(new Preferencias(Nivel(rnd), rnd.Next(3) != 0, Atravessar(travessia))),
+        8 => new SettingsChanged(new Preferencias(Nivel(rnd), rnd.Next(3) != 0, Atravessar(travessia)).ComAdultosAleatorios(rnd)),
         9 => new CmdResetPosition(),
         10 => rnd.Next(2) == 0 ? new CmdPauseAutonomy() : new CmdResumeAutonomy(),
         _ => Sortear(rnd, travessia, gerador, s, ref topologia),
@@ -2577,7 +2643,7 @@ internal static class InvariantesTestes
             PontoPx ancora = gerador.Ponto(topologia);
             salva = new PosicaoDoPersonagem(chave, fx, fy, ancora) { TelaDoMonitor = topologia.MonitorQueContem(Posicionador.PixelDosPes(ancora))?.Tela };
         }
-        return new Loaded(topologia, salva, new Preferencias(Nivel(rnd), rnd.Next(4) != 0, Atravessar(travessia)));
+        return new Loaded(topologia, salva, new Preferencias(Nivel(rnd), rnd.Next(4) != 0, Atravessar(travessia)).ComAdultosAleatorios(rnd));
     }
 
     private static Evento Sortear(Random rnd, Random travessia, GeradorDeTopologias gerador, EstadoDoNucleo s, ref Topologia topologia)
@@ -2620,7 +2686,7 @@ internal static class InvariantesTestes
             < 65 => new Resumed(),
             < 66 => rnd.Next(20) == 0 ? new SessionEnding() : new Tick(),
             < 70 => TelaCheia(rnd, atual),
-            < 71 => new SettingsChanged(new Preferencias(Nivel(rnd), rnd.Next(3) != 0, Atravessar(travessia))),
+            < 71 => new SettingsChanged(new Preferencias(Nivel(rnd), rnd.Next(3) != 0, Atravessar(travessia)).ComAdultosAleatorios(rnd)),
             < 78 => new MovementSignal(SinalCoerente(rnd, s.Estado)),
             < 90 => new AutonomyTimer(rnd.Next(10) == 0 ? s.Geracao - 1 : s.Geracao),
             // R-e: carga repetida no meio da sequência, com outra topologia; deve ser ignorada.

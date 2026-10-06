@@ -235,7 +235,7 @@ internal static class RestaurarTestes
         ];
         foreach ((string caso, Topologia t, string passo, string chave, PontoPx ancora, RetanguloPx tela) in casos)
         {
-            Cenario c = new Cenario().Aplicar(new Loaded(t, noSecundario, Preferencias.Padrao));
+            Cenario c = new Cenario().Aplicar(new Loaded(t, noSecundario, PreferenciasDeTeste.Completas));
             c.Percorreu(Estado.Booting, Estado.Settling, Estado.Idle);
             Afirmar.Igual($"BOOTING: configurações e topologia carregadas; posição salva restaurada {passo}", c.Transicoes[0].Regra, $"{caso}: regra");
             Afirmar.Igual(chave, c.Retrato.ChaveMonitor, $"{caso}: monitor");
@@ -244,7 +244,7 @@ internal static class RestaurarTestes
         }
 
         // Escondido e mostrado antes da carga: a carga o mostra, e a regra também diz o passo.
-        Cenario antes = new Cenario().Aplicar(new CmdHide(), new CmdShow(), new Loaded(UmMonitor, noSecundario, Preferencias.Padrao));
+        Cenario antes = new Cenario().Aplicar(new CmdHide(), new CmdShow(), new Loaded(UmMonitor, noSecundario, PreferenciasDeTeste.Completas));
         antes.Percorreu(Estado.Hidden, Estado.Settling, Estado.Idle);
         Afirmar.Igual("HIDDEN: pedido de mostrar anterior à carga; posição salva restaurada no monitor principal", antes.Transicoes[0].Regra, "pedido de mostrar anterior à carga");
         Afirmar.Igual(new PontoPx(480, 1032), antes.Ancora, "no principal, a 25%");
@@ -269,7 +269,7 @@ internal static class RestaurarTestes
                 {
                     string caso = $"{id}, {m.Chave}, fração {fx}";
                     PosicaoDoPersonagem salva = DescreverNo(t, m.Chave, fx, 1);
-                    Cenario c = new Cenario(doAplicativo).Aplicar(new Loaded(t, salva, Preferencias.Padrao));
+                    Cenario c = new Cenario(doAplicativo).Aplicar(new Loaded(t, salva, PreferenciasDeTeste.Completas));
                     c.Percorreu(Estado.Booting, Estado.Settling, Estado.Idle);
                     Afirmar.Igual("BOOTING: configurações e topologia carregadas; posição salva restaurada pela chave", c.Transicoes[0].Regra, $"{caso}: regra");
                     Afirmar.Igual(m.Chave, c.Retrato.ChaveMonitor, $"{caso}: monitor");
@@ -285,7 +285,7 @@ internal static class RestaurarTestes
     [Teste]
     public static void Carga_SemPosicaoSalva_RegraInalterada()
     {
-        Cenario c = new Cenario().Aplicar(new Loaded(UmMonitor, null, Preferencias.Padrao));
+        Cenario c = new Cenario().Aplicar(new Loaded(UmMonitor, null, PreferenciasDeTeste.Completas));
         c.Percorreu(Estado.Booting, Estado.Settling, Estado.Idle);
         Afirmar.Igual("BOOTING: configurações e topologia carregadas", c.Transicoes[0].Regra, "regra");
         Afirmar.Igual(Cenario.AncoraInicial, c.Ancora, "posição inicial");
@@ -311,7 +311,7 @@ internal static class RestaurarTestes
         foreach ((string caso, double fx, double fy, Estado estado, string regra, PontoPx ancora, Direcao direcao) in casos)
         {
             var salva = new PosicaoDoPersonagem(Display1, fx, fy, AncoraDeOutraSessao);
-            Cenario c = new Cenario(MovimentoTestes.Fase4()).Aplicar(new Loaded(UmMonitor, salva, Preferencias.Padrao));
+            Cenario c = new Cenario(MovimentoTestes.Fase4()).Aplicar(new Loaded(UmMonitor, salva, PreferenciasDeTeste.Completas));
             c.Percorreu(Estado.Booting, Estado.Settling, estado);
             Afirmar.Igual("BOOTING: configurações e topologia carregadas; posição salva restaurada pela chave", c.Transicoes[0].Regra, $"{caso}: regra da carga");
             Afirmar.Igual(regra, c.Transicoes[1].Regra, $"{caso}: regra de SETTLING");
@@ -340,7 +340,7 @@ internal static class RestaurarTestes
     public static void Carga_MonitorSalvoAusente_NaoVoltaQuandoReconectaEGravaOPrincipal()
     {
         PosicaoDoPersonagem noSecundario = DescreverNo(SecundarioAEsquerda, Display2, 0.25, 1);
-        Cenario c = new Cenario().Aplicar(new Loaded(UmMonitor, noSecundario, Preferencias.Padrao));
+        Cenario c = new Cenario().Aplicar(new Loaded(UmMonitor, noSecundario, PreferenciasDeTeste.Completas));
         Afirmar.Igual(new PontoPx(480, 1032), c.Ancora, "no principal, a 25%");
 
         c.Aplicar(new TopologyChanged(SecundarioAEsquerda)).Esta(Estado.Idle);
@@ -360,20 +360,20 @@ internal static class RestaurarTestes
     public static void Reproducao_LoadedLevaATelaEGravarPosicaoContinuaComCincoCampos()
     {
         var comTela = new PosicaoDoPersonagem(Display2, 0.25, 1, new PontoPx(-1440, 1032)) { TelaDoMonitor = Ret(-1920, 0, 0, 1080) };
-        string linha = Gravacao.Escrever(new Loaded(UmMonitor, comTela, Preferencias.Padrao), _ => "UmMonitor");
+        string linha = Gravacao.Escrever(new Loaded(UmMonitor, comTela, PreferenciasDeTeste.Completas), _ => "UmMonitor");
         Afirmar.Igual(@"Loaded topologia=UmMonitor energia=Media telaCheia=sim posicao=\\.\DISPLAY2;0.25;1;-1440;1032;-1920;0;0;1080", linha, "com a tela, 9 campos");
         Loaded lido = (Loaded)Gravacao.Ler(linha, _ => UmMonitor, EstadoDoNucleo.Inicial(1)).Single();
         Afirmar.Igual(comTela, lido.PosicaoSalva, "ida e volta com a tela");
 
         var semTela = comTela with { TelaDoMonitor = null };
         Afirmar.Igual(@"Loaded topologia=UmMonitor energia=Media telaCheia=sim posicao=\\.\DISPLAY2;0.25;1;-1440;1032",
-            Gravacao.Escrever(new Loaded(UmMonitor, semTela, Preferencias.Padrao), _ => "UmMonitor"), "sem a tela, 5 campos");
+            Gravacao.Escrever(new Loaded(UmMonitor, semTela, PreferenciasDeTeste.Completas), _ => "UmMonitor"), "sem a tela, 5 campos");
         Afirmar.Igual(semTela, Gravacao.LerPosicao(@"\\.\DISPLAY2;0.25;1;-1440;1032"), "5 campos: tela desconhecida");
 
         // Uma tela vazia também é desconhecida: 5 campos, que a leitura aceita (9 campos com ela, a leitura recusaria).
         foreach (RetanguloPx vazia in new RetanguloPx[] { default, Ret(-1920, 0, -1920, 1080), Ret(0, 1080, 1920, 0) })
         {
-            string escrita = Gravacao.Escrever(new Loaded(UmMonitor, comTela with { TelaDoMonitor = vazia }, Preferencias.Padrao), _ => "UmMonitor");
+            string escrita = Gravacao.Escrever(new Loaded(UmMonitor, comTela with { TelaDoMonitor = vazia }, PreferenciasDeTeste.Completas), _ => "UmMonitor");
             Afirmar.Igual(@"Loaded topologia=UmMonitor energia=Media telaCheia=sim posicao=\\.\DISPLAY2;0.25;1;-1440;1032", escrita, $"tela vazia {vazia}: 5 campos");
             Loaded relida = (Loaded)Gravacao.Ler(escrita, _ => UmMonitor, EstadoDoNucleo.Inicial(1)).Single();
             Afirmar.Igual(semTela, relida.PosicaoSalva, $"tela vazia {vazia}: volta com a tela desconhecida");

@@ -62,6 +62,9 @@ internal static class Textos
     internal static string ConfigTelaCheiaAjuda => Obter(nameof(ConfigTelaCheiaAjuda));
     internal static string ConfigAdulto => Obter(nameof(ConfigAdulto));
     internal static string ConfigAdultoAjuda => Obter(nameof(ConfigAdultoAjuda));
+    internal static string ConfigItensAdultos => Obter(nameof(ConfigItensAdultos));
+    internal static string ConfigItensAdultosAjuda => Obter(nameof(ConfigItensAdultosAjuda));
+    internal static string ConfigItemAdultoAjuda => Obter(nameof(ConfigItemAdultoAjuda));
     internal static string ConfigTamanho => Obter(nameof(ConfigTamanho));
     internal static string ConfigTamanhoPequeno => Obter(nameof(ConfigTamanhoPequeno));
     internal static string ConfigTamanhoMedio => Obter(nameof(ConfigTamanhoMedio));
@@ -89,13 +92,19 @@ internal static class Textos
             ? Obter(ChaveDoItem(item))
             : throw new ArgumentOutOfRangeException(nameof(item), item, "Item fora do enum.");
 
+    /// <summary>
+    /// O nome de um item sem a tecla de acesso do menu Win32 (o "&amp;" de <see cref="Item"/>): o que a janela de
+    /// configurações mostra e o leitor de tela lê (DEC-041). Nenhum nome de item tem um "&amp;" literal.
+    /// </summary>
+    internal static string NomeDoItem(Item item) => Item(item).Replace("&", "", StringComparison.Ordinal);
+
     /// <summary>Todas as chaves usadas pelo aplicativo, para o teste que confere se nenhuma falta.</summary>
     internal static IReadOnlyList<string> Chaves { get; } =
     [
         nameof(MenuEsconder), nameof(MenuMostrar), nameof(MenuPausar), nameof(MenuRetomar), nameof(MenuSair), nameof(DicaDaBandeja), nameof(AvisoElevado),
         nameof(MenuEmocaoDominante), nameof(MenuEmocaoAutomatica), .. Expressoes.DeHumor.Select(ChaveDaEmocao),
         nameof(MenuItens), nameof(MenuRecolherItens), nameof(MenuConteudoAdulto), nameof(MenuModoTelaCheia), .. TabelaDoTamagotchi.Itens.Select(ChaveDoItem),
-        nameof(MenuEnergia), nameof(MenuConfiguracoes), nameof(PainelTitulo), nameof(EnergiaGrupo), nameof(EnergiaBaixa), nameof(EnergiaMedia), nameof(EnergiaAlta), nameof(PainelAjuda), nameof(ConfigTitulo), nameof(ConfigComportamento), nameof(ConfigAparencia), nameof(ConfigWindows), nameof(ConfigEnergiaAjuda), nameof(ConfigTelaCheia), nameof(ConfigTelaCheiaAjuda), nameof(ConfigAdulto), nameof(ConfigAdultoAjuda), nameof(ConfigTamanho), nameof(ConfigTamanhoPequeno), nameof(ConfigTamanhoMedio), nameof(ConfigTamanhoGrande), nameof(ConfigTamanhoProximaVez), nameof(ConfigTopo), nameof(ConfigTopoAjuda), nameof(ConfigInicio), nameof(ConfigInicioDesativado), nameof(ConfigInicioOutraCopia), nameof(ConfigInicioIndisponivel), nameof(ConfigInicioAjuda), nameof(ConfigInicioFalhou), nameof(ConfigInicioSimulado), nameof(ConfigFechar),
+        nameof(MenuEnergia), nameof(MenuConfiguracoes), nameof(PainelTitulo), nameof(EnergiaGrupo), nameof(EnergiaBaixa), nameof(EnergiaMedia), nameof(EnergiaAlta), nameof(PainelAjuda), nameof(ConfigTitulo), nameof(ConfigComportamento), nameof(ConfigAparencia), nameof(ConfigWindows), nameof(ConfigEnergiaAjuda), nameof(ConfigTelaCheia), nameof(ConfigTelaCheiaAjuda), nameof(ConfigAdulto), nameof(ConfigAdultoAjuda), nameof(ConfigItensAdultos), nameof(ConfigItensAdultosAjuda), nameof(ConfigItemAdultoAjuda), nameof(ConfigTamanho), nameof(ConfigTamanhoPequeno), nameof(ConfigTamanhoMedio), nameof(ConfigTamanhoGrande), nameof(ConfigTamanhoProximaVez), nameof(ConfigTopo), nameof(ConfigTopoAjuda), nameof(ConfigInicio), nameof(ConfigInicioDesativado), nameof(ConfigInicioOutraCopia), nameof(ConfigInicioIndisponivel), nameof(ConfigInicioAjuda), nameof(ConfigInicioFalhou), nameof(ConfigInicioSimulado), nameof(ConfigFechar),
     ];
 
     internal static string Obter(string chave)

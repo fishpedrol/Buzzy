@@ -74,7 +74,7 @@ internal sealed class MenuIntegracaoTestes
     [Teste]
     public void VinteAberturas_GdiEUserEstaveis_ECadaAberturaApagaOsBitmapsQueCriou()
     {
-        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar();
+        using BuzzyEmTeste b = BuzzyEmTeste.Iniciar(comOsNoveAdultos: true);
         PontoPx opaco = Preparar(b);
         // A primeira abertura carrega o tema do menu e as fontes, que ficam para as próximas.
         for (int i = 0; i < 2; i++) AbrirECancelar(b, opaco);

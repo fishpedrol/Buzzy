@@ -3,7 +3,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Buzzy.App.Plataforma;
 using Buzzy.Core;
+using Buzzy.Core.Persistencia;
+using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Testes.Integracao;
 
@@ -111,6 +114,8 @@ internal sealed class BuzzyEmTeste : IDisposable
         {
             if (abertos.Length > 0)
                 throw new InvalidOperationException($"Já há Buzzy aberto (pids {string.Join(", ", abertos.Select(p => p.Id))}); o teste não encerra processos que não abriu.");
+            if (InstanciaDoBuzzy.Aberta())
+                throw new InvalidOperationException("Já há um Buzzy aberto nesta sessão (o mutex de instância única existe; talvez com outro nome de arquivo); o teste não encerra processos que não abriu.");
         }
         finally
         {
@@ -173,7 +178,15 @@ internal sealed class BuzzyEmTeste : IDisposable
     /// <summary>O caminho do Buzzy.exe em teste, para conferir que ele não vai ao log (DEC-040, item 5).</summary>
     internal static string CaminhoDoExecutavel => Caminhos.ExeDoBuzzy();
 
-    internal static BuzzyEmTeste Iniciar(bool pausado = true, ulong? semente = null, string perfil = PerfilDeTeste.Integracao, bool limpar = true, bool telaCheia = false)
+    /// <summary>
+    /// As preferências dos testes do tamagotchi: a chave adulta ligada e os nove itens adultos marcados. Desde a DEC-041, o
+    /// padrão é a chave desligada e só quatro marcados; estes testes exercitam todos os itens, então partem destas.
+    /// </summary>
+    internal static readonly Preferencias PreferenciasComOsNoveAdultos
+        = Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos };
+
+    internal static BuzzyEmTeste Iniciar(bool pausado = true, ulong? semente = null, string perfil = PerfilDeTeste.Integracao, bool limpar = true, bool telaCheia = false,
+        bool comOsNoveAdultos = false)
     {
         ExigirTesteSemElevacao();
         string exe = Caminhos.ExeDoBuzzy();
@@ -187,6 +200,14 @@ internal sealed class BuzzyEmTeste : IDisposable
 
         // Sem nenhum Buzzy aberto, ninguém usa a pasta do perfil.
         if (limpar) PerfilDeTeste.Limpar(perfil);
+        // O arquivo das preferências, só na pasta do perfil de teste (nunca a real), sem posição: ele parte do lugar inicial.
+        if (comOsNoveAdultos)
+        {
+            string pasta = PerfilDeTeste.Pasta(perfil, PastaDeDados.DoBuzzy() ?? throw new InvalidOperationException("O Windows não informou a pasta local do usuário."));
+            Directory.CreateDirectory(pasta);
+            File.WriteAllBytes(Path.Combine(pasta, ArquivoDeConfiguracoes.NomePrincipal),
+                EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(null, PreferenciasComOsNoveAdultos)));
+        }
         ExigirNenhumBuzzyAberto(); // repetida imediatamente antes de iniciar
         var b = new BuzzyEmTeste(IniciarProcesso(pausado, semente, perfil, telaCheia), inicioDoLog);
         try

@@ -63,7 +63,7 @@ internal static class EmocaoDominanteTestes
         Afirmar.Igual(Expressao.Pensativo, c.Atual.Expressao, "a cara muda na hora");
         Afirmar.Igual(Expressao.Pensativo, c.Atual.Preferencias.EmocaoDominante, "a preferência");
         Afirmar.Igual(Cenario.AncoraInicial, c.Ancora, "não se move");
-        Afirmar.Sequencia([new GravarPreferencias(Preferencias.Padrao with { EmocaoDominante = Expressao.Pensativo })], c.Efeitos, "só grava as preferências");
+        Afirmar.Sequencia([new GravarPreferencias(PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Pensativo })], c.Efeitos, "só grava as preferências");
         Afirmar.Igual(Expressao.Pensativo, c.Retrato.EmocaoDominante, "o retrato mostra a escolha, para a marca do menu");
 
         c.Aplicar(new CmdSetDominantEmotion(Expressao.Pensativo)).SemTransicao();
@@ -74,7 +74,7 @@ internal static class EmocaoDominanteTestes
         Afirmar.Igual(Expressao.Pensativo, c.Atual.Expressao, "a automática mantém a cara até a próxima troca");
         Afirmar.Nulo(c.Atual.Preferencias.EmocaoDominante, "a preferência volta a ser a automática");
         Afirmar.Nulo(c.Retrato.EmocaoDominante, "o retrato também");
-        Afirmar.Sequencia([new GravarPreferencias(Preferencias.Padrao)], c.Efeitos, "e grava");
+        Afirmar.Sequencia([new GravarPreferencias(PreferenciasDeTeste.Completas)], c.Efeitos, "e grava");
         c.Aplicar(new CmdSetDominantEmotion(null)).SemTransicao();
         Afirmar.Sequencia([], c.Efeitos, "automática de novo não faz nada");
     }
@@ -94,12 +94,12 @@ internal static class EmocaoDominanteTestes
             Afirmar.Sequencia([], c.Efeitos, $"comando com {fora}: sem efeito");
             Afirmar.Igual(antes, c.Atual, $"comando com {fora}: nada muda");
 
-            Cenario configuracoes = Cenario.Parado().Aplicar(new SettingsChanged(Preferencias.Padrao with { EmocaoDominante = (Expressao)fora }));
-            Afirmar.Igual(Preferencias.Padrao, configuracoes.Atual.Preferencias, $"SETTINGS_CHANGED com {fora}: automática");
+            Cenario configuracoes = Cenario.Parado().Aplicar(new SettingsChanged(PreferenciasDeTeste.Completas with { EmocaoDominante = (Expressao)fora }));
+            Afirmar.Igual(PreferenciasDeTeste.Completas, configuracoes.Atual.Preferencias, $"SETTINGS_CHANGED com {fora}: automática");
             Afirmar.Igual(Expressao.Neutro, configuracoes.Atual.Expressao, $"SETTINGS_CHANGED com {fora}: a cara não muda");
 
-            Cenario carga = new Cenario().Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao with { EmocaoDominante = (Expressao)fora }));
-            Afirmar.Igual(Preferencias.Padrao, carga.Atual.Preferencias, $"carga com {fora}: automática");
+            Cenario carga = new Cenario().Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, PreferenciasDeTeste.Completas with { EmocaoDominante = (Expressao)fora }));
+            Afirmar.Igual(PreferenciasDeTeste.Completas, carga.Atual.Preferencias, $"carga com {fora}: automática");
             Afirmar.Igual(Expressao.Neutro, carga.Atual.Expressao, $"carga com {fora}: a cara de sempre");
         }
 
@@ -119,7 +119,7 @@ internal static class EmocaoDominanteTestes
     [Teste]
     public static void Carga_ComDominante_ComecaComACara()
     {
-        Preferencias travesso = Preferencias.Padrao with { EmocaoDominante = Expressao.Travesso };
+        Preferencias travesso = PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Travesso };
         Cenario c = new Cenario().Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, travesso)).Esta(Estado.Idle);
         Afirmar.Igual(Expressao.Travesso, c.Atual.Expressao, "começa com a cara da emoção");
         Afirmar.Igual(travesso, c.Atual.Preferencias, "com a preferência");
@@ -129,7 +129,7 @@ internal static class EmocaoDominanteTestes
         Afirmar.Igual(Expressao.Travesso, escondido.Atual.Expressao, "escondido antes da carga: a cara já é a da emoção");
         Afirmar.Igual(Expressao.Travesso, escondido.Aplicar(new CmdShow()).Esta(Estado.Idle).Atual.Expressao, "e reaparece com ela");
 
-        Preferencias curioso = Preferencias.Padrao with { EmocaoDominante = Expressao.Curioso };
+        Preferencias curioso = PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Curioso };
         Cenario configuracoes = Cenario.Parado().Aplicar(new SettingsChanged(curioso)).SemTransicao().SemEfeito<GravarPreferencias>();
         Afirmar.Igual(Expressao.Curioso, configuracoes.Atual.Expressao, "SETTINGS_CHANGED: a cara muda na hora");
         Afirmar.Igual(curioso, configuracoes.Atual.Preferencias, "SETTINGS_CHANGED: a preferência");
@@ -137,9 +137,9 @@ internal static class EmocaoDominanteTestes
         Cenario descansando = Cenario.Em(Estado.Resting).Aplicar(new SettingsChanged(curioso));
         Afirmar.Igual(Expressao.Sonolento, descansando.Atual.Expressao, "descansando, a cara espera");
 
-        Cenario antesDaCarga = new Cenario().Aplicar(new SettingsChanged(curioso), new Loaded(TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao));
+        Cenario antesDaCarga = new Cenario().Aplicar(new SettingsChanged(curioso), new Loaded(TopologiasDeExemplo.UmMonitor, null, PreferenciasDeTeste.Completas));
         Afirmar.Igual(Expressao.Neutro, antesDaCarga.Atual.Expressao, "antes da carga, a cara de partida é a da carga");
-        Afirmar.Igual(Preferencias.Padrao, antesDaCarga.Atual.Preferencias, "e as preferências também");
+        Afirmar.Igual(PreferenciasDeTeste.Completas, antesDaCarga.Atual.Preferencias, "e as preferências também");
     }
 
     // Com a emoção dominante, a troca de cara da agenda sorteia a dominante (peso 6) ou uma das quatro companheiras
@@ -154,7 +154,7 @@ internal static class EmocaoDominanteTestes
         foreach (Expressao dominante in Expressoes.DeHumor)
         {
             Cenario c = new Cenario(soTrocarACara, semente: 11)
-                .Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao with { EmocaoDominante = dominante }));
+                .Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, PreferenciasDeTeste.Completas with { EmocaoDominante = dominante }));
             var vezes = new Dictionary<Expressao, int>();
             for (int i = 0; i < Trocas; i++)
             {
@@ -166,7 +166,7 @@ internal static class EmocaoDominanteTestes
             Afirmar.Verdadeiro(vezes[dominante] >= Trocas / 2, $"{dominante}: a dominante sai em pelo menos metade das trocas ({Contagem(vezes)})");
         }
 
-        Cenario automatica = new Cenario(soTrocarACara, semente: 11).Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao));
+        Cenario automatica = new Cenario(soTrocarACara, semente: 11).Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, PreferenciasDeTeste.Completas));
         var vistas = new HashSet<Expressao>();
         for (int i = 0; i < Trocas; i++)
         {
@@ -186,10 +186,10 @@ internal static class EmocaoDominanteTestes
     public static void VoltaDepoisDeReacaoPousoEAcordar()
     {
         var cfg = new ConfiguracaoDoNucleo();
-        Preferencias pensativo = Preferencias.Padrao with { EmocaoDominante = Expressao.Pensativo };
+        Preferencias pensativo = PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Pensativo };
         foreach (bool comDominante in new[] { true, false })
         {
-            Preferencias preferencias = comDominante ? pensativo : Preferencias.Padrao;
+            Preferencias preferencias = comDominante ? pensativo : PreferenciasDeTeste.Completas;
             string caso = comDominante ? "com a dominante" : "automática";
 
             Cenario reacao = new Cenario(cfg).Aplicar(new Loaded(TopologiasDeExemplo.UmMonitor, null, preferencias), new Press(Cenario.PontoOpaco), new Click()).Esta(Estado.Reacting);
@@ -239,7 +239,7 @@ internal static class EmocaoDominanteTestes
         {
             string caso = dominante?.ToString() ?? "automática";
             Expressao[] Esperadas(Expressao[] daAutomatica) => dominante is { } d ? [d, .. Expressoes.Companheiras(d)] : daAutomatica;
-            Preferencias preferencias = Preferencias.Padrao with { EmocaoDominante = dominante };
+            Preferencias preferencias = PreferenciasDeTeste.Completas with { EmocaoDominante = dominante };
 
             var escondido = new SimuladorDeTempo(doAplicativo, 4, TopologiasDeExemplo.UmMonitor, preferencias);
             PontoPx a = escondido.Estado.Lugar!.Ancora;
@@ -285,8 +285,8 @@ internal static class EmocaoDominanteTestes
             string Onde(int i) => $"semente {semente} (sequência {n}), dominante {dominante}, {i}º evento";
             // A mesma instância da topologia nas duas execuções: o estado guarda a topologia por referência.
             Topologia topologia = TopologiasDeExemplo.UmMonitor;
-            var automatica = new SimuladorDeTempo(doAplicativo, (ulong)semente, topologia, Preferencias.Padrao);
-            var comDominante = new SimuladorDeTempo(doAplicativo, (ulong)semente, topologia, Preferencias.Padrao with { EmocaoDominante = dominante });
+            var automatica = new SimuladorDeTempo(doAplicativo, (ulong)semente, topologia, PreferenciasDeTeste.Completas);
+            var comDominante = new SimuladorDeTempo(doAplicativo, (ulong)semente, topologia, PreferenciasDeTeste.Completas with { EmocaoDominante = dominante });
             Afirmar.Igual(SemAsCaras(automatica.Estado), SemAsCaras(comDominante.Estado), $"{Onde(0)}: a carga");
             Afirmar.Igual(dominante, comDominante.Estado.Expressao, $"{Onde(0)}: começa com a cara da dominante");
             var semEmocao = new List<(Evento Evento, Resultado Resultado)>();

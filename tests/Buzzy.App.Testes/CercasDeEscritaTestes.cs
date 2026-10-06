@@ -13,10 +13,9 @@ namespace Buzzy.App.Testes;
 /// </summary>
 internal sealed class CercasDeEscritaTestes
 {
-    private static IEnumerable<string> FontesDoProduto() => Directory.GetFiles(Path.Combine(Caminhos.Raiz, "src"), "*.cs", SearchOption.AllDirectories)
-        .Where(f => !Regex.IsMatch(f, @"[\/](obj|bin)[\/]"));
+    private static IEnumerable<string> FontesDoProduto() => FonteDoProduto.Arquivos();
 
-    private static string SemComentarios(string codigo) => Regex.Replace(codigo, @"//.*|/\*[\s\S]*?\*/", "");
+    private static string SemComentarios(string codigo) => FonteDoProduto.SemComentarios(codigo);
 
     // Item 1: File, Directory, FileStream, FileInfo, StreamWriter, caminhos temporários, armazenamento isolado e diálogos
     // de salvar só nos dois arquivos que gravam (as configurações e o log); o único Save do produto vai para a memória.
@@ -62,6 +61,13 @@ internal sealed class CercasDeEscritaTestes
     {
         Assembly app = typeof(CodigosDeSaida).Assembly;
         Afirmar.Igual(DllImportSearchPath.System32, app.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>()?.Paths, "o atributo no assembly do app");
+        // Um atributo num método ou num tipo vence o do assembly: nenhum pode afrouxar a busca.
+        foreach (Type t in app.GetTypes())
+        {
+            Afirmar.Falso(t.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>() is { Paths: not DllImportSearchPath.System32 }, $"{t.FullName}: busca de DLL afrouxada no tipo");
+            foreach (MethodInfo m in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                Afirmar.Falso(m.GetCustomAttribute<DefaultDllImportSearchPathsAttribute>() is { Paths: not DllImportSearchPath.System32 }, $"{t.FullName}.{m.Name}: busca de DLL afrouxada no método");
+        }
         string[] dlls = [.. FontesDoProduto().SelectMany(f => Regex.Matches(File.ReadAllText(f), @"(?:DllImport|LibraryImport)\(""([^""]+)""").Select(m => m.Groups[1].Value.ToLowerInvariant())).Distinct().Order(StringComparer.Ordinal)];
         foreach (string dll in dlls)
             Afirmar.Verdadeiro(File.Exists(Path.Combine(Environment.SystemDirectory, dll)), $"{dll} existe no System32");

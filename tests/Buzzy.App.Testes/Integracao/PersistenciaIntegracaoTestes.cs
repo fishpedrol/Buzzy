@@ -478,9 +478,10 @@ internal sealed class PersistenciaIntegracaoTestes
             Directory.CreateDirectory(pasta);
             string principal = Path.Combine(pasta, ArquivoDeConfiguracoes.NomePrincipal);
             var conteudo = new ConfiguracoesSalvas(null, Preferencias.Padrao with { Energia = NivelDeEnergia.Alta, ModoTelaCheia = false });
-            string v4 = System.Text.Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(conteudo))
-                .Replace("\"schemaVersion\": 5", "\"schemaVersion\": 4", StringComparison.Ordinal)
-                .Replace(",\n    \"sempreNoTopo\": true,\n    \"escala\": \"media\"", "", StringComparison.Ordinal);
+            // A v4 a partir da escrita atual: a versão trocada, sem os campos que vieram depois (do sempre no topo ao fim das preferências).
+            string v4 = System.Text.RegularExpressions.Regex.Replace(System.Text.Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(conteudo))
+                .Replace($"\"schemaVersion\": {EsquemaDeConfiguracoes.VersaoAtual}", "\"schemaVersion\": 4", StringComparison.Ordinal),
+                @",\n    ""sempreNoTopo""[\s\S]*?(?=\n  \})", "");
             File.WriteAllText(principal, v4);
             DateTime escritoAntes = File.GetLastWriteTimeUtc(principal);
 
@@ -493,7 +494,7 @@ internal sealed class PersistenciaIntegracaoTestes
                 FecharEGravar(b);
             }
             LeituraDasConfiguracoes lida = LerDoPerfil();
-            Afirmar.Igual(((int?)EsquemaDeConfiguracoes.VersaoAtual, conteudo.Preferencias), (lida.Versao, lida.Configuracoes.Preferencias), "migrado para a v5, com os mesmos valores");
+            Afirmar.Igual(((int?)EsquemaDeConfiguracoes.VersaoAtual, conteudo.Preferencias), (lida.Versao, lida.Configuracoes.Preferencias), "migrado para a versão atual, com os mesmos valores");
             Afirmar.Igual(v4, File.ReadAllText(Path.Combine(pasta, ArquivoDeConfiguracoes.NomeReserva)), "o v4 virou a reserva");
         });
     }

@@ -157,6 +157,12 @@ public sealed record CmdSetAdultContent(bool Ligado) : Evento
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
+/// <summary>CMD_SET_ADULT_ITEM: altera a disponibilidade de um item adulto nas Configurações (DEC-041).</summary>
+public sealed record CmdSetAdultItemEnabled(Item Item, bool Ligado) : Evento
+{
+    public override Origem Origem => Origem.ComandoDoUsuario;
+}
+
 /// <summary>
 /// <c>CMD_SET_FULLSCREEN_MODE</c> (DEC-034): "Desviar da tela cheia" no menu, o modo de tela cheia (Q-09) ligado ou
 /// desligado. Grava a escolha nas preferências. Desligar desfaz o efeito temporário, como as preferências; ligar com ele à
@@ -452,11 +458,41 @@ public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bo
     public Expressao? EmocaoDominante { get; init; }
 
     /// <summary>
-    /// O conteúdo adulto do tamagotchi (DEC-033, pedido do usuário de 2026-10-02): os itens que não são de alívio, as ondas
-    /// de substância, a paranoia e o baseado por conta própria. Ligado por padrão; desligado, nada disso aparece nem
-    /// acontece, e o menu esconde os itens adultos. Fica fora do construtor posicional.
+    /// A chave geral do conteúdo adulto (DEC-033): desligada por padrão; desligada, nenhum item adulto nem efeito de
+    /// substância aparece ou acontece. Fica separada das escolhas individuais dos itens adultos.
     /// </summary>
-    public bool ConteudoAdulto { get; init; } = true;
+    public bool ConteudoAdulto { get; init; }
+
+    /// <summary>
+    /// Itens adultos permitidos individualmente (DEC-041). O padrão habilita vodka, cerveja, cigarro e baseado. As caixas
+    /// continuam configuráveis com a chave geral desligada, mas isso não libera o conteúdo enquanto ela estiver desligada.
+    /// </summary>
+    public ConjuntoDeItens ItensAdultosHabilitados { get; init; } = ItensAdultosPadrao;
+
+    /// <summary>Seleção inicial de conteúdo adulto, conforme o pedido do usuário de 2026-10-05.</summary>
+    public static ConjuntoDeItens ItensAdultosPadrao => ConjuntoDeItens.Vazio
+        .Com(Item.Vodka).Com(Item.Cerveja).Com(Item.Cigarro).Com(Item.Baseado);
+
+    /// <summary>Os nove itens adultos (DEC-033 e DEC-041), todos marcados: o que valia antes da DEC-041.</summary>
+    public static ConjuntoDeItens TodosOsItensAdultos
+    {
+        get
+        {
+            ConjuntoDeItens todos = ConjuntoDeItens.Vazio;
+            foreach (Item item in TabelaDoTamagotchi.Itens)
+                if (TabelaDoTamagotchi.Adulto(item)) todos = todos.Com(item);
+            return todos;
+        }
+    }
+
+    /// <summary>Remove itens não adultos de um conjunto recebido de arquivo ou preferência externa.</summary>
+    public static ConjuntoDeItens NormalizarItensAdultos(ConjuntoDeItens itens)
+    {
+        ConjuntoDeItens normalizados = ConjuntoDeItens.Vazio;
+        foreach (Item item in TabelaDoTamagotchi.Itens)
+            if (TabelaDoTamagotchi.Adulto(item) && itens.Contem(item)) normalizados = normalizados.Com(item);
+        return normalizados;
+    }
 
     /// <summary>
     /// Se o personagem e os itens ficam sempre no topo (Q-03; DEC-038, item 8). Ligado por padrão; desligado, a ordem Z só

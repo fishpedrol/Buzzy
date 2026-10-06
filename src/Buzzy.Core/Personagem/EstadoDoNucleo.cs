@@ -153,12 +153,18 @@ public sealed record EstadoDoNucleo
     /// </summary>
     public EstadoDaOnda? Onda { get; init; }
 
+    /// <summary>Contribuições por item da onda da frente, só em memória (DEC-041).</summary>
+    public ContribuicoesDaOnda FontesDaOnda { get; init; }
+
     /// <summary>
     /// A onda de fundo (DEC-028; desenho do núcleo, 4.5): a que estava na frente quando chegou uma de precedência maior
     /// ou igual. Fica congelada, sem temporizador nem efeito no comportamento, e volta à frente, com a fase recomeçada,
     /// quando a da frente acaba. Só cabem duas: uma terceira descarta a de fundo anterior.
     /// </summary>
     public EstadoDaOnda? OndaDeFundo { get; init; }
+
+    /// <summary>Contribuições por item da onda congelada ao fundo, só em memória (DEC-041).</summary>
+    public ContribuicoesDaOnda FontesDaOndaDeFundo { get; init; }
 
     /// <summary>
     /// A carga da paranoia no episódio (pedidos do usuário de 2026-10-01; DEC-028): quantos itens de substância ele usou, se
@@ -287,8 +293,8 @@ public sealed record Retrato(
     /// <summary>A emoção dominante escolhida (DEC-027), para a marca no menu; nula, "Automática".</summary>
     public Expressao? EmocaoDominante { get; init; }
 
-    /// <summary>A chave do conteúdo adulto (DEC-033), para a marca no menu; ligada por padrão.</summary>
-    public bool ConteudoAdulto { get; init; } = true;
+    /// <summary>A chave do conteúdo adulto (DEC-033), para a marca no menu; desligada por padrão.</summary>
+    public bool ConteudoAdulto { get; init; }
 
     /// <summary>A onda do item em curso (DEC-028): tipo, fase e nível, para as sobreposições da apresentação; nula sem onda.</summary>
     public EstadoDaOnda? Onda { get; init; }

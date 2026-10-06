@@ -12,8 +12,10 @@
       4. Pare a captura (Ctrl+E) e salve: File -> Save -> "Events displayed using current filter", formato CSV.
       5. Rode: powershell -NoProfile -File tools\verificar-gravacoes.ps1 -Csv <arquivo.csv>
     O que conta como gravação: WriteFile, SetRenameInformationFile, SetDispositionInformationFile(Ex),
-    SetEndOfFileInformationFile, SetAllocationInformationFile, SetBasicInformationFile, CreateFile que cria ou abre
-    para escrita, e RegSetValue, RegDeleteValue, RegCreateKey, RegDeleteKey e RegSetInfoKey com resultado SUCCESS.
+    SetEndOfFileInformationFile, SetAllocationInformationFile, SetBasicInformationFile, CreateFile que criou ou
+    sobrescreveu um arquivo (OpenResult) ou o abriu com acesso de escrita, e RegSetValue, RegDeleteValue, RegCreateKey
+    e RegDeleteKey com resultado SUCCESS. O RegSetInfoKey só conta fora das marcas de handle (KeySetHandleTagsInformation),
+    que o Windows registra em quase toda chave aberta, mesmo só para ler.
     Cada uma cai num grupo:
       - do Buzzy: a pasta de dados (%LOCALAPPDATA%\Buzzy) e o valor HKCU\...\CurrentVersion\Run\Buzzy;
       - do Windows em nome do processo: caches de shader do driver de vídeo, o prefetch, o MuiCache, o estado da
@@ -32,25 +34,30 @@ if (-not (Test-Path -LiteralPath $Csv)) { Write-Host "Arquivo não encontrado: $
 
 $operacoesDeArquivo = @('WriteFile', 'SetRenameInformationFile', 'SetDispositionInformationFile', 'SetDispositionInformationEx',
     'SetEndOfFileInformationFile', 'SetAllocationInformationFile', 'SetBasicInformationFile')
-$operacoesDeRegistro = @('RegSetValue', 'RegDeleteValue', 'RegCreateKey', 'RegDeleteKey', 'RegSetInfoKey')
+$operacoesDeRegistro = @('RegSetValue', 'RegDeleteValue', 'RegCreateKey', 'RegDeleteKey')
 
 $pastaDoBuzzy = [IO.Path]::Combine($PastaLocal, 'Buzzy').TrimEnd('\') + '\'
 $valorRun = 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Buzzy'
 
-# Gravações que o Windows ou o driver fazem em nome de qualquer aplicativo de janela (não vêm do código do Buzzy).
+# Gravações que o Windows ou o driver fazem em nome de qualquer aplicativo de janela (não vêm do código do Buzzy), por
+# PREFIXO completo: uma pasta com o mesmo nome em outro lugar (Documentos\D3DSCache) ou uma chave vizinha
+# (Explorer\StartupApproved\Run, Explorer\Advanced) continua inesperada.
+$windir = [Environment]::GetFolderPath('Windows').TrimEnd('\')
 $doWindows = @(
-    '\D3DSCache\', '\NVIDIA\DXCache\', '\NVIDIA\GLCache\', '\NVIDIA Corporation\NV_Cache\', '\AMD\DxCache\', '\AMD\DxcCache\',
-    '\Intel\ShaderCache\', '\Windows\Prefetch\', '\Microsoft\Windows\Caches\', '\Windows\ServiceProfiles\',
+    "$PastaLocal\D3DSCache\", "$PastaLocal\NVIDIA\DXCache\", "$PastaLocal\NVIDIA\GLCache\", "$PastaLocal\NVIDIA Corporation\NV_Cache\",
+    "$PastaLocal\AMD\DxCache\", "$PastaLocal\AMD\DxcCache\", "$PastaLocal\Intel\ShaderCache\", "$PastaLocal\Microsoft\Windows\Caches\",
+    "$windir\Prefetch\", "$windir\ServiceProfiles\",
     'HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache',
     'HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\TrayNotify',
-    'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\', 'HKCU\Software\Microsoft\Direct3D\',
-    'HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\', 'HKCU\Software\Microsoft\CTF\'
+    'HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\', 'HKCU\Software\Microsoft\Direct3D\',
+    'HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\', 'HKCU\Software\Microsoft\CTF\'
 )
 
 function Normalizar([string] $caminho) {
-    $c = $caminho
-    $c = $c -replace '^HKEY_CURRENT_USER', 'HKCU'
-    $c = $c -replace '^HKU\\S-1-5-21-[0-9-]+(_Classes)?', { if ($_.Groups[1].Value) { 'HKCU\Software\Classes' } else { 'HKCU' } }
+    # Substituições de texto simples (o -replace com bloco só existe a partir do PowerShell 6.1).
+    $c = $caminho -replace '^HKEY_CURRENT_USER', 'HKCU'
+    $c = $c -replace '^HKU\\S-1-5-21-[0-9-]+_Classes', 'HKCU\Software\Classes'
+    $c = $c -replace '^HKU\\S-1-5-21-[0-9-]+', 'HKCU'
     $c
 }
 
@@ -58,17 +65,19 @@ function Grupo([string] $caminho) {
     $c = Normalizar $caminho
     if ($c.StartsWith($pastaDoBuzzy, [StringComparison]::OrdinalIgnoreCase) -or $c.Equals($pastaDoBuzzy.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) { return 'Buzzy' }
     if ($c.Equals($valorRun, [StringComparison]::OrdinalIgnoreCase)) { return 'Buzzy' }
-    foreach ($trecho in $doWindows) { if ($c.IndexOf($trecho, [StringComparison]::OrdinalIgnoreCase) -ge 0) { return 'Windows' } }
+    foreach ($prefixo in $doWindows) { if ($c.StartsWith($prefixo, [StringComparison]::OrdinalIgnoreCase)) { return 'Windows' } }
     'Inesperada'
 }
 
 function EhGravacao($linha) {
     if ($linha.Result -ne 'SUCCESS') { return $false }
     if ($operacoesDeArquivo -contains $linha.Operation -or $operacoesDeRegistro -contains $linha.Operation) { return $true }
+    if ($linha.Operation -eq 'RegSetInfoKey') { return $linha.Detail -notmatch 'KeySetHandleTagsInformation' }
     if ($linha.Operation -eq 'CreateFile') {
-        # Cria, sobrescreve ou abre para escrita (o Detail do Process Monitor diz a disposição e o acesso).
-        return ($linha.Detail -match 'Disposition: (Create|OverwriteIf|Overwrite|Supersede|OpenIf)' -and $linha.Detail -match 'Desired Access:[^,]*(Write|Append|Delete)') `
-            -or $linha.Detail -match 'Desired Access:[^,]*Generic Write'
+        # Criou ou sobrescreveu (o OpenResult do Process Monitor), ou abriu com algum direito de escrita: o trecho do
+        # acesso vai de "Desired Access:" até "Disposition:", com os direitos separados por vírgula.
+        if ($linha.Detail -match 'OpenResult: (Created|Overwritten|Superseded)') { return $true }
+        if ($linha.Detail -match 'Desired Access: (?<acesso>.*?)(, Disposition:|$)') { return $Matches['acesso'] -match 'Write|Append|Delete' }
     }
     $false
 }

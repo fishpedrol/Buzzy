@@ -88,7 +88,9 @@ internal static class ReferenciasPermitidas
     internal static void Diversas()
     {
         _ = System.Reflection.Assembly.GetExecutingAssembly().GetName();
-        _ = typeof(ReferenciasPermitidas).Assembly.Location;
+        // No lugar de Assembly.Location (vazio num executável de arquivo único; F9-P10): o caminho e a pasta do executável.
+        _ = Environment.ProcessPath;
+        _ = AppContext.BaseDirectory;
         _ = System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(typeof(ReferenciasPermitidas).Assembly);
         _ = AppDomain.CurrentDomain.BaseDirectory;
         _ = Marshal.SizeOf<PontoNativo>();

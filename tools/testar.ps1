@@ -122,8 +122,11 @@ try {
         # DEC-040, item 8: o runtime é a dependência real do Buzzy; fica registrado a cada bateria, para conferir contra a
         # página de suporte do .NET no gate de cada fase. Com pacotes e sem rede, a consulta não aconteceu: aviso.
         Write-Host "SDK: $(dotnet --version); runtimes de desktop: $((dotnet --list-runtimes | Select-String 'WindowsDesktop') -join '; ')"
-        if ($pacotes -gt 0 -and -not (Test-Connection -TargetName api.nuget.org -Count 1 -Quiet -ErrorAction SilentlyContinue)) {
-            Write-Host "AVISO: há pacotes e o api.nuget.org não respondeu; a auditoria pode não ter consultado nada." -ForegroundColor Yellow
+        if ($pacotes -gt 0) {
+            # Só um aviso: sem rede, a auditoria pode não ter consultado nada. A resolução de nomes serve no PowerShell 5.1 e no 7.
+            $alcanca = $true
+            try { [void][System.Net.Dns]::GetHostAddresses('api.nuget.org') } catch { $alcanca = $false }
+            if (-not $alcanca) { Write-Host "AVISO: há pacotes e o api.nuget.org não resolve; a auditoria pode não ter consultado nada." -ForegroundColor Yellow }
         }
         if ($vulneraveis.Count -gt 0) { $vulneraveis | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }; $global:LASTEXITCODE = 1 }
     }

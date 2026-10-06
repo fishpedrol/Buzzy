@@ -47,7 +47,7 @@ internal static class ChaveLigadaTestes
                 Acoes = (n % 3) switch { 0 => AcoesAutonomas.Todas, 1 => AcoesAutonomas.Escalar, _ => AcoesAutonomas.Escalar | AcoesAutonomas.Pular },
             };
             ConfiguracaoDoNucleo desligada = doAplicativo with { Tamagotchi = false };
-            var preferencias = new Preferencias((NivelDeEnergia)rnd.Next(3), true);
+            var preferencias = new Preferencias((NivelDeEnergia)rnd.Next(3), true).Completa();
             // A mesma instância da topologia nas duas execuções: o estado guarda a topologia por referência.
             Topologia topologia = TopologiasDeExemplo.UmMonitor;
             var semChave = new SimuladorDeTempo(desligada, (ulong)semente, topologia, preferencias);
@@ -102,7 +102,7 @@ internal static class ChaveLigadaTestes
             var rnd = new Random(semente);
             Expressao dominante = Expressoes.DeHumor[n % Expressoes.DeHumor.Count];
             Topologia topologia = TopologiasDeExemplo.UmMonitor;
-            var preferencias = new Preferencias((NivelDeEnergia)rnd.Next(3), true);
+            var preferencias = new Preferencias((NivelDeEnergia)rnd.Next(3), true).Completa();
             var automatica = new SimuladorDeTempo(cfg, (ulong)semente, topologia, preferencias);
             var comDominante = new SimuladorDeTempo(cfg, (ulong)semente, topologia, preferencias with { EmocaoDominante = dominante });
             Afirmar.Igual(SemAsCaras(automatica.Estado), SemAsCaras(comDominante.Estado), $"semente {semente}: a carga");

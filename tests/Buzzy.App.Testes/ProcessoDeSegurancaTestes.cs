@@ -22,7 +22,9 @@ internal sealed class ProcessoDeSegurancaTestes
             .Where(f => Regex.IsMatch(File.ReadAllText(f), @"<(PackageReference|PackageVersion|GlobalPackageReference)\b"))
             .Select(f => Path.GetRelativePath(Caminhos.Raiz, f))];
         Afirmar.Sequencia([], comPacote, "nenhum PackageReference (DEC-016, item 2)");
-        string[] lockfiles = [.. ArquivosDoRepositorio("packages.lock.json")];
+        // O .exe único (F9-P10) tem lockfile próprio, src/Buzzy.App/packages.win-x64.lock.json, com a mesma regra.
+        string[] lockfiles = [.. ArquivosDoRepositorio("packages.lock.json", "packages.*.lock.json")];
+        Afirmar.Verdadeiro(lockfiles.Any(f => f.EndsWith("packages.win-x64.lock.json", StringComparison.Ordinal)), "o lockfile do .exe único");
         Afirmar.Verdadeiro(lockfiles.Length >= 5, $"os lockfiles: {lockfiles.Length}");
         foreach (string f in lockfiles)
         {

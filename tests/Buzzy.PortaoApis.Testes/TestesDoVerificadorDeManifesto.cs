@@ -10,8 +10,10 @@ public sealed class TestesDoVerificadorDeManifesto
     private const string Arquivo = @"C:\src\app.manifest";
     private const string Nivel = """<requestedExecutionLevel level="asInvoker" uiAccess="false" />""";
     private const string Dpi = """<dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>""";
+    // DEC-043: o supportedOS do Windows 10, que o Windows 11 compartilha.
+    private const string Compatibilidade = """<compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"><application><supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" /></application></compatibility>""";
 
-    internal static string Manifesto(string? nivel = null, string? dpi = null, string? extraNaRaiz = null) => $"""
+    internal static string Manifesto(string? nivel = null, string? dpi = null, string? extraNaRaiz = null, string? compatibilidade = null) => $"""
         <?xml version="1.0" encoding="utf-8"?>
         <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
           <assemblyIdentity version="1.0.0.0" name="Buzzy.app" />
@@ -22,6 +24,7 @@ public sealed class TestesDoVerificadorDeManifesto
               </requestedPrivileges>
             </security>
           </trustInfo>
+          {compatibilidade ?? Compatibilidade}
           <application xmlns="urn:schemas-microsoft-com:asm.v3">
             <windowsSettings>
               {dpi ?? Dpi}
@@ -49,6 +52,32 @@ public sealed class TestesDoVerificadorDeManifesto
         string caminho = Path.Combine(Repositorio.PastaDoSpike, "app.manifest");
         Afirmar.Verdadeiro(File.Exists(caminho), $"manifesto do protótipo não encontrado: {caminho}");
         Afirmar.Igual(0, VerificadorDeManifesto.Verificar(caminho).Count);
+    }
+
+    // DEC-043: sem o GUID do Windows 10 (que o Windows 11 compartilha), o Windows trata o aplicativo como um do Windows 8.
+    [Teste]
+    public void SupportedOsDoWindows10E11_Exigido()
+    {
+        Violacao ausente = Verificar(Manifesto(compatibilidade: "")).Single();
+        Afirmar.Igual("supportedOS", ausente.Api);
+        Afirmar.Contem("supportedOS do Windows 10 e 11 ausente", ausente.Detalhe);
+        Afirmar.Igual(Categoria.Manifesto, ausente.Categoria);
+
+        // Só o GUID do Windows 8.1 não basta.
+        const string Windows81 = """<compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"><application><supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}" /></application></compatibility>""";
+        Afirmar.Contem("ausente", Verificar(Manifesto(compatibilidade: Windows81)).Single().Detalhe);
+
+        // Os dois juntos passam, em qualquer caixa: o do Windows 10 e 11 é o que importa.
+        const string Ambos = """<compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"><application><supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}" /><supportedOS Id="{8E0F7A12-BFB3-4FE8-B9A5-48FD50A15A9A}" /></application></compatibility>""";
+        Afirmar.Igual(0, Verificar(Manifesto(compatibilidade: Ambos)).Count);
+
+        // Fora de compatibility/application, ou noutro namespace, o Windows não o lê.
+        List<Violacao> fora = Verificar(Manifesto(compatibilidade: "", extraNaRaiz: """<supportedOS xmlns="urn:schemas-microsoft-com:compatibility.v1" Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />"""));
+        Afirmar.Verdadeiro(fora.Any(v => v.Detalhe.Contains("fora de assembly/compatibility/application", StringComparison.Ordinal)), string.Join("; ", fora.Select(v => v.Detalhe)));
+        Afirmar.Verdadeiro(fora.Any(v => v.Detalhe.Contains("ausente", StringComparison.Ordinal)));
+        List<Violacao> namespaceErrado = Verificar(Manifesto(compatibilidade: """<compatibility xmlns="urn:schemas-microsoft-com:asm.v1"><application><supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" /></application></compatibility>"""));
+        Afirmar.Igual(2, namespaceErrado.Count, string.Join("; ", namespaceErrado.Select(v => v.Detalhe)));
+        Afirmar.Verdadeiro(namespaceErrado.Any(v => v.Detalhe.Contains("namespace", StringComparison.Ordinal)));
     }
 
     [Teste]

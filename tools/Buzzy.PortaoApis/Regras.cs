@@ -21,6 +21,13 @@ internal enum Categoria
     /// sessão. Fica no fim do enum para não renumerar as outras (revisão de segurança do bloco P6-P9, achado 6).
     /// </summary>
     ConfiguracaoGlobal,
+
+    /// <summary>
+    /// APIs que dependem de o assembly ser um arquivo no disco e, num executável de arquivo único (F9-P10, DEC-042),
+    /// devolvem vazio ou lançam: o que o analisador de arquivo único do SDK acusaria, sem o pacote dele (DEC-016,
+    /// item 2). Não é capacidade de SECURITY.md 3.2; fica no fim do enum para não renumerar as outras.
+    /// </summary>
+    ArquivoUnico,
 }
 
 internal static class Categorias
@@ -38,6 +45,7 @@ internal static class Categorias
         Categoria.CodigoDinamico => "Código dinâmico",
         Categoria.Manifesto => "Manifesto",
         Categoria.ConfiguracaoGlobal => "Alterar configuração global",
+        Categoria.ArquivoUnico => "Arquivo único",
         _ => throw new ArgumentOutOfRangeException(nameof(categoria), categoria, null),
     };
 }
@@ -341,6 +349,32 @@ internal static class ListaProibida
         Namespace("System.Reflection.Emit", Categoria.CodigoDinamico, "gera código em tempo de execução",
             fonte: ["System.Reflection.Emit", "DynamicMethod", "ILGenerator", "AssemblyBuilder", "PersistedAssemblyBuilder"]),
 
+        // ---- Arquivo único (F9-P10, DEC-042) ------------------------------------------------
+        // Num executável de arquivo único, o assembly não é um arquivo: Location e CodeBase vêm vazios (ou lançam), e
+        // GetFile/GetFiles lançam. O caminho do executável vem de Environment.ProcessPath; a pasta, de AppContext.BaseDirectory.
+        Membro("System.Reflection.Assembly", "get_Location", Categoria.ArquivoUnico, "vazio num executável de arquivo único; use Environment.ProcessPath ou AppContext.BaseDirectory",
+            fonte: ["Assembly.Location"]),
+        Membro("System.Reflection.Assembly", "get_CodeBase", Categoria.ArquivoUnico, "lança num executável de arquivo único (e é obsoleto)",
+            fonte: ["CodeBase"]),
+        Membro("System.Reflection.Assembly", "get_EscapedCodeBase", Categoria.ArquivoUnico, "lança num executável de arquivo único (e é obsoleto)",
+            fonte: ["EscapedCodeBase"]),
+        Membro("System.Reflection.Assembly", "GetFile", Categoria.ArquivoUnico, "lança num executável de arquivo único",
+            fonte: ["Assembly.GetFile"]),
+        Membro("System.Reflection.Assembly", "GetFiles", Categoria.ArquivoUnico, "lança num executável de arquivo único",
+            fonte: ["Assembly.GetFiles"]),
+        Membro("System.Reflection.AssemblyName", "get_CodeBase", Categoria.ArquivoUnico, "vazio num executável de arquivo único (e é obsoleto)",
+            fonte: []),
+        Membro("System.Reflection.AssemblyName", "get_EscapedCodeBase", Categoria.ArquivoUnico, "vazio num executável de arquivo único (e é obsoleto)",
+            fonte: []),
+        // As outras APIs marcadas [RequiresAssemblyFiles] no runtime 10.0.12 (as do aviso IL3002 do analisador; revisão
+        // adversarial do F9-P10): só nos binários, porque Name e FullyQualifiedName são nomes comuns na fonte.
+        Membro("System.Runtime.InteropServices.Marshal", "GetHINSTANCE", Categoria.ArquivoUnico, "devolve -1 para um módulo dentro de um executável de arquivo único",
+            fonte: ["GetHINSTANCE"]),
+        Membro("System.Reflection.Module", "get_Name", Categoria.ArquivoUnico, "devolve \"<Unknown>\" para um módulo dentro de um executável de arquivo único",
+            fonte: []),
+        Membro("System.Reflection.Module", "get_FullyQualifiedName", Categoria.ArquivoUnico, "devolve \"<Unknown>\" para um módulo dentro de um executável de arquivo único",
+            fonte: []),
+
         // ---- Alterar configuração global --------------------------------------------------
         // A chave estável do monitor (DEC-030) só LÊ a configuração de vídeo (GetDisplayConfigBufferSizes, QueryDisplayConfig e
         // DisplayConfigGetDeviceInfo, permitidas); estas a mudam para o sistema todo (revisão de segurança do bloco P6-P9).
@@ -366,7 +400,6 @@ internal static class ListaProibida
         Funcao("WindowFromAccessibleObject", Categoria.LerOutrosAplicativos, "obtém a janela de um objeto de acessibilidade de outro aplicativo"),
         MetodoCom("ElementFromHandle", Categoria.LerOutrosAplicativos, "UIA cliente por COM: o elemento de uma janela de outro aplicativo"),
         MetodoCom("ElementFromPoint", Categoria.LerOutrosAplicativos, "UIA cliente por COM: o elemento sob um ponto da tela"),
-        MetodoCom("GetFocusedElement", Categoria.LerOutrosAplicativos, "UIA cliente por COM: o elemento com o foco, de qualquer aplicativo"),
         Funcao("GetClipboardSequenceNumber", Categoria.LerOutrosAplicativos, "observa quando o clipboard muda"),
         Funcao("IsClipboardFormatAvailable", Categoria.LerOutrosAplicativos, "lê que tipo de conteúdo está no clipboard"),
         Funcao("EnumClipboardFormats", Categoria.LerOutrosAplicativos, "lista os formatos do conteúdo do clipboard"),
@@ -386,9 +419,12 @@ internal static class ListaProibida
         Tipo("System.IO.FileSystemWatcher", Categoria.LerOutrosAplicativos, "observa mudanças em arquivos e pastas do usuário"),
         Tipo("System.Windows.DataObject", Categoria.LerOutrosAplicativos, "recebe conteúdo de outro aplicativo por arrastar e soltar"),
         Tipo("System.Windows.DragDrop", Categoria.LerOutrosAplicativos, "recebe conteúdo de outro aplicativo por arrastar e soltar"),
-        Membro("System.Environment", "UserName", Categoria.LerOutrosAplicativos, "lê o nome do usuário (SECURITY.md 6)", fonte: ["Environment.UserName"]),
-        Membro("System.Environment", "MachineName", Categoria.LerOutrosAplicativos, "lê o nome da máquina (SECURITY.md 6)", fonte: ["Environment.MachineName"]),
-        Membro("System.Environment", "UserDomainName", Categoria.LerOutrosAplicativos, "lê o domínio do usuário (SECURITY.md 6)", fonte: ["Environment.UserDomainName"]),
+        // As propriedades viram o método get_ no metadado: é esse nome que o binário referencia. (Sem a regra do
+        // GetFocusedElement da UIA por COM: o FocusManager do WPF tem o mesmo nome, e a UIA por COM já exige o
+        // CoCreateInstance, proibido.)
+        Membro("System.Environment", "get_UserName", Categoria.LerOutrosAplicativos, "lê o nome do usuário (SECURITY.md 6)", fonte: ["Environment.UserName"]),
+        Membro("System.Environment", "get_MachineName", Categoria.LerOutrosAplicativos, "lê o nome da máquina (SECURITY.md 6)", fonte: ["Environment.MachineName"]),
+        Membro("System.Environment", "get_UserDomainName", Categoria.LerOutrosAplicativos, "lê o domínio do usuário (SECURITY.md 6)", fonte: ["Environment.UserDomainName"]),
 
         // Processos e código dinâmico por COM tardio, reflexão por texto, VB e WMI, e as funções de processo do CRT e do ntdll.
         Membro("System.Type", "GetTypeFromProgID", Categoria.CodigoDinamico, "COM tardio por nome (WScript.Shell, Shell.Application, Schedule.Service)", fonte: ["GetTypeFromProgID"]),

@@ -68,25 +68,26 @@ internal sealed class ManifestoDeClipesTestes
             for (int k = 0, n = 1 + r.Next(3); k < n; k++)
             {
                 int i = r.Next(t.Length);
-                t = r.Next(6) switch
+                t = r.Next(7) switch
                 {
                     0 => t.Remove(i, Math.Min(1 + r.Next(8), t.Length - i)),
                     1 => t.Insert(i, ((char)r.Next(32, 127)).ToString()),
                     2 => t[..i],
                     3 => t.IndexOf(": ", i, StringComparison.Ordinal) is int j and >= 0 ? t[..(j + 2)] + trocas[r.Next(trocas.Length)] + t[(j + 2)..].TrimStart('"', '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 't', 'r', 'u', 'e', 'f', 'a', 'l', 's') : t,
                     4 => t.IndexOf('{', i) is int j and >= 0 ? t.Insert(j + 1, " \"repete\": true,") : t,
-                    _ => t.Insert(i, "\\uDC00"),
+                    5 => t.Insert(i, "\\uDC00"),
+                    _ => t.Insert(i, "\uD800"),
                 };
             }
             try
             {
                 ManifestoDeClipes m = ManifestoDeClipes.Ler(t);
                 aceitos++;
-                foreach (string s in Situacoes.Todas.Where(m.Tem))
+                Afirmar.Igual(m.Clipes.Count, m.Clipes.Select(c => c.Situacao).Distinct(StringComparer.Ordinal).Count(), $"caso {caso}: situações sem repetição");
+                foreach (Clipe c in m.Clipes)
                 {
-                    Afirmar.Verdadeiro(Situacoes.Todas.Contains(s, StringComparer.Ordinal), $"caso {caso}: situação {s}");
-                    Clipe c = m[s];
-                    Afirmar.Verdadeiro(c.Quadros.Count is >= 1 and <= ManifestoDeClipes.MaximoDeQuadros && c.Quadros.All(q => q.Passos is >= 1 and <= ManifestoDeClipes.MaximoDePassos), $"caso {caso}: limites de {s}");
+                    Afirmar.Verdadeiro(Situacoes.Todas.Contains(c.Situacao, StringComparer.Ordinal), $"caso {caso}: situação {c.Situacao}");
+                    Afirmar.Verdadeiro(c.Quadros.Count is >= 1 and <= ManifestoDeClipes.MaximoDeQuadros && c.Quadros.All(q => q.Passos is >= 1 and <= ManifestoDeClipes.MaximoDePassos), $"caso {caso}: limites de {c.Situacao}");
                 }
             }
             catch (FormatException)

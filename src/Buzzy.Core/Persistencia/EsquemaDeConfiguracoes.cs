@@ -7,14 +7,15 @@ using Buzzy.Core.Personagem;
 namespace Buzzy.Core.Persistencia;
 
 /// <summary>
-/// Esquema v5 do settings.json (Fase 5; ARCHITECTURE.md 2.12; SECURITY.md 7): converte bytes em
+/// Esquema v6 do settings.json (Fase 5; ARCHITECTURE.md 2.12; SECURITY.md 7): converte bytes em
 /// <see cref="ConfiguracoesSalvas"/> e de volta, sem E/S. A v2 acrescentou a emoção dominante
 /// (<c>preferencias.emocaoDominante</c>, DEC-027); a v3, a postura gravada com a posição (DEC-029, item 11): a borda do
 /// esconderijo (<c>posicao.esconderijo</c>, DEC-025) e a marca "preso pelo usuário" (<c>posicao.presoPeloUsuario</c>,
 /// DEC-024); a v4, a chave do conteúdo adulto (<c>preferencias.conteudoAdulto</c>, DEC-033); a v5, o sempre no topo e a
-/// escala (<c>preferencias.sempreNoTopo</c> e <c>preferencias.escala</c>, DEC-038). Os campos novos são sempre escritos;
-/// arquivos v1 a v4, sem eles, são lidos sem aviso, com a emoção automática, sem esconderijo, solto, com o conteúdo adulto
-/// e o topo ligados e a escala Média, o padrão; a raiz só os regrava na versão atual no primeiro pedido (DEC-038, item 3).
+/// escala (<c>preferencias.sempreNoTopo</c> e <c>preferencias.escala</c>, DEC-038); a v6, os itens adultos habilitados
+/// (<c>preferencias.itensAdultosHabilitados</c>, DEC-041). Campos ausentes usam os padrões atuais: chave geral adulta
+/// desligada e vodka, cerveja, cigarro e baseado selecionados. Valores gerais já gravados continuam preservados; a raiz só
+/// regrava uma versão anterior no primeiro pedido, conforme a agenda existente.
 ///
 /// A leitura é tolerante campo a campo e nunca lança. Só é ilegível o arquivo grande demais, fora de
 /// UTF-8, que não é JSON (comentários e vírgula final são aceitos), fundo demais, sem objeto na raiz ou
@@ -33,10 +34,10 @@ public static class EsquemaDeConfiguracoes
 {
     /// <summary>
     /// Versão escrita no campo <c>schemaVersion</c>. Toda ampliação do esquema a incrementa: a 2 acrescentou a emoção
-    /// dominante, a 3, a borda do esconderijo e a marca de preso, a 4, o conteúdo adulto, e a 5, o sempre no topo e a escala
-    /// (DEC-038); um build de uma versão anterior vê o arquivo novo como versão futura e não grava por cima.
+    /// dominante, a 3, a borda do esconderijo e a marca de preso, a 4, o conteúdo adulto, a 5, o sempre no topo e a escala
+    /// (DEC-038), e a 6, os itens adultos habilitados (DEC-041); um build anterior vê o arquivo novo como versão futura e não grava por cima.
     /// </summary>
-    public const int VersaoAtual = 5;
+    public const int VersaoAtual = 6;
 
     /// <summary>Tamanho máximo do arquivo, contando um BOM; maior, é ilegível sem ser interpretado.</summary>
     public const int TamanhoMaximoEmBytes = 65_536;
@@ -50,12 +51,12 @@ public static class EsquemaDeConfiguracoes
     /// <summary>Faixa das coordenadas gravadas (âncora e tela do monitor), em pixels físicos.</summary>
     public const int CoordenadaMinima = -32_768, CoordenadaMaxima = 32_767;
 
-    // Campos do esquema v5, na ordem em que são escritos.
+    // Campos do esquema v6, na ordem em que são escritos.
     private static readonly string[] CamposDaRaiz = ["schemaVersion", "posicao", "preferencias"];
     private static readonly string[] CamposDaPosicao = ["chaveMonitor", "telaDoMonitor", "fracaoX", "fracaoY", "ancoraAbsoluta", "esconderijo", "presoPeloUsuario"];
     private static readonly string[] CamposDaTela = ["esquerda", "topo", "direita", "base"];
     private static readonly string[] CamposDaAncora = ["x", "y"];
-    private static readonly string[] CamposDasPreferencias = ["energia", "modoTelaCheia", "atravessarMonitores", "emocaoDominante", "conteudoAdulto", "sempreNoTopo", "escala"];
+    private static readonly string[] CamposDasPreferencias = ["energia", "modoTelaCheia", "atravessarMonitores", "emocaoDominante", "conteudoAdulto", "sempreNoTopo", "escala", "itensAdultosHabilitados"];
 
     private static readonly EscalaDoPersonagem[] Escalas = [EscalaDoPersonagem.Pequena, EscalaDoPersonagem.Media, EscalaDoPersonagem.Grande];
 
@@ -171,6 +172,11 @@ public static class EsquemaDeConfiguracoes
             json.WriteBoolean("conteudoAdulto", normalizadas.Preferencias.ConteudoAdulto);
             json.WriteBoolean("sempreNoTopo", normalizadas.Preferencias.SempreNoTopo);
             json.WriteString("escala", NomeDaEscala(normalizadas.Preferencias.Escala));
+            json.WriteStartArray("itensAdultosHabilitados");
+            foreach (Item item in TabelaDoTamagotchi.Itens)
+                if (TabelaDoTamagotchi.Adulto(item) && normalizadas.Preferencias.ItensAdultosHabilitados.Contem(item))
+                    json.WriteStringValue(NomeDoItemAdulto(item));
+            json.WriteEndArray();
             json.WriteEndObject();
             json.WriteEndObject();
         }
@@ -221,6 +227,40 @@ public static class EsquemaDeConfiguracoes
         }
         escala = Preferencias.Padrao.Escala;
         return false;
+    }
+
+    /// <summary>Nome ASCII estável de um dos nove itens adultos no settings.json.</summary>
+    private static string NomeDoItemAdulto(Item item) => item switch
+    {
+        Item.Vodka => "vodka",
+        Item.Cerveja => "cerveja",
+        Item.Baseado => "baseado",
+        Item.Cigarro => "cigarro",
+        Item.Cocaina => "cocaina",
+        Item.Md => "md",
+        Item.LancaPerfume => "lancaperfume",
+        Item.Cogumelo => "cogumelo",
+        Item.Bala => "bala",
+        _ => throw new ArgumentOutOfRangeException(nameof(item), item, "Item não é adulto."),
+    };
+
+    /// <summary>Leitor por lista fechada para os identificadores persistidos (DEC-041).</summary>
+    private static bool TentarLerItemAdulto(string nome, out Item item)
+    {
+        item = nome.ToLowerInvariant() switch
+        {
+            "vodka" => Item.Vodka,
+            "cerveja" => Item.Cerveja,
+            "baseado" => Item.Baseado,
+            "cigarro" => Item.Cigarro,
+            "cocaina" => Item.Cocaina,
+            "md" => Item.Md,
+            "lancaperfume" => Item.LancaPerfume,
+            "cogumelo" => Item.Cogumelo,
+            "bala" => Item.Bala,
+            _ => default,
+        };
+        return TabelaDoTamagotchi.Adulto(item) && string.Equals(nome, NomeDoItemAdulto(item), StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Nome do nível no arquivo: <c>"baixa"</c>, <c>"media"</c> ou <c>"alta"</c>; fora dos três, <c>"media"</c>.</summary>
@@ -455,9 +495,9 @@ public static class EsquemaDeConfiguracoes
     }
 
     /// <summary>
-    /// Preferências campo a campo: ausente vale o padrão, sem aviso; inválido vale o padrão, com aviso. A emoção
-    /// dominante nula ou ausente (um arquivo v1) é a automática, sem aviso; o conteúdo adulto ausente (até a v3) é o ligado; o
-    /// sempre no topo e a escala ausentes (até a v4) são o ligado e a Média. A escala nula também vale a Média, sem aviso.
+    /// Preferências campo a campo: ausente vale o padrão, sem aviso; inválido vale o padrão, com aviso. A emoção dominante
+    /// nula ou ausente é automática; conteúdo adulto ausente é desligado; topo ausente é ligado; escala ausente é Média;
+    /// seleção de itens ausente habilita vodka, cerveja, cigarro e baseado.
     /// </summary>
     private static Preferencias LerPreferencias(JsonElement? valor, List<string> avisos)
     {
@@ -490,7 +530,35 @@ public static class EsquemaDeConfiguracoes
             ConteudoAdulto = LerBooleano(campos[4], "preferencias.conteudoAdulto", padrao.ConteudoAdulto, avisos),
             SempreNoTopo = LerBooleano(campos[5], "preferencias.sempreNoTopo", padrao.SempreNoTopo, avisos),
             Escala = escala,
+            ItensAdultosHabilitados = LerItensAdultos(campos[7], padrao.ItensAdultosHabilitados, avisos),
         };
+    }
+
+    private static ConjuntoDeItens LerItensAdultos(JsonElement? valor, ConjuntoDeItens padrao, List<string> avisos)
+    {
+        if (valor is null) return padrao;
+        if (valor.Value.ValueKind != JsonValueKind.Array)
+        {
+            avisos.Add("preferencias.itensAdultosHabilitados: não é uma lista; valem os padrões");
+            return padrao;
+        }
+
+        ConjuntoDeItens itens = ConjuntoDeItens.Vazio;
+        foreach (JsonElement elemento in valor.Value.EnumerateArray())
+        {
+            if (elemento.ValueKind != JsonValueKind.String || !TentarLerItemAdulto(elemento.GetString()!, out Item item))
+            {
+                avisos.Add("preferencias.itensAdultosHabilitados: identificador desconhecido ou inválido; ignorado");
+                continue;
+            }
+            if (itens.Contem(item))
+            {
+                avisos.Add($"preferencias.itensAdultosHabilitados: {NomeDoItemAdulto(item)} repetido; ignorado");
+                continue;
+            }
+            itens = itens.Com(item);
+        }
+        return itens;
     }
 
     private static bool LerBooleano(JsonElement? valor, string nome, bool padrao, List<string> avisos)
@@ -528,6 +596,7 @@ public static class EsquemaDeConfiguracoes
         if (!Enum.IsDefined(preferencias.Energia)) preferencias = preferencias with { Energia = Preferencias.Padrao.Energia };
         if (preferencias.EmocaoDominante is { } emocao && !Expressoes.EhDeHumor(emocao)) preferencias = preferencias with { EmocaoDominante = null };
         if (!Enum.IsDefined(preferencias.Escala)) preferencias = preferencias with { Escala = Preferencias.Padrao.Escala };
+        preferencias = preferencias with { ItensAdultosHabilitados = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados) };
         return preferencias;
     }
 

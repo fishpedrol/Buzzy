@@ -144,8 +144,9 @@ public sealed class ManifestoDeClipes
         {
             documento = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 8, CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = false });
         }
-        catch (JsonException e)
+        catch (Exception e) when (e is JsonException or ArgumentException)
         {
+            // ArgumentException: um surrogate cru no texto (não escapado), que a transcodificação para UTF-8 recusa.
             throw new FormatException($"Manifesto não é JSON válido: {e.Message}", e);
         }
         using (documento)

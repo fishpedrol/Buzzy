@@ -1563,7 +1563,11 @@ internal sealed partial class Verificacao
         string valor = semente.ToString(CultureInfo.InvariantCulture);
         ProcessStartInfo psi = PerfilDaVerificacao.Descrever(_exeBuzzy, pausado ? ["--pausado", "--semente", valor] : ["--semente", valor]);
         ExigirNenhumBuzzyAberto();
-        if (limpar) PerfilDaVerificacao.Limpar();
+        if (limpar)
+        {
+            PerfilDaVerificacao.Limpar();
+            PerfilDaVerificacao.ComOsNoveAdultos();
+        }
         ExigirNenhumBuzzyAberto(); // repetida imediatamente antes de iniciar
         _buzzy = Process.Start(psi) ?? throw new FalhaDeVerificacao("Buzzy.exe não iniciou.");
         _inicioBuzzy = _buzzy.StartTime;

@@ -60,3 +60,19 @@ internal static class PerfilDeTeste
         }
     }
 }
+
+/// <summary>
+/// Se há um Buzzy aberto nesta sessão, com qualquer nome de arquivo (o .exe único se chama Buzzy-&lt;versão&gt;-win-x64.exe;
+/// revisão adversarial do F9-P10): o mutex de instância única do usuário (InstanciaUnica, Local\Buzzy.Instancia.&lt;SID&gt;)
+/// existe enquanto algum Buzzy roda. Só abre o mutex para saber se existe e o fecha na hora; não o adquire.
+/// </summary>
+internal static class InstanciaDoBuzzy
+{
+    internal static bool Aberta()
+    {
+        string sufixo = System.Security.Principal.WindowsIdentity.GetCurrent().User?.Value ?? "sem-sid";
+        if (!Mutex.TryOpenExisting($@"Local\Buzzy.Instancia.{sufixo}", out Mutex? mutex)) return false;
+        mutex.Dispose();
+        return true;
+    }
+}

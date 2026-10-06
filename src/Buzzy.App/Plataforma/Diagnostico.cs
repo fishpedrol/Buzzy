@@ -10,8 +10,8 @@ namespace Buzzy.App.Plataforma;
 /// comando, e só em <c>%LOCALAPPDATA%\Buzzy\diagnostico.log</c> (SECURITY.md 5: logs ficam na
 /// pasta do Buzzy e têm tamanho limitado). Ao passar de 1 MB, o arquivo vira
 /// <c>diagnostico.1.log</c> (uma cópia só) e recomeça. O limite falha fechado (DEC-040, item 4): um log que
-/// é link (ponto de nova análise) não é usado, e um que não consegue girar para de gravar ao passar de duas
-/// vezes o limite.
+/// é link simbólico ou junção (ponto de nova análise) não é usado na partida, e um que não consegue girar para de
+/// gravar ao passar de duas vezes o limite. Um link físico não é visto (o risco aceito na seção 9 do SECURITY.md).
 ///
 /// Registra apenas fatos do próprio Buzzy: suas janelas, sua posição, os monitores, o ícone
 /// da bandeja, os cliques que chegaram às suas janelas e os comandos do seu menu. Nunca

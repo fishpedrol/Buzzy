@@ -298,6 +298,19 @@ public sealed record CargaDaParanoia(int Substancias, bool Sintetica, ConjuntoDe
     public static readonly CargaDaParanoia Nenhuma = new(0, false, ConjuntoDeItens.Vazio, Sorteada: false);
 
     /// <summary>
+    /// Quantas vezes cada item participou do episódio; só em memória (DEC-041), para desfazer exatamente um item desmarcado.
+    /// É a proveniência, não a identidade da carga: fica fora da igualdade (abaixo), e o total dela bate com
+    /// <see cref="Substancias"/> e os itens contados com <see cref="Distintas"/> (CargaDaParanoiaTestes).
+    /// </summary>
+    public ContagensDeSubstancias PorItem { get; init; }
+
+    /// <summary>A igualdade da carga: as substâncias, a sintética, os distintos e o sorteio, sem a proveniência.</summary>
+    public bool Equals(CargaDaParanoia? outra)
+        => outra is not null && Substancias == outra.Substancias && Sintetica == outra.Sintetica && Distintas == outra.Distintas && Sorteada == outra.Sorteada;
+
+    public override int GetHashCode() => HashCode.Combine(Substancias, Sintetica, Distintas, Sorteada);
+
+    /// <summary>
     /// Se o episódio é uma mistura com droga sintética (o pedido do usuário de 2026-10-01): pelo menos uma sintética e pelo
     /// menos dois itens de substância distintos. Só ela sorteia a paranoia, uma vez por episódio; álcool, maconha, cigarro e
     /// cogumelo, sozinhos ou misturados entre si, e uma sintética sozinha, repetida, nunca.
@@ -312,8 +325,98 @@ public sealed record CargaDaParanoia(int Substancias, bool Sintetica, ConjuntoDe
     {
         ArgumentNullException.ThrowIfNull(dados);
         if (dados.Alivio) throw new ArgumentException($"{dados.Item} é de alívio: não entra na carga da paranoia.", nameof(dados));
-        return new CargaDaParanoia(Substancias + 1, Sintetica || dados.Sintetica, Distintas.Com(dados.Item), Sorteada);
+        return new CargaDaParanoia(Substancias == int.MaxValue ? int.MaxValue : Substancias + 1,
+            Sintetica || dados.Sintetica, Distintas.Com(dados.Item), Sorteada)
+        { PorItem = PorItem.Com(dados.Item) };
     }
+
+    /// <summary>Recalcula o episódio depois que um item foi desmarcado, sem sortear novamente.</summary>
+    public CargaDaParanoia Sem(Item item)
+    {
+        int removidas = PorItem.Contagem(item);
+        if (removidas == 0) return this;
+        ContagensDeSubstancias restantes = PorItem.Sem(item);
+        if (restantes.Total == 0) return Nenhuma;
+        ConjuntoDeItens distintas = Distintas.Sem(item);
+        bool sintetica = distintas.Itens.Any(i => TabelaDoTamagotchi.DoItem(i).Sintetica);
+        return this with
+        {
+            Substancias = Math.Max(0, Substancias - removidas),
+            Sintetica = sintetica,
+            Distintas = distintas,
+            PorItem = restantes,
+        };
+    }
+}
+
+/// <summary>Contagem imutável por item adulto, para reconstruir uma mistura sem a origem desmarcada.</summary>
+public readonly record struct ContagensDeSubstancias
+{
+    private int Vodka { get; init; }
+    private int Cerveja { get; init; }
+    private int Baseado { get; init; }
+    private int Cigarro { get; init; }
+    private int Cocaina { get; init; }
+    private int Md { get; init; }
+    private int LancaPerfume { get; init; }
+    private int Cogumelo { get; init; }
+    private int Bala { get; init; }
+
+    private ContagensDeSubstancias(int vodka, int cerveja, int baseado, int cigarro, int cocaina, int md, int lancaPerfume, int cogumelo, int bala)
+        => (Vodka, Cerveja, Baseado, Cigarro, Cocaina, Md, LancaPerfume, Cogumelo, Bala)
+            = (vodka, cerveja, baseado, cigarro, cocaina, md, lancaPerfume, cogumelo, bala);
+
+    /// <summary>Quantas vezes este item entrou na mistura.</summary>
+    public int Contagem(Item item) => item switch
+    {
+        Item.Vodka => Vodka,
+        Item.Cerveja => Cerveja,
+        Item.Baseado => Baseado,
+        Item.Cigarro => Cigarro,
+        Item.Cocaina => Cocaina,
+        Item.Md => Md,
+        Item.LancaPerfume => LancaPerfume,
+        Item.Cogumelo => Cogumelo,
+        Item.Bala => Bala,
+        _ => 0,
+    };
+
+    /// <summary>Soma as contagens, com saturação de inteiro.</summary>
+    public int Total => (int)Math.Min(int.MaxValue, (long)Vodka + Cerveja + Baseado + Cigarro + Cocaina + Md + LancaPerfume + Cogumelo + Bala);
+
+    /// <summary>Incrementa a ocorrência do item; valores fora dos nove itens adultos são recusados.</summary>
+    public ContagensDeSubstancias Com(Item item)
+    {
+        static int Incrementar(int atual) => atual == int.MaxValue ? atual : atual + 1;
+        return item switch
+        {
+            Item.Vodka => this with { Vodka = Incrementar(Vodka) },
+            Item.Cerveja => this with { Cerveja = Incrementar(Cerveja) },
+            Item.Baseado => this with { Baseado = Incrementar(Baseado) },
+            Item.Cigarro => this with { Cigarro = Incrementar(Cigarro) },
+            Item.Cocaina => this with { Cocaina = Incrementar(Cocaina) },
+            Item.Md => this with { Md = Incrementar(Md) },
+            Item.LancaPerfume => this with { LancaPerfume = Incrementar(LancaPerfume) },
+            Item.Cogumelo => this with { Cogumelo = Incrementar(Cogumelo) },
+            Item.Bala => this with { Bala = Incrementar(Bala) },
+            _ => throw new ArgumentOutOfRangeException(nameof(item), item, "Item não é uma substância adulta."),
+        };
+    }
+
+    /// <summary>Zera as ocorrências do item.</summary>
+    public ContagensDeSubstancias Sem(Item item) => item switch
+    {
+        Item.Vodka => this with { Vodka = 0 },
+        Item.Cerveja => this with { Cerveja = 0 },
+        Item.Baseado => this with { Baseado = 0 },
+        Item.Cigarro => this with { Cigarro = 0 },
+        Item.Cocaina => this with { Cocaina = 0 },
+        Item.Md => this with { Md = 0 },
+        Item.LancaPerfume => this with { LancaPerfume = 0 },
+        Item.Cogumelo => this with { Cogumelo = 0 },
+        Item.Bala => this with { Bala = 0 },
+        _ => this,
+    };
 }
 
 /// <summary>
@@ -349,11 +452,64 @@ public readonly record struct ConjuntoDeItens
     /// <summary>O conjunto com o item; o mesmo, se já estava. Um valor fora do enum lança.</summary>
     public ConjuntoDeItens Com(Item item) => new(_bits | Bit(item));
 
+    /// <summary>O conjunto sem o item; um valor fora do enum lança.</summary>
+    public ConjuntoDeItens Sem(Item item) => new(_bits & ~Bit(item));
+
     /// <summary>Os itens separados por vírgula, na ordem do enum: <c>Vodka,Md</c>.</summary>
     public override string ToString() => string.Join(",", Itens);
 
     private static int Bit(Item item)
         => Enum.IsDefined(item) && (int)item < 31 ? 1 << (int)item : throw new ArgumentOutOfRangeException(nameof(item), item, "Item desconhecido.");
+}
+
+/// <summary>
+/// Intensidade ainda atribuída a cada item em uma onda ativa (DEC-041). O valor é imutável e comparável; a contribuição
+/// por item e a soma são limitadas a 3, igual ao teto de nível das ondas.
+/// </summary>
+public readonly record struct ContribuicoesDaOnda
+{
+    private readonly ulong _bits;
+
+    private ContribuicoesDaOnda(ulong bits) => _bits = bits;
+
+    /// <summary>Nenhuma origem de item.</summary>
+    public static ContribuicoesDaOnda Nenhuma => default;
+
+    /// <summary>Intensidade somada e limitada a 3.</summary>
+    public int Total
+    {
+        get
+        {
+            int total = 0;
+            foreach (Item item in TabelaDoTamagotchi.Itens) total += Intensidade(item);
+            return Math.Min(3, total);
+        }
+    }
+
+    /// <summary>Intensidade registrada para o item.</summary>
+    public int Intensidade(Item item)
+    {
+        if (!Enum.IsDefined(item)) throw new ArgumentOutOfRangeException(nameof(item), item, "Item desconhecido.");
+        return (int)((_bits >> ((int)item * 4)) & 0xFUL);
+    }
+
+    /// <summary>Soma uma contribuição, limitada a 3 por item.</summary>
+    public ContribuicoesDaOnda Com(Item item, int intensidade)
+    {
+        if (!Enum.IsDefined(item)) throw new ArgumentOutOfRangeException(nameof(item), item, "Item desconhecido.");
+        if (intensidade < 1) throw new ArgumentOutOfRangeException(nameof(intensidade));
+        int deslocamento = (int)item * 4;
+        ulong mascara = 0xFUL << deslocamento;
+        int somada = Math.Min(3, Intensidade(item) + Math.Min(3, intensidade));
+        return new((_bits & ~mascara) | ((ulong)somada << deslocamento));
+    }
+
+    /// <summary>Retira todas as contribuições desse item.</summary>
+    public ContribuicoesDaOnda Sem(Item item)
+    {
+        if (!Enum.IsDefined(item)) throw new ArgumentOutOfRangeException(nameof(item), item, "Item desconhecido.");
+        return new(_bits & ~(0xFUL << ((int)item * 4)));
+    }
 }
 
 /// <summary>

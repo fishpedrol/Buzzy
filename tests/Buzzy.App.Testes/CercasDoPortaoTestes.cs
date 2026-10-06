@@ -1,4 +1,6 @@
 using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Buzzy.Testes;
 
@@ -12,14 +14,32 @@ namespace Buzzy.App.Testes;
 /// </summary>
 internal sealed class CercasDoPortaoTestes
 {
-    private static readonly string Src = Path.Combine(Caminhos.Raiz, "src");
+    private static readonly string Src = FonteDoProduto.Src;
 
-    private static IEnumerable<string> FontesDoProduto() => Directory.GetFiles(Src, "*.cs", SearchOption.AllDirectories)
-        .Where(f => !Regex.IsMatch(f, @"[\\/](obj|bin)[\\/]"));
+    private static IEnumerable<string> FontesDoProduto() => FonteDoProduto.Arquivos();
 
-    private static string SemComentarios(string codigo) => Regex.Replace(codigo, @"//.*|/\*[\s\S]*?\*/", "");
+    private static string SemComentarios(string codigo) => FonteDoProduto.SemComentarios(codigo);
 
-    private static string Relativo(string f) => Path.GetRelativePath(Src, f);
+    private static string Relativo(string f) => FonteDoProduto.Relativo(f);
+
+    /// <summary>Os métodos P/Invoke dos três assemblies do produto, pelos metadados compilados (módulo!entrada).</summary>
+    private static List<string> PInvokeNosMetadados()
+    {
+        var vistos = new List<string>();
+        foreach (Assembly a in new[] { typeof(CodigosDeSaida).Assembly, typeof(Buzzy.Core.Topologia).Assembly, typeof(Buzzy.Visual.Animacao.ManifestoDeClipes).Assembly })
+        {
+            foreach (Type t in a.GetTypes())
+            {
+                foreach (MethodInfo m in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                {
+                    if ((m.Attributes & MethodAttributes.PinvokeImpl) == 0) continue;
+                    DllImportAttribute? d = m.GetCustomAttribute<DllImportAttribute>();
+                    vistos.Add($"{d?.Value.ToLowerInvariant() ?? "?"}!{(string.IsNullOrEmpty(d?.EntryPoint) ? m.Name : d.EntryPoint)}");
+                }
+            }
+        }
+        return vistos;
+    }
 
     // Todas as declarações P/Invoke do produto, por arquivo, módulo e ponto de entrada. Uma API nativa nova (ou uma que
     // muda de arquivo) reprova aqui e pede a revisão de segurança: o portão proíbe por lista, e esta cerca fecha o resto.
@@ -73,7 +93,8 @@ internal sealed class CercasDoPortaoTestes
     [Teste]
     public void PInvoke_ListaFechada()
     {
-        var declaracao = new Regex(@"\[(?:DllImport|LibraryImport)\(\s*""([^""]+)""([^\]]*)\][\s\S]*?(?:extern|partial)\s+[\w<>\[\]?]+\s+(\w+)\s*\(");
+        // Qualquer grafia do atributo (com o sufixo Attribute, com o nome qualificado, junto de outros atributos).
+        var declaracao = new Regex(@"\[[^\]]*?\b(?:DllImport|LibraryImport)(?:Attribute)?\s*\(\s*""([^""]+)""([^\]]*)\][\s\S]*?(?:extern|partial)\s+[\w<>\[\]?]+\s+(\w+)\s*\(");
         var vistos = new List<string>();
         foreach (string f in FontesDoProduto())
         {
@@ -84,9 +105,75 @@ internal sealed class CercasDoPortaoTestes
             }
         }
         Afirmar.Sequencia(PInvokeEsperados, vistos.Order(StringComparer.Ordinal), "os P/Invoke do produto (uma API nova pede revisão de segurança)");
-        // Nenhuma outra forma de chamar código nativo por nome.
-        string[] outros = [.. FontesDoProduto().Where(f => Regex.IsMatch(SemComentarios(File.ReadAllText(f)), @"\bdelegate\s+unmanaged\b|\bfunction pointer\b|\bUnmanagedCallersOnly\b|\bDllImportResolver\b")).Select(Relativo)];
-        Afirmar.Sequencia([], outros, "ponteiros de função nativos e resolvedores de DLL");
+        // Os metadados compilados fecham a mesma lista, qualquer que seja a grafia na fonte.
+        Afirmar.Sequencia(PInvokeEsperados.Select(e => e[(e.IndexOf('|') + 1)..]).Order(StringComparer.Ordinal), PInvokeNosMetadados().Order(StringComparer.Ordinal), "os P/Invoke nos metadados do App, do Core e do Visual");
+        // Nenhuma outra forma de chamar código nativo: ponteiros de função, resolvedores de DLL e COM declarado à mão.
+        string[] outros = [.. FontesDoProduto().Where(f => Regex.IsMatch(SemComentarios(File.ReadAllText(f)), @"\bdelegate\s*\*|\bUnmanagedCallersOnly\b|\bDllImportResolver\b|\bcalli\b|\bComImport\b|\bCoClass\b|\bGeneratedComInterface\b|\bComWrappers\b|\bComVisible\s*\(\s*true")).Select(Relativo)];
+        Afirmar.Sequencia([], outros, "ponteiros de função, resolvedores de DLL e COM declarado à mão");
+    }
+
+    // DEC-043: o Buzzy roda no Windows 10 (versão 1607, build 14393) e no Windows 11. A versão do Windows em que cada
+    // P/Invoke do produto entrou, pela documentação da Microsoft; nenhuma pode ser mais nova que o mínimo, e a mais nova
+    // é a que o define (GetSystemMetricsForDpi, do 1607, o mesmo mínimo do .NET 10). Uma API nova entra aqui junto com a
+    // lista acima. Windows 2000 = 5.0, XP = 5.1, Vista = 6.0, 7 = 6.1, 8.1 = 6.3, 10 1607 = 10.0.14393.
+    private static readonly Version WindowsMinimo = new(10, 0, 14393);
+
+    private static readonly Dictionary<string, (Version Desde, string Windows)> VersaoMinimaDoWindows = new(StringComparer.Ordinal)
+    {
+        ["advapi32.dll!RegCloseKey"] = (new(5, 0), "Windows 2000"),
+        ["advapi32.dll!RegDeleteValueW"] = (new(5, 0), "Windows 2000"),
+        ["advapi32.dll!RegGetValueW"] = (new(6, 0), "Windows Vista"),
+        ["advapi32.dll!RegOpenKeyExW"] = (new(5, 0), "Windows 2000"),
+        ["advapi32.dll!RegSetValueExW"] = (new(5, 0), "Windows 2000"),
+        ["gdi32.dll!CreateDIBSection"] = (new(5, 0), "Windows 2000"),
+        ["gdi32.dll!DeleteObject"] = (new(5, 0), "Windows 2000"),
+        ["kernel32.dll!GetCurrentThreadId"] = (new(5, 0), "Windows 2000"),
+        ["shcore.dll!GetDpiForMonitor"] = (new(6, 3), "Windows 8.1"),
+        ["shell32.dll!SHQueryUserNotificationState"] = (new(6, 0), "Windows Vista"),
+        ["shell32.dll!Shell_NotifyIconGetRect"] = (new(6, 1), "Windows 7"),
+        ["shell32.dll!Shell_NotifyIconW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!ClientToScreen"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!CreateIconFromResourceEx"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!CreatePopupMenu"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!DestroyIcon"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!DestroyMenu"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!DisplayConfigGetDeviceInfo"] = (new(6, 1), "Windows 7"),
+        ["user32.dll!EndMenu"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!EnumDisplayMonitors"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!GetDisplayConfigBufferSizes"] = (new(6, 1), "Windows 7"),
+        ["user32.dll!GetDoubleClickTime"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!GetForegroundWindow"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!GetMonitorInfoW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!GetSystemMetricsForDpi"] = (new(10, 0, 14393), "Windows 10 1607"),
+        ["user32.dll!GetWindowLongPtrW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!GetWindowRect"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!GetWindowThreadProcessId"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!InsertMenuItemW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!PostMessageW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!QueryDisplayConfig"] = (new(6, 1), "Windows 7"),
+        ["user32.dll!RegisterWindowMessageW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!ReleaseCapture"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!SetCapture"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!SetForegroundWindow"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!SetWinEventHook"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!SetWindowLongPtrW"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!SetWindowPos"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!TrackPopupMenuEx"] = (new(5, 0), "Windows 2000"),
+        ["user32.dll!UnhookWinEvent"] = (new(5, 0), "Windows 2000"),
+        ["wtsapi32.dll!WTSRegisterSessionNotification"] = (new(5, 1), "Windows XP"),
+        ["wtsapi32.dll!WTSUnRegisterSessionNotification"] = (new(5, 1), "Windows XP"),
+    };
+
+    [Teste]
+    public void PInvoke_VersaoMinimaDoWindows()
+    {
+        string[] doProduto = [.. PInvokeEsperados.Select(e => e[(e.IndexOf('|') + 1)..]).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+        Afirmar.Sequencia(doProduto, VersaoMinimaDoWindows.Keys.Order(StringComparer.Ordinal), "cada P/Invoke do produto tem a versão do Windows em que entrou (DEC-043)");
+        foreach ((string api, (Version desde, string windows)) in VersaoMinimaDoWindows)
+            Afirmar.Verdadeiro(desde <= WindowsMinimo, $"{api} exige {windows} ({desde}), mais novo que o mínimo do Buzzy, o Windows 10 1607 ({WindowsMinimo})");
+        Afirmar.Igual(WindowsMinimo, VersaoMinimaDoWindows.Values.Max(v => v.Desde), "o mínimo declarado é o da função mais nova");
+        // O manifesto declara o Windows 10 e 11 (um GUID para os dois; o portão também exige).
+        Afirmar.Contem("<supportedOS Id=\"{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}\" />", File.ReadAllText(Path.Combine(Src, "Buzzy.App", "app.manifest")));
     }
 
     // L16: os argumentos dos dois ganchos fixos: o evento único, fora de contexto, sem módulo, sem processo, pulando o
@@ -95,7 +182,9 @@ internal sealed class CercasDoPortaoTestes
     public void SetWinEventHook_ArgumentosFixos()
     {
         string codigo = SemComentarios(File.ReadAllText(Path.Combine(Src, "Buzzy.App", "Plataforma", "ObservadorDeTelaCheia.cs")));
-        string[] chamadas = [.. Regex.Matches(codigo, @"Nativo\.SetWinEventHook\(([^;]*)\);").Select(m => Regex.Replace(m.Groups[1].Value, @"\s+", " ").Trim())];
+        string[] chamadas = [.. Regex.Matches(codigo, @"\bNativo\s*\.\s*SetWinEventHook\s*\(([^;]*)\);").Select(m => Regex.Replace(m.Groups[1].Value, @"\s+", " ").Trim())];
+        // A palavra aparece exatamente três vezes: a declaração e as duas chamadas (nenhuma outra forma de chamar).
+        Afirmar.Igual(3, Regex.Matches(codigo, @"\bSetWinEventHook\b").Count, "a declaração e as duas chamadas");
         Afirmar.Sequencia(
         [
             "EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, 0, _aoEvento, 0, 0, WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS",
@@ -138,6 +227,9 @@ internal sealed class CercasDoPortaoTestes
     [Teste]
     public void SemEnderecosDeRede()
     {
+        // O removedor de comentários não pode engolir um endereço dentro de um texto.
+        Afirmar.Contem("https://exemplo", SemComentarios("var u = \"https://exemplo\"; // comentário"));
+        Afirmar.Contem(@"\\servidor", SemComentarios(@"var p = @""\\servidor\x""; /* c */"));
         foreach (string f in FontesDoProduto())
         {
             string codigo = SemComentarios(File.ReadAllText(f));
@@ -153,7 +245,7 @@ internal sealed class CercasDoPortaoTestes
     public void SemReflexaoPorTexto()
     {
         // (o GetProperty do JsonElement, que lê um campo de JSON, não é reflexão: só o de um Type conta)
-        var reflexao = new Regex(@"\bdynamic\b|\.GetMethod\s*\(|(typeof\([^)]*\)|GetType\(\))\.Get(Property|Field|Member|Methods|Properties|Fields)\s*\(|\.GetField\s*\(|\bType\.GetType\s*\(|\bActivator\.CreateInstance\b|\bMethodInfo\b|\bInvokeMember\b|\bAssembly\.Load");
+        var reflexao = new Regex(@"\bdynamic\b|\.(GetMethods?|GetRuntimeMethods?|GetDeclaredMethods?|GetMembers?|GetRuntimeProperties|GetFields?|GetConstructors?)\s*\(|(typeof\([^)]*\)|GetType\(\))\.Get(Property|Properties)\s*\(|\.GetType\s*\(\s*[""$@]|\bType\.GetType\s*\(|\bActivator\.CreateInstance\b|\bMethod(Info|Base)\b|\bInvokeMember\b|\bAssembly\.Load|\bExpression\.Lambda\b");
         string[] quem = [.. FontesDoProduto().Where(f => reflexao.IsMatch(SemComentarios(File.ReadAllText(f)))).Select(Relativo)];
         Afirmar.Sequencia([], quem, "reflexão por texto ou dynamic");
     }

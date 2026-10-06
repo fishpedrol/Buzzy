@@ -98,6 +98,7 @@ public static partial class Maquina
                 case CmdExit: Sair("CMD_EXIT"); break;
                 case CmdSetDominantEmotion e: EscolherEmocao(e.Emocao); break;
                 case CmdSetAdultContent e: EscolherConteudoAdulto(e.Ligado); break;
+                case CmdSetAdultItemEnabled e: EscolherItemAdulto(e.Item, e.Ligado); break;
                 case CmdSetFullscreenMode e: EscolherModoTelaCheia(e.Ligado); break;
                 case CmdSetEnergy e: EscolherEnergiaPorComando(e.Nivel); break;
                 case CmdSetAlwaysOnTop e: EscolherSempreNoTopo(e.Ligado); break;
@@ -1160,6 +1161,7 @@ public static partial class Maquina
             if (!Enum.IsDefined(preferencias.Energia)) preferencias = preferencias with { Energia = Preferencias.Padrao.Energia };
             if (preferencias.EmocaoDominante is { } emocao && !Expressoes.EhDeHumor(emocao)) preferencias = preferencias with { EmocaoDominante = null };
             if (!Enum.IsDefined(preferencias.Escala)) preferencias = preferencias with { Escala = Preferencias.Padrao.Escala };
+            preferencias = preferencias with { ItensAdultosHabilitados = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados) };
             return preferencias;
         }
 
@@ -1172,6 +1174,10 @@ public static partial class Maquina
             // precedência (DEC-028); antes da carga, quem decide a cara de partida é a carga.
             if (_s.Carregado && novas.EmocaoDominante is { } emocao && emocao != antes.EmocaoDominante && !ComOnda && CaraLivre(_s.Estado))
                 _s = _s with { Expressao = emocao };
+            if (_s.Carregado)
+                foreach (Item item in TabelaDoTamagotchi.Itens)
+                    if (ItemAdulto(item) && antes.ItensAdultosHabilitados.Contem(item) && !novas.ItensAdultosHabilitados.Contem(item))
+                        TirarOItemAdulto(item);
             // Desligar o conteúdo adulto pelas preferências faz o mesmo que pelo menu (DEC-033).
             if (_s.Carregado && antes.ConteudoAdulto && !novas.ConteudoAdulto) TirarOConteudoAdulto();
             if (!antes.ModoTelaCheia || novas.ModoTelaCheia) return;

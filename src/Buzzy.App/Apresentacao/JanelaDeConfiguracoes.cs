@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Buzzy.App.Plataforma;
 using Buzzy.Core;
 using Buzzy.Core.Personagem;
@@ -10,7 +11,7 @@ namespace Buzzy.App.Apresentacao;
 
 /// <summary>
 /// A janela de configurações (Fase 8; DEC-038, itens 5 a 8; critérios 7 a 10): uma coluna em três grupos — Comportamento
-/// (energia, desviar da tela cheia, conteúdo adulto), Aparência (tamanho, sempre no topo) e Windows (o início com o Windows) —
+/// (energia, desviar da tela cheia, conteúdo adulto e seleção individual dos itens, DEC-041), Aparência (tamanho, sempre no topo) e Windows (o início com o Windows) —
 /// e o botão Fechar (Esc). Cada controle aplica na hora pelo pedido dele, sem OK nem Cancelar,
 /// sem campo de texto; a marca só muda pela raiz (<see cref="Atualizar"/>), a partir do que o núcleo gravou. Janela comum,
 /// nunca topmost, com a fonte do sistema e o tema "chapéu de palha" (<see cref="TemaDoBuzzy"/>, DEC-039; no alto contraste, as
@@ -23,6 +24,8 @@ internal sealed class JanelaDeConfiguracoes : Window
 
     private readonly EscalaDoPersonagem _escalaEmVigor;
     private readonly TextBlock _proximaVez;
+    private readonly Dictionary<Item, CaixaDeComando> _caixasDosItensAdultos = [];
+    private readonly Dictionary<Item, Image> _iconesDosItensAdultos = [];
 
     /// <param name="preferencias">As preferências do núcleo na abertura.</param>
     /// <param name="escalaEmVigor">O tamanho com que o Buzzy abriu, para o aviso de "próxima vez".</param>
@@ -69,6 +72,7 @@ internal sealed class JanelaDeConfiguracoes : Window
         {
             comportamento.Children.Add(Adulto);
             comportamento.Children.Add(Ajuda(Textos.ConfigAdultoAjuda));
+            comportamento.Children.Add(ControlesDosItensAdultos());
         }
         var aparencia = new StackPanel();
         aparencia.Children.Add(Tamanho);
@@ -109,14 +113,22 @@ internal sealed class JanelaDeConfiguracoes : Window
         Tamanho.Escolheu += escala => PediuEscala?.Invoke(escala);
         TelaCheia.Pedido += ligado => PediuTelaCheia?.Invoke(ligado);
         if (Adulto is not null) Adulto.Pedido += ligado => PediuAdulto?.Invoke(ligado);
+        foreach ((Item item, CaixaDeComando caixa) in _caixasDosItensAdultos)
+            caixa.Pedido += ligado => PediuItemAdulto?.Invoke(item, ligado);
         Topo.Pedido += ligado => PediuTopo?.Invoke(ligado);
         Activated += (_, _) => Ativada?.Invoke();
-        Loaded += (_, _) => Energia.Focar();
+        Loaded += (_, _) =>
+        {
+            AtualizarIconesDosItensAdultos();
+            Energia.Focar();
+        };
+        DpiChanged += (_, _) => AtualizarIconesDosItensAdultos();
     }
 
     internal event Action<NivelDeEnergia>? PediuEnergia;
     internal event Action<bool>? PediuTelaCheia;
     internal event Action<bool>? PediuAdulto;
+    internal event Action<Item, bool>? PediuItemAdulto;
     internal event Action<EscalaDoPersonagem>? PediuEscala;
     internal event Action<bool>? PediuTopo;
 
@@ -126,6 +138,7 @@ internal sealed class JanelaDeConfiguracoes : Window
     internal Seletor<NivelDeEnergia> Energia { get; }
     internal CaixaDeComando TelaCheia { get; }
     internal CaixaDeComando? Adulto { get; }
+    internal IReadOnlyDictionary<Item, CaixaDeComando> CaixasDosItensAdultos => _caixasDosItensAdultos;
     internal Seletor<EscalaDoPersonagem> Tamanho { get; }
     internal CaixaDeComando Topo { get; }
     internal Button Fechar { get; }
@@ -164,6 +177,8 @@ internal sealed class JanelaDeConfiguracoes : Window
         Energia.Marcar(preferencias.Energia);
         TelaCheia.Marcar(preferencias.ModoTelaCheia);
         Adulto?.Marcar(preferencias.ConteudoAdulto);
+        foreach ((Item item, CaixaDeComando caixa) in _caixasDosItensAdultos)
+            caixa.Marcar(preferencias.ItensAdultosHabilitados.Contem(item));
         Tamanho.Marcar(preferencias.Escala);
         Topo.Marcar(preferencias.SempreNoTopo);
         _proximaVez.Visibility = preferencias.Escala == _escalaEmVigor ? Visibility.Collapsed : Visibility.Visible;
@@ -175,6 +190,59 @@ internal sealed class JanelaDeConfiguracoes : Window
         AutomationProperties.SetName(caixa, rotulo.Replace("_", "", StringComparison.Ordinal));
         AutomationProperties.SetHelpText(caixa, ajuda);
         return caixa;
+    }
+
+    private StackPanel ControlesDosItensAdultos()
+    {
+        var grupo = new StackPanel { Margin = new Thickness(18, 4, 2, 0) };
+        var titulo = new TextBlock
+        {
+            Text = Textos.ConfigItensAdultos,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 4, 6, 0),
+        };
+        titulo.SetResourceReference(TextBlock.ForegroundProperty, TemaDoBuzzy.ChaveTexto);
+        grupo.Children.Add(titulo);
+        grupo.Children.Add(Ajuda(Textos.ConfigItensAdultosAjuda));
+
+        foreach (Item item in TabelaDoTamagotchi.Itens.Where(TabelaDoTamagotchi.Adulto))
+        {
+            string nome = Textos.NomeDoItem(item);
+            var icone = new IconeDecorativo
+            {
+                Width = 24,
+                Height = 24,
+                Margin = new Thickness(0, 0, 8, 0),
+                Stretch = Stretch.Uniform,
+                SnapsToDevicePixels = true,
+            };
+            RenderOptions.SetBitmapScalingMode(icone, BitmapScalingMode.NearestNeighbor);
+            _iconesDosItensAdultos.Add(item, icone);
+
+            var conteudo = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            conteudo.Children.Add(icone);
+            conteudo.Children.Add(new TextBlock { Text = nome, VerticalAlignment = VerticalAlignment.Center });
+            var caixa = new CaixaDeComando { Content = conteudo, Margin = new Thickness(0, 3, 6, 2), VerticalContentAlignment = VerticalAlignment.Center };
+            AutomationProperties.SetName(caixa, nome);
+            AutomationProperties.SetHelpText(caixa, Textos.ConfigItemAdultoAjuda);
+            _caixasDosItensAdultos.Add(item, caixa);
+            grupo.Children.Add(caixa);
+        }
+        return grupo;
+    }
+
+    private void AtualizarIconesDosItensAdultos()
+    {
+        if (_iconesDosItensAdultos.Count == 0) return;
+        int dpi = (int)Math.Round(VisualTreeHelper.GetDpi(this).PixelsPerInchX, MidpointRounding.AwayFromZero);
+        foreach ((Item item, Image icone) in _iconesDosItensAdultos)
+            icone.Source = SpriteDoItem.Renderizar(item, dpi);
+    }
+
+    /// <summary>O ícone de um item na caixa: enfeite, sem peer de automação (o nome da caixa já diz o item ao leitor de tela).</summary>
+    private sealed class IconeDecorativo : Image
+    {
+        protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => null!;
     }
 
     private static TextBlock Ajuda(string texto)

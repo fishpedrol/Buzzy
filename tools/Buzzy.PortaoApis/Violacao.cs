@@ -10,6 +10,12 @@ internal static class Codigos
     public const string CodigoFonte = "BZP004";
     public const string Manifesto = "BZP005";
     public const string BinarioDeTerceiro = "BZP006";
+
+    /// <summary>O host de um pacote de arquivo único que não é o singlefilehost.exe da Microsoft (F9-P10).</summary>
+    public const string HostDeArquivoUnico = "BZP007";
+
+    /// <summary>runtimeconfig.json ou deps.json fora da lista revisada (F9-P10): o runtime carregaria código de fora.</summary>
+    public const string ConfiguracaoDoRuntime = "BZP008";
 }
 
 /// <summary>Uma capacidade proibida encontrada.</summary>

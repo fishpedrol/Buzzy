@@ -113,7 +113,7 @@ public sealed class TestesDoVerificadorDeFonte : IDisposable
             var eu = Process.GetCurrentProcess(); var id = eu.Id; var inicio = eu.StartTime;
             var tamanho = Marshal.SizeOf<Ponto>();
             SetWindowPos(janela, 0, 0, 0, 0, 0, 0); Shell_NotifyIcon(1, dados); SetForegroundWindow(janela);
-            var asm = typeof(A).Assembly.Location; Assembly.GetExecutingAssembly();
+            var exe = Environment.ProcessPath; var pasta = AppContext.BaseDirectory; Assembly.GetExecutingAssembly();
             """;
         List<Violacao> violacoes = Verificar(fonte);
         Afirmar.Igual(0, violacoes.Count, string.Join("; ", violacoes.Select(v => v.Api)));
@@ -127,6 +127,10 @@ public sealed class TestesDoVerificadorDeFonte : IDisposable
         Afirmar.Sequencia<string>(["Clipboard"], Verificar("System.Windows.Clipboard.GetText();").Select(v => v.Api));
         Afirmar.Sequencia<string>(["Assembly.LoadFrom"], Verificar("Assembly.LoadFrom(caminho);").Select(v => v.Api));
         Afirmar.Sequencia<string>(["Assembly.Load"], Verificar("System.Reflection.Assembly.Load(bytes);").Select(v => v.Api));
+        // F9-P10: o que vem vazio ou lança num executável de arquivo único.
+        Afirmar.Sequencia<string>(["Assembly.Location"], Verificar("var x = typeof(A).Assembly.Location;").Select(v => v.Api));
+        Afirmar.Sequencia<string>(["CodeBase"], Verificar("var x = nome.CodeBase;").Select(v => v.Api));
+        Afirmar.Sequencia<string>(["Assembly.GetFiles"], Verificar("var x = typeof(A).Assembly.GetFiles();").Select(v => v.Api));
         Afirmar.Sequencia<string>(["System.Reflection.Emit", "DynamicMethod"], Verificar("new System.Reflection.Emit.DynamicMethod(\"m\", null, null);").Select(v => v.Api));
         Afirmar.Sequencia<string>(["Windows.Graphics.Capture"], Verificar("using Windows.Graphics.Capture;").Select(v => v.Api));
     }

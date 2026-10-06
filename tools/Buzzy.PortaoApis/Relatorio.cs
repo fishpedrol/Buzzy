@@ -16,13 +16,16 @@ internal static class Relatorio
 
         saida.WriteLine("Portão de APIs proibidas do Buzzy (SECURITY.md 3.2 e 8, item 1)");
         int categorias = ListaProibida.Regras.Select(r => r.Categoria).Distinct().Count();
-        saida.WriteLine($"Lista proibida: {ListaProibida.Regras.Count} regras em {categorias} categorias; permissões do apphost: {PermissoesDoApphost.Entradas.Count}; usos restritos: {UsosRestritos.Entradas.Count}.");
+        saida.WriteLine($"Lista proibida: {ListaProibida.Regras.Count} regras em {categorias} categorias; permissões do apphost: {PermissoesDoApphost.Entradas.Count}; do host de arquivo único: {PermissoesDoHostDeArquivoUnico.Entradas.Count}; usos restritos: {UsosRestritos.Entradas.Count}.");
         saida.WriteLine();
 
-        saida.WriteLine($"Binários em {opcoes.Binarios}");
+        saida.WriteLine(opcoes.Pacote is null ? $"Binários em {opcoes.Binarios}" : $"Pacote de arquivo único {opcoes.Pacote}");
         int largura = resultado.Binarios.Max(b => Path.GetFileName(b.Caminho).Length);
         foreach (BinarioVerificado b in resultado.Binarios)
             saida.WriteLine($"  {Path.GetFileName(b.Caminho).PadRight(largura)}  {b.Tipo}: {b.Resumo}");
+        if (resultado.ResumoDoPacote is not null) saida.WriteLine($"  {resultado.ResumoDoPacote}.");
+        if (opcoes.Runtimes.Count > 0)
+            saida.WriteLine($"  Do runtime da Microsoft, por procedência (mesmo nome e SHA-256 em {string.Join(", ", opcoes.Runtimes)}): {resultado.DoRuntime}.");
         saida.WriteLine(resultado.NaoVerificados.Count == 0
             ? "  Outros binários na pasta: nenhum."
             : $"  Outros binários na pasta, fora do portão: {string.Join(", ", resultado.NaoVerificados)}.");
@@ -37,9 +40,11 @@ internal static class Relatorio
 
         if (resultado.Permitidas.Count > 0)
         {
-            saida.WriteLine("Permitidas no apphost (lançador genérico do SDK, não é código do Buzzy; nunca valem para as DLLs):");
+            saida.WriteLine(opcoes.Pacote is null
+                ? "Permitidas no apphost (lançador genérico do SDK, não é código do Buzzy; nunca valem para as DLLs):"
+                : "Permitidas no host de arquivo único (o singlefilehost.exe da Microsoft: lançador e runtime; não é código do Buzzy; nunca valem para as DLLs):");
             foreach (Permitida p in resultado.Permitidas)
-                saida.WriteLine($"  {Path.GetFileName(p.Arquivo)}: {p.Api} [{p.Categoria.Nome()}] permitida no apphost - {p.Permissao.Motivo}");
+                saida.WriteLine($"  {Path.GetFileName(p.Arquivo)}: {p.Api} [{p.Categoria.Nome()}] permitida no {Onde(resultado)} - {p.Permissao.Motivo}");
             saida.WriteLine();
         }
 
@@ -73,7 +78,7 @@ internal static class Relatorio
     public static string Resumo(ResultadoDoPortao resultado)
     {
         ArgumentNullException.ThrowIfNull(resultado);
-        string permitidas = $"{resultado.Permitidas.Count} importação(ões) permitida(s) no apphost; {resultado.UsosRestritos.Count} uso(s) restrito(s)";
+        string permitidas = $"{resultado.Permitidas.Count} importação(ões) permitida(s) no {Onde(resultado)}; {resultado.UsosRestritos.Count} uso(s) restrito(s)";
         if (resultado.Violacoes.Count == 0)
             return $"Resumo: APROVADO - nenhuma violação; {permitidas}.";
 
@@ -84,6 +89,9 @@ internal static class Relatorio
             .Select(g => $"{g.Key.Nome()}: {g.Count()}"));
         return $"Resumo: REPROVADO - {resultado.Violacoes.Count} violação(ões) em {arquivos} arquivo(s) ({porCategoria}); {permitidas}.";
     }
+
+    /// <summary>Onde valem as permissões: o apphost (pasta) ou o host de arquivo único (pacote).</summary>
+    private static string Onde(ResultadoDoPortao resultado) => resultado.Opcoes.Pacote is null ? "apphost" : "host de arquivo único";
 
     /// <summary>Erro de uso ou de leitura, também no formato do MSBuild.</summary>
     public static void EscreverErro(string mensagem, TextWriter erros)

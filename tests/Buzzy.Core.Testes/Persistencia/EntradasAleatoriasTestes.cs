@@ -30,7 +30,7 @@ internal static class EntradasAleatoriasTestes
     private static byte[][] Corpus()
     {
         var corpus = new List<byte[]>();
-        foreach (string v in new[] { "settings-v1.json", "settings-v2.json", "settings-v3.json", "settings-v4.json", "settings-v5.json" })
+        foreach (string v in new[] { "settings-v1.json", "settings-v2.json", "settings-v3.json", "settings-v4.json", "settings-v5.json", "settings-v6.json" })
             corpus.Add(File.ReadAllBytes(Path.Combine(ReproducaoTestes.PastaDasFontes(), "Persistencia", "Amostras", v)));
         var r = new Random(Semente);
         for (int i = 0; i < 40; i++)
@@ -39,6 +39,8 @@ internal static class EntradasAleatoriasTestes
             {
                 SempreNoTopo = r.Next(2) == 0,
                 Escala = (EscalaDoPersonagem)r.Next(3),
+                ConteudoAdulto = r.Next(2) == 0,
+                ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos.Itens.Where(_ => r.Next(2) == 0).Aggregate(ConjuntoDeItens.Vazio, (c, i) => c.Com(i)),
             };
             PosicaoDoPersonagem? posicao = r.Next(4) == 0 ? null
                 : new PosicaoDoPersonagem(r.Next(2) == 0 ? @"\\.\DISPLAY1" : $"mon:{r.NextInt64():x16}", r.NextDouble(), r.NextDouble(), new PontoPx(r.Next(-4000, 4000), r.Next(-2000, 3000)));
@@ -184,7 +186,15 @@ internal static class EntradasAleatoriasTestes
             }
             case 11:
             {
-                string v = r.Next(2) == 0 ? "-1" : r.Next(2) == 0 ? "0" : r.Next(2) == 0 ? "6" : "2147483648";
+                int sorteio = r.Next(5);
+                string v = sorteio switch
+                {
+                    0 => "-1",
+                    1 => "0",
+                    2 => (EsquemaDeConfiguracoes.VersaoAtual + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    3 => (EsquemaDeConfiguracoes.VersaoAtual + 100).ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    _ => "2147483648",
+                };
                 operacoes.Add($"schemaVersion {v}");
                 return Encoding.UTF8.GetBytes(System.Text.RegularExpressions.Regex.Replace(texto, @"""schemaVersion"":\s*-?\d+", $"\"schemaVersion\": {v}"));
             }

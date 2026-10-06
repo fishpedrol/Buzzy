@@ -259,7 +259,7 @@ internal static class BaseadoPorContaPropriaTestes
         {
             int semente = mestre.Next();
             var rnd = new Random(semente);
-            var preferencias = new Preferencias((NivelDeEnergia)(n % 3), true);
+            var preferencias = new Preferencias((NivelDeEnergia)(n % 3), true).Completa();
             Topologia topologia = TopologiasDeExemplo.UmMonitor;
             var com = new SimuladorDeTempo(comAAcao, (ulong)semente, topologia, preferencias);
             var sem = new SimuladorDeTempo(semAAcao, (ulong)semente, topologia, preferencias);
@@ -484,7 +484,7 @@ internal static class BaseadoPorContaPropriaTestes
             double elegivel = 0, total = 0;
             for (int n = 1; n <= sementes; n++)
             {
-                var sim = new SimuladorDeTempo(cfg, (ulong)(20261100 + n), TopologiasDeExemplo.UmMonitor, new Preferencias(nivel, true));
+                var sim = new SimuladorDeTempo(cfg, (ulong)(20261100 + n), TopologiasDeExemplo.UmMonitor, new Preferencias(nivel, true).Completa());
                 double ultimo = sim.AgoraMs;
                 EstadoDoNucleo atual = sim.Estado;
                 sim.AoResultado = (antes, e, r) =>

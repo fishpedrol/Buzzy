@@ -195,14 +195,29 @@ public static partial class Maquina
             int intensidade = Math.Clamp(dados.Intensidade, 1, 3);
             EstadoDaOnda? frente = _s.Onda, fundo = _s.OndaDeFundo;
             if (frente is null)
+            {
+                _s = _s with { FontesDaOnda = ContribuicoesDaOnda.Nenhuma.Com(dados.Item, intensidade) };
                 IniciarFase(new EstadoDaOnda(tipo, FaseDaOnda.Subida, intensidade, intensidade));
+            }
             else if (frente.Tipo == tipo)
+            {
+                _s = _s with { FontesDaOnda = _s.FontesDaOnda.Com(dados.Item, intensidade) };
                 IniciarFase(Somada(frente, intensidade));
+            }
             else if (fundo is not null && fundo.Tipo == tipo)
-                _s = _s with { OndaDeFundo = Somada(fundo, intensidade) };
+                _s = _s with
+                {
+                    OndaDeFundo = Somada(fundo, intensidade),
+                    FontesDaOndaDeFundo = _s.FontesDaOndaDeFundo.Com(dados.Item, intensidade),
+                };
             else if (_cfg.TabelaDeOndas(tipo).Precedencia >= _cfg.TabelaDeOndas(frente.Tipo).Precedencia)
             {
-                _s = _s with { OndaDeFundo = frente };
+                _s = _s with
+                {
+                    OndaDeFundo = frente,
+                    FontesDaOndaDeFundo = _s.FontesDaOnda,
+                    FontesDaOnda = ContribuicoesDaOnda.Nenhuma.Com(dados.Item, intensidade),
+                };
                 IniciarFase(new EstadoDaOnda(tipo, FaseDaOnda.Subida, intensidade, intensidade));
             }
         }
@@ -291,7 +306,12 @@ public static partial class Maquina
             _s = _s with { AleatorioDaParanoia = proximo, Carga = _s.Carga with { Sorteada = true } };
             if (!saiu) return ("", false);
             var comeca = new EstadoDaOnda(Onda.Paranoico, FaseDaOnda.Subida, 1, 1);
-            _s = _s with { OndaDeFundo = _s.Onda };
+            _s = _s with
+            {
+                OndaDeFundo = _s.Onda,
+                FontesDaOndaDeFundo = _s.FontesDaOnda,
+                FontesDaOnda = ContribuicoesDaOnda.Nenhuma,
+            };
             IniciarFase(comeca);
             return ($"; a paranoia começa: {Descrever(comeca)}", true);
         }
@@ -345,11 +365,16 @@ public static partial class Maquina
         {
             if (_s.OndaDeFundo is { } fundo)
             {
-                _s = _s with { OndaDeFundo = null };
+                _s = _s with
+                {
+                    OndaDeFundo = null,
+                    FontesDaOnda = _s.FontesDaOndaDeFundo,
+                    FontesDaOndaDeFundo = ContribuicoesDaOnda.Nenhuma,
+                };
                 IniciarFase(fundo);
                 return fundo;
             }
-            _s = _s with { Onda = null };
+            _s = _s with { Onda = null, FontesDaOnda = ContribuicoesDaOnda.Nenhuma };
             if (CaraLivre(_s.Estado)) _s = _s with { Expressao = CaraDeBase() };
             return null;
         }

@@ -240,7 +240,7 @@ internal static class OndaTestes
         {
             int semente = mestre.Next();
             var rnd = new Random(semente);
-            var sim = new SimuladorDeTempo(cfg, (ulong)semente, TopologiasDeExemplo.UmMonitor, new Preferencias((NivelDeEnergia)rnd.Next(3), true));
+            var sim = new SimuladorDeTempo(cfg, (ulong)semente, TopologiasDeExemplo.UmMonitor, new Preferencias((NivelDeEnergia)rnd.Next(3), true).Completa());
             int disparosNoEpisodio = 0, limite = 0;
             void Conferir(EstadoDoNucleo antes, Evento e, Resultado r)
             {
@@ -351,7 +351,7 @@ internal static class OndaTestes
     /// substância (o baseado por conta própria começa uma).
     /// </summary>
     private static EstadoDoNucleo SemAOnda(EstadoDoNucleo s)
-        => s with { Expressao = Expressao.Neutro, Onda = null, OndaDeFundo = null, Carga = CargaDaParanoia.Nenhuma, GeracaoDaOnda = 0, OndaAgendada = false, Sinal = Sinal.Nenhum };
+        => s with { Expressao = Expressao.Neutro, Onda = null, OndaDeFundo = null, FontesDaOnda = ContribuicoesDaOnda.Nenhuma, FontesDaOndaDeFundo = ContribuicoesDaOnda.Nenhuma, Carga = CargaDaParanoia.Nenhuma, GeracaoDaOnda = 0, OndaAgendada = false, Sinal = Sinal.Nenhum };
 
     // ---------------------------------------------------------------- perfil e física em vigor
 
@@ -368,7 +368,7 @@ internal static class OndaTestes
         foreach (NivelDeEnergia energia in Enum.GetValues<NivelDeEnergia>())
         {
             PerfilDeEnergia baseDoNivel = cfg.Perfil(energia);
-            EstadoDoNucleo s = inicial with { Preferencias = Preferencias.Padrao with { Energia = energia } };
+            EstadoDoNucleo s = inicial with { Preferencias = PreferenciasDeTeste.Completas with { Energia = energia } };
             Afirmar.Verdadeiro(ReferenceEquals(baseDoNivel, Maquina.PerfilEfetivo(s, cfg)), $"{energia}: sem onda, o mesmo perfil");
             foreach (Onda onda in Enum.GetValues<Onda>())
             {
@@ -729,7 +729,7 @@ internal static class OndaTestes
             Expressao? dominante = n % 3 == 0 ? Expressoes.DeHumor[n % 14] : null;
             string Onde(int i, Evento e) => $"semente {semente} (sequência {n}, dominante {dominante?.ToString() ?? "automática"}), {i}º evento ({e})";
             Topologia topologia = TopologiasDeExemplo.UmMonitor;
-            Preferencias preferencias = Preferencias.Padrao with { EmocaoDominante = dominante };
+            Preferencias preferencias = PreferenciasDeTeste.Completas with { EmocaoDominante = dominante };
             var semOnda = new SimuladorDeTempo(cfg, (ulong)semente, topologia, preferencias);
             SimuladorDeTempo comOnda = new SimuladorDeTempo(cfg, (ulong)semente, topologia, preferencias)
                 .Semeado(s => s with { Onda = new EstadoDaOnda(Onda.Bebado, FaseDaOnda.Pico, 1, 1) });
@@ -859,7 +859,7 @@ internal static class OndaTestes
     [Teste]
     public static void Onda_TemPrecedenciaSobreADominanteEDepoisVolta()
     {
-        var sim = new SimuladorDeTempo(Ligado(), 5, TopologiasDeExemplo.UmMonitor, Preferencias.Padrao with { EmocaoDominante = Expressao.Pensativo });
+        var sim = new SimuladorDeTempo(Ligado(), 5, TopologiasDeExemplo.UmMonitor, PreferenciasDeTeste.Completas with { EmocaoDominante = Expressao.Pensativo });
         sim.Aplicar(new CmdPauseAutonomy());
         Afirmar.Igual(Expressao.Pensativo, sim.Estado.Expressao, "começa com a dominante");
         List<Aplicado> aplicados = [];
@@ -1031,7 +1031,7 @@ internal static class OndaTestes
         ConfiguracaoDoNucleo cfg = Ligado();
         Afirmar.Igual(Origem.Relogio, new ItemEffectTimer(1).Origem, "origem do relógio");
         var carregado = new Nucleo(cfg, 3);
-        carregado.Enfileirar(new Loaded(TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao));
+        carregado.Enfileirar(new Loaded(TopologiasDeExemplo.UmMonitor, null, PreferenciasDeTeste.Completas));
         carregado.Processar();
         long geracaoDaAgenda = carregado.Estado.Geracao;
         PontoPx a = carregado.Estado.Lugar!.Ancora;
@@ -1344,7 +1344,7 @@ internal static class OndaTestes
         {
             int semente = mestre.Next();
             var rnd = new Random(semente);
-            var sim = new SimuladorDeTempo(cfg, (ulong)semente, TopologiasDeExemplo.UmMonitor, new Preferencias((NivelDeEnergia)rnd.Next(3), true));
+            var sim = new SimuladorDeTempo(cfg, (ulong)semente, TopologiasDeExemplo.UmMonitor, new Preferencias((NivelDeEnergia)rnd.Next(3), true).Completa());
             int disparosNoEpisodio = 0, limite = 0, passosNoUso = 0;
             (Uso Uso, EstadoDoNucleo Antes)? emUso = null;
             void Conferir(EstadoDoNucleo antes, Evento e, Resultado r)

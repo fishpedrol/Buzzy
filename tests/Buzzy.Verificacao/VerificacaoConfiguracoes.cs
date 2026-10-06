@@ -30,7 +30,10 @@ namespace Buzzy.Verificacao;
 /// </summary>
 internal sealed partial class Verificacao
 {
-    private const ushort VK_DOWN = 0x28, VK_TAB_F8 = 0x09, VK_ALT_F8 = 0x12;
+    private const ushort VK_DOWN = 0x28, VK_TAB_F8 = 0x09, VK_ALT_F8 = 0x12, VK_SPACE_F9 = 0x20;
+
+    /// <summary>Os nove itens adultos das configurações (DEC-041), na ordem do enum, como o leitor de tela os lê.</summary>
+    private static readonly string[] ItensAdultosNaJanela = ["Vodka", "Cerveja", "Baseado", "Cigarro", "Cocaína", "MD", "Lança-perfume", "Cogumelo", "Bala"];
 
     private nint _hPainel;
     private nint _hConfiguracoes;
@@ -56,6 +59,7 @@ internal sealed partial class Verificacao
                 if (F8ConfiguracoesPeloMenu())
                 {
                     F8TabPelosControles();
+                    F9ItemAdulto();
                     F8PainelEConfiguracoes();
                     F8SempreNoTopo();
                     F8InicioSimulado();
@@ -222,11 +226,11 @@ internal sealed partial class Verificacao
 
     private void F8TabPelosControles()
     {
-        const string Criterio = "V-F8-6 — o Tab percorre as configurações: todo controle com nome, uma parada por grupo de opções (na marcada), na ordem (energia, tela cheia, adulto, tamanho, topo, início, Fechar) e de volta ao começo";
+        const string Criterio = "V-F8-6 — o Tab percorre as configurações: todo controle com nome, uma parada por grupo de opções (na marcada), na ordem (energia, tela cheia, adulto, os nove itens adultos, tamanho, topo, início, Fechar) e de volta ao começo";
         var vistos = new List<string>();
         string primeiro = FocoDaUia(comTipo: true);
         vistos.Add(primeiro);
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 30; i++)
         {
             if (!_inj.TeclaVirtual(VK_TAB_F8, "Tab nas configurações", () => FrenteEh(_hConfiguracoes))) break;
             Thread.Sleep(150);
@@ -238,10 +242,39 @@ internal sealed partial class Verificacao
         // A energia marcada é a do perfil (Alta, pelo V-F8-2); o tamanho, o padrão (Médio).
         Preferencias? p = PreferenciasDoPerfil();
         string energia = p?.Energia switch { NivelDeEnergia.Baixa => "Baixa", NivelDeEnergia.Alta => "Alta", _ => "Média" };
-        string[] esperado = [energia, "Desviar da tela cheia", "Conteúdo adulto", "Médio", "Sempre no topo", "Iniciar com o Windows", "Fechar"];
+        string[] esperado = [energia, "Desviar da tela cheia", "Conteúdo adulto", .. ItensAdultosNaJanela, "Médio", "Sempre no topo", "Iniciar com o Windows", "Fechar"];
         bool emOrdem = vistos.Count == esperado.Length && vistos.Zip(esperado).All(par => par.First.StartsWith(par.Second, StringComparison.Ordinal));
-        bool voltou = vistos.Count < 21;
+        bool voltou = vistos.Count < 31;
         Registrar(Criterio, semNomeVazio && emOrdem && voltou, $"sequência: {string.Join(" → ", vistos)}; esperado: {string.Join(" → ", esperado)}; voltou ao começo={voltou}");
+    }
+
+    private void F9ItemAdulto()
+    {
+        const string Criterio = "V-F9-9 — pelo teclado, Espaço no MD marca o item (desmarcado por padrão) e grava no perfil; Espaço de novo desmarca e grava (DEC-041)";
+        AtivarConfiguracoes();
+        string foco = FocoDaUia();
+        for (int i = 0; i < 16 && foco != "MD"; i++)
+        {
+            if (!_inj.TeclaVirtual(VK_TAB_F8, "Tab até o MD", () => FrenteEh(_hConfiguracoes))) break;
+            Thread.Sleep(150);
+            foco = FocoDaUia();
+        }
+        if (foco != "MD")
+        {
+            Registrar(Criterio, Inconclusivo, $"o Tab não chegou ao MD (foco: {foco})");
+            return;
+        }
+        bool? antes = Marcado(_hConfiguracoes, "MD");
+        long marca = LogDoBuzzy.Marca();
+        bool a = _inj.TeclaVirtual(VK_SPACE_F9, "Espaço no MD", () => FrenteEh(_hConfiguracoes));
+        EventoBuzzy? pedido = LogDoBuzzy.Esperar(marca, e => e.Chave == "CONFIG" && e.Campos.ContainsKey("pedido") && e["evento"] == "CmdSetAdultItemEnabled", 3000);
+        bool marcou = EsperarAte(() => Marcado(_hConfiguracoes, "MD") == true, 3000);
+        bool gravou = EsperarAte(() => PreferenciasDoPerfil()?.ItensAdultosHabilitados.Contem(Item.Md) == true, 10000);
+        bool b = _inj.TeclaVirtual(VK_SPACE_F9, "Espaço de novo no MD", () => FrenteEh(_hConfiguracoes));
+        bool desmarcou = EsperarAte(() => Marcado(_hConfiguracoes, "MD") == false, 3000);
+        bool gravouDesmarcado = EsperarAte(() => PreferenciasDoPerfil() is { } p && !p.ItensAdultosHabilitados.Contem(Item.Md), 10000);
+        Registrar(Criterio, antes == false && a && pedido is not null && marcou && gravou && b && desmarcou && gravouDesmarcado,
+            $"antes desmarcado={antes == false}; Espaço={a}; pedido no log={pedido is not null}; marcado={marcou}; gravado={gravou}; Espaço de novo={b}; desmarcado={desmarcou}; gravado desmarcado={gravouDesmarcado}");
     }
 
     private void F8PainelEConfiguracoes()
@@ -359,6 +392,13 @@ internal sealed partial class Verificacao
     {
         AutomationElement? el = AutomationElement.FromHandle(janela).FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, nome));
         return el?.TryGetCurrentPattern(SelectionItemPattern.Pattern, out object? p) == true ? ((SelectionItemPattern)p).Current.IsSelected : null;
+    }
+
+    /// <summary>A marca de uma caixa pela UIA (TogglePattern); nula se não achar a caixa.</summary>
+    private static bool? Marcado(nint janela, string nome)
+    {
+        AutomationElement? el = AutomationElement.FromHandle(janela).FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, nome));
+        return el?.TryGetCurrentPattern(TogglePattern.Pattern, out object? p) == true ? ((TogglePattern)p).Current.ToggleState == ToggleState.On : null;
     }
 
     private static bool Existe(nint janela, string nome)

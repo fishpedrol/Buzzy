@@ -300,7 +300,7 @@ public sealed class TestesDoPortao : IDisposable
             Afirmar.Igual("", saida, descricao);
             Afirmar.Contem("Buzzy.PortaoApis: error BZP000: ", erros);
             Afirmar.Contem(mensagem, erros);
-            Afirmar.Contem("Uso: Buzzy.PortaoApis --binarios", erros);
+            Afirmar.Contem("Uso: Buzzy.PortaoApis (--binarios <pasta> | --pacote", erros);
         }
     }
 
@@ -341,7 +341,8 @@ public sealed class TestesDoPortao : IDisposable
     {
         (int codigo, string saida, string erros) = Rodar("--ajuda");
         Afirmar.Igual(0, codigo);
-        Afirmar.Contem("Uso: Buzzy.PortaoApis --binarios <pasta> --fonte <pasta>", saida);
+        Afirmar.Contem("Uso: Buzzy.PortaoApis (--binarios <pasta> | --pacote <arquivo.exe> --host-de-arquivo-unico <singlefilehost.exe>)", saida);
+        Afirmar.Contem("--fonte <pasta> [--fonte <pasta> ...] [--runtime <pasta> ...]", saida);
         Afirmar.Igual("", erros);
     }
 }

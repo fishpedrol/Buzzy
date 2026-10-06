@@ -243,7 +243,7 @@ internal sealed class LigacaoDosItensTestes
             return (s, efeitos);
         }
 
-        (EstadoDoNucleo carregado, _) = Aplicar(EstadoDoNucleo.Inicial(7), new Loaded(topologia, null, Preferencias.Padrao));
+        (EstadoDoNucleo carregado, _) = Aplicar(EstadoDoNucleo.Inicial(7), new Loaded(topologia, null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos }));
         (EstadoDoNucleo fumando, List<Efeito> efeitos) = Aplicar(carregado, new AutonomyTimer(carregado.Geracao));
         Afirmar.Igual((Estado.Using, Item.Baseado), (fumando.Estado, fumando.Uso?.Item), "fumou por conta própria");
         Efeito[] doTamagotchi = [.. efeitos.Where(DoTamagotchi)];

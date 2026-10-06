@@ -1938,6 +1938,12 @@ if ($filhosVistos.Count -gt 0) { $vereditos.Add(('{0} processo(s) filho(s)' -f $
 if ($filhosVivosDepois.Count -gt 0) { $vereditos.Add(('{0} filho(s) vivo(s) depois da saída' -f $filhosVivosDepois.Count)) }
 if ($script:verificacoesRede -eq 0) { $vereditos.Add('nenhuma verificação de rede feita') }
 elseif ($script:falhasRede -gt ($script:verificacoesRede / 10)) { $vereditos.Add(('{0} de {1} verificações de rede falharam' -f $script:falhasRede, $script:verificacoesRede)) }
+if ($script:verificacoesFilhos -eq 0) { $vereditos.Add('nenhuma verificação de processos filhos feita') }
+elseif ($script:falhasFilhos -gt ($script:verificacoesFilhos / 10)) { $vereditos.Add(('{0} de {1} verificações de filhos falharam' -f $script:falhasFilhos, $script:verificacoesFilhos)) }
+if (-not $script:filhosDepoisVerificados) { $vereditos.Add('os filhos depois da saída não foram verificados') }
+# A resolução global do timer (Q-08): uma mudança atribuível ao Buzzy também reprova.
+if ($null -eq $atribuicao) { try { $atribuicao = AtribuicaoTimer } catch { } }
+if ($null -ne $atribuicao -and $atribuicao.Codigo -eq 'possível') { $vereditos.Add('mudança da resolução global do timer possivelmente atribuível ao Buzzy') }
 if ($vereditos.Count -gt 0) {
     Write-Host ('FALHA DE SEGURANÇA: {0}.' -f ($vereditos -join '; ')) -ForegroundColor Red
     exit 1

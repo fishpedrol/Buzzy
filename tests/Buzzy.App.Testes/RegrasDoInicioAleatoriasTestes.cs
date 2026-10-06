@@ -17,7 +17,8 @@ internal sealed class RegrasDoInicioAleatoriasTestes
     public void TextosEBytesAleatorios_NuncaLancam_EDestaCopiaSoAbsoluto()
     {
         var r = new Random(20261005);
-        string[] pedacos = ["\"", "\\", "/", ":", "C:", "\\\\?\\", "\\\\servidor\\", ".", "..", " ", "\0", "\t", "Buzzy.exe", "BUZZY.EXE", "Programas", "%TEMP%", "~1", "\u00e9", "\ud800", "--perfil-de-teste", new string('a', 300)];
+        string[] pedacos = ["\"", "\\", "/", ":", "C:", "\\\\?\\", "\\\\servidor\\", ".", "..", " ", "\0", "\t", "Buzzy.exe", "BUZZY.EXE", "Programas", "%TEMP%", "~1", "\u00e9", "\ud800", "--perfil-de-teste", new string('a', 300),
+            @"\Programas\Buzzy\Buzzy.exe", @"C:Programas\Buzzy\Buzzy.exe", @"Buzzy\Buzzy.exe", @".\Buzzy.exe", @"Programas\Buzzy\Buzzy.exe"];
         int destaCopia = 0;
         for (int caso = 0; caso < 10_000; caso++)
         {

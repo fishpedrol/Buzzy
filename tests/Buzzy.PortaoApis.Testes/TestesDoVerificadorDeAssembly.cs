@@ -45,6 +45,10 @@ public sealed class TestesDoVerificadorDeAssembly : IDisposable
         "System.Runtime.InteropServices.NativeLibrary", "System.Runtime.InteropServices.Marshal.GetDelegateForFunctionPointer",
         "System.Reflection.Emit.AssemblyBuilder", "System.Reflection.Emit.AssemblyBuilderAccess",
         "Buzzy.PortaoApis.Testes.Amostras.ISaidaDxgiAmostra.DuplicateOutput",
+        "System.Reflection.Assembly.get_Location", "System.Reflection.Assembly.get_CodeBase", "System.Reflection.Assembly.get_EscapedCodeBase",
+        "System.Reflection.Assembly.GetFile", "System.Reflection.Assembly.GetFiles",
+        "System.Reflection.AssemblyName.get_CodeBase", "System.Reflection.AssemblyName.get_EscapedCodeBase",
+        "System.Runtime.InteropServices.Marshal.GetHINSTANCE", "System.Reflection.Module.get_Name", "System.Reflection.Module.get_FullyQualifiedName",
     ];
 
     // Trechos que não podem aparecer em nenhuma violação: as amostras permitidas.

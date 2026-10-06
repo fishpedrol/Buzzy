@@ -22,7 +22,7 @@ internal static class EsquemaDeConfiguracoesTestes
 {
     private static readonly TamanhoDip Sprite = new(128, 128);
 
-    private const string AmostraV1 = "settings-v1.json", AmostraV2 = "settings-v2.json", AmostraV3 = "settings-v3.json", AmostraV4 = "settings-v4.json", AmostraV5 = "settings-v5.json";
+    private const string AmostraV1 = "settings-v1.json", AmostraV2 = "settings-v2.json", AmostraV3 = "settings-v3.json", AmostraV4 = "settings-v4.json", AmostraV5 = "settings-v5.json", AmostraV6 = "settings-v6.json";
 
     // ---------------------------------------------------------------- as amostras v3, v2 e v1
 
@@ -32,40 +32,40 @@ internal static class EsquemaDeConfiguracoesTestes
     // alterado por acidente falha aqui. Como nas referências, só o fim de linha é normalizado (o Git pode trocar LF
     // por CRLF na amostra).
     [Teste]
-    public static void Escrever_ExemploS2_IgualAAmostraV5()
+    public static void Escrever_ExemploS2_IgualAAmostraV6()
     {
         byte[] escrito = EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao));
 
-        Afirmar.Igual(Amostra(AmostraV5), Encoding.UTF8.GetString(escrito), "texto escrito");
+        Afirmar.Igual(Amostra(AmostraV6), Encoding.UTF8.GetString(escrito), "texto escrito");
         Afirmar.Falso(escrito.AsSpan().StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]), "sem BOM");
         Afirmar.Falso(escrito.Contains((byte)'\r'), "fim de linha \\n, sem \\r");
         Afirmar.Igual((byte)'\n', escrito[^1], "termina com \\n");
-        Afirmar.Igual(5, EsquemaDeConfiguracoes.VersaoAtual, "versão atual");
+        Afirmar.Igual(6, EsquemaDeConfiguracoes.VersaoAtual, "versão atual");
 
         // DEC-038: o sempre no topo desligado e a escala fora do padrão saem no fim das preferências.
         string semTopo = Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { SempreNoTopo = false })));
-        Afirmar.Igual(Amostra(AmostraV5).Replace("\"sempreNoTopo\": true", "\"sempreNoTopo\": false", StringComparison.Ordinal), semTopo, "com o topo desligado");
+        Afirmar.Igual(Amostra(AmostraV6).Replace("\"sempreNoTopo\": true", "\"sempreNoTopo\": false", StringComparison.Ordinal), semTopo, "com o topo desligado");
         foreach ((EscalaDoPersonagem escala, string nome) in new[] { (EscalaDoPersonagem.Pequena, "pequena"), (EscalaDoPersonagem.Grande, "grande"), ((EscalaDoPersonagem)7, "media") })
         {
             string comEscala = Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { Escala = escala })));
-            Afirmar.Igual(Amostra(AmostraV5).Replace("\"escala\": \"media\"", $"\"escala\": \"{nome}\"", StringComparison.Ordinal), comEscala, $"com a escala {escala}");
+            Afirmar.Igual(Amostra(AmostraV6).Replace("\"escala\": \"media\"", $"\"escala\": \"{nome}\"", StringComparison.Ordinal), comEscala, $"com a escala {escala}");
         }
 
         // A emoção escolhida sai com o nome da cara em minúsculas, no mesmo lugar.
         string comEmocao = Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { EmocaoDominante = Expressao.Feliz })));
-        Afirmar.Igual(Amostra(AmostraV5).Replace("\"emocaoDominante\": \"automatica\"", "\"emocaoDominante\": \"feliz\"", StringComparison.Ordinal), comEmocao, "com a emoção Feliz");
+        Afirmar.Igual(Amostra(AmostraV6).Replace("\"emocaoDominante\": \"automatica\"", "\"emocaoDominante\": \"feliz\"", StringComparison.Ordinal), comEmocao, "com a emoção Feliz");
 
         // A postura sai sempre, na posição, depois da âncora: a borda em minúsculas e a marca como booleano.
         foreach ((LadoDoEsconderijo lado, string nome) in new[] { (LadoDoEsconderijo.Baixo, "baixo"), (LadoDoEsconderijo.Esquerda, "esquerda"), (LadoDoEsconderijo.Direita, "direita") })
         {
             string comPostura = Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao) { Esconderijo = lado, PresoPeloUsuario = true }));
-            Afirmar.Igual(Amostra(AmostraV5).Replace("\"esconderijo\": \"nenhum\"", $"\"esconderijo\": \"{nome}\"", StringComparison.Ordinal)
+            Afirmar.Igual(Amostra(AmostraV6).Replace("\"esconderijo\": \"nenhum\"", $"\"esconderijo\": \"{nome}\"", StringComparison.Ordinal)
                 .Replace("\"presoPeloUsuario\": false", "\"presoPeloUsuario\": true", StringComparison.Ordinal), comPostura, $"escondido na borda {nome} e preso");
         }
 
-        // O conteúdo adulto desligado (DEC-033) sai como booleano, no fim das preferências.
-        string semAdulto = Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { ConteudoAdulto = false })));
-        Afirmar.Igual(Amostra(AmostraV5).Replace("\"conteudoAdulto\": true", "\"conteudoAdulto\": false", StringComparison.Ordinal), semAdulto, "com o conteúdo adulto desligado");
+        // O conteúdo adulto (DEC-033) sai como booleano; o padrão, desde a DEC-041, é desligado.
+        string semAdulto = Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { ConteudoAdulto = true })));
+        Afirmar.Igual(Amostra(AmostraV6).Replace("\"conteudoAdulto\": false", "\"conteudoAdulto\": true", StringComparison.Ordinal), semAdulto, "com o conteúdo adulto ligado");
     }
 
     // A amostra v5 (DEC-038), lida do disco como está, volta com os valores exatos; o sempre no topo e a escala, por lista
@@ -76,7 +76,8 @@ internal static class EsquemaDeConfiguracoesTestes
         LeituraDasConfiguracoes lida = EsquemaDeConfiguracoes.Ler(File.ReadAllBytes(CaminhoDaAmostra(AmostraV5)));
         Afirmar.Igual((SituacaoDaLeitura.Valida, (int?)5), (lida.Situacao, lida.Versao), "situação e versão");
         Afirmar.Sequencia([], lida.Avisos, "avisos");
-        Afirmar.Igual(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao), lida.Configuracoes, "configurações");
+        // A amostra v5 grava "conteudoAdulto": true, que se preserva; sem a lista da v6, valem os quatro marcados (DEC-041, item 4).
+        Afirmar.Igual(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { ConteudoAdulto = true }), lida.Configuracoes, "configurações");
 
         string v5 = Amostra(AmostraV5);
         foreach ((string valor, EscalaDoPersonagem esperada, int avisos) in new[]
@@ -103,6 +104,51 @@ internal static class EsquemaDeConfiguracoesTestes
         }
     }
 
+    // Fase 9, F9-P9 (DEC-041, item 4): a amostra v6 volta como o padrão; a lista dos itens adultos é fechada: um item de
+    // alívio, um nome desconhecido, um repetido ou um tipo errado dão aviso, sem repetir o valor; a lista vazia vale nenhum.
+    [Teste]
+    public static void Ler_AmostraV6_EAListaDosItensAdultos()
+    {
+        LeituraDasConfiguracoes lida = EsquemaDeConfiguracoes.Ler(File.ReadAllBytes(CaminhoDaAmostra(AmostraV6)));
+        Afirmar.Igual((SituacaoDaLeitura.Valida, (int?)6, 0), (lida.Situacao, lida.Versao, lida.Avisos.Count), "situação, versão e avisos");
+        Afirmar.Igual(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao), lida.Configuracoes, "o padrão");
+
+        string v6 = Amostra(AmostraV6);
+        string Lista(string conteudo) => v6.Replace("""
+    "itensAdultosHabilitados": [
+      "vodka",
+      "cerveja",
+      "baseado",
+      "cigarro"
+    ]
+""".Replace("\r\n", "\n", StringComparison.Ordinal), $"    \"itensAdultosHabilitados\": {conteudo}\n", StringComparison.Ordinal);
+        foreach ((string conteudo, Item[] esperados, int avisos) in new (string, Item[], int)[]
+        {
+            ("[]", [], 0),
+            ("[\"md\", \"bala\"]", [Item.Md, Item.Bala], 0),
+            ("[\"banana\", \"md\"]", [Item.Md], 1),
+            ("[\"xyz-desconhecido\"]", [], 1),
+            ("[\"md\", \"md\"]", [Item.Md], 1),
+            ("[1, \"cerveja\"]", [Item.Cerveja], 1),
+            ("\"vodka\"", [Item.Vodka, Item.Cerveja, Item.Baseado, Item.Cigarro], 1),
+            ("null", [Item.Vodka, Item.Cerveja, Item.Baseado, Item.Cigarro], 1),
+        })
+        {
+            LeituraDasConfiguracoes l = Ler(Lista(conteudo));
+            Afirmar.Igual((SituacaoDaLeitura.Valida, avisos), (l.Situacao, l.Avisos.Count), $"lista {conteudo}: situação e avisos ({string.Join(" / ", l.Avisos)})");
+            Afirmar.Igual(esperados.Aggregate(ConjuntoDeItens.Vazio, (c, i) => c.Com(i)), l.Configuracoes.Preferencias.ItensAdultosHabilitados, $"lista {conteudo}");
+            Afirmar.Falso(l.Avisos.Any(a => a.Contains("xyz-desconhecido", StringComparison.Ordinal)), "o aviso não repete o valor");
+        }
+        // Ida e volta de cada seleção possível de um item só, e de todos.
+        foreach (Item item in Preferencias.TodosOsItensAdultos.Itens)
+        {
+            var p = Preferencias.Padrao with { ItensAdultosHabilitados = ConjuntoDeItens.Vazio.Com(item) };
+            Afirmar.Igual(p, EsquemaDeConfiguracoes.Ler(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(null, p))).Configuracoes.Preferencias, $"só {item}");
+        }
+        var todos = Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos };
+        Afirmar.Igual(todos, EsquemaDeConfiguracoes.Ler(EsquemaDeConfiguracoes.Escrever(new ConfiguracoesSalvas(null, todos))).Configuracoes.Preferencias, "todos");
+    }
+
     // A amostra v4, lida do disco como está, volta com os valores exatos; com o conteúdo adulto desligado, também, sem aviso.
     [Teste]
     public static void Ler_AmostraV4_DevolveOsValores()
@@ -110,13 +156,13 @@ internal static class EsquemaDeConfiguracoesTestes
         LeituraDasConfiguracoes lida = EsquemaDeConfiguracoes.Ler(File.ReadAllBytes(CaminhoDaAmostra(AmostraV4)));
         Afirmar.Igual((SituacaoDaLeitura.Valida, (int?)4), (lida.Situacao, lida.Versao), "situação e versão");
         Afirmar.Sequencia([], lida.Avisos, "avisos");
-        Afirmar.Igual(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao), lida.Configuracoes, "configurações");
+        Afirmar.Igual(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { ConteudoAdulto = true }), lida.Configuracoes, "configurações (o conteúdo adulto gravado, preservado)");
 
         LeituraDasConfiguracoes desligado = Ler(Amostra(AmostraV4).Replace("\"conteudoAdulto\": true", "\"conteudoAdulto\": false", StringComparison.Ordinal));
         Afirmar.Sequencia([], desligado.Avisos, "avisos, desligado");
         Afirmar.Falso(desligado.Configuracoes.Preferencias.ConteudoAdulto, "desligado");
         LeituraDasConfiguracoes invalido = Ler(Amostra(AmostraV4).Replace("\"conteudoAdulto\": true", "\"conteudoAdulto\": \"nao\"", StringComparison.Ordinal));
-        Afirmar.Verdadeiro(invalido.Configuracoes.Preferencias.ConteudoAdulto && invalido.Avisos.Count == 1, "inválido vale o padrão, ligado, com aviso");
+        Afirmar.Verdadeiro(!invalido.Configuracoes.Preferencias.ConteudoAdulto && invalido.Avisos.Count == 1, "inválido vale o padrão, desligado desde a DEC-041, com aviso");
     }
 
     // A amostra v3, lida do disco como está, volta com os valores exatos: a emoção automática, sem esconderijo, solto e,
@@ -674,11 +720,11 @@ internal static class EsquemaDeConfiguracoesTestes
     public static void Ler_VersaoFutura_LeOQueConhece()
     {
         LeituraDasConfiguracoes lida = Ler("""
-            {"schemaVersion": 6, "posicao": {"chaveMonitor": "a", "fracaoX": 0.25, "fracaoY": 1, "monitorPreferido": "b", "esconderijo": "esquerda", "presoPeloUsuario": true},
+            {"schemaVersion": 7, "posicao": {"chaveMonitor": "a", "fracaoX": 0.25, "fracaoY": 1, "monitorPreferido": "b", "esconderijo": "esquerda", "presoPeloUsuario": true},
              "preferencias": {"energia": "baixa", "volume": 7, "emocaoDominante": "travesso", "conteudoAdulto": false}, "janelaDeConfiguracoes": {"largura": 400}}
             """);
         Afirmar.Igual(SituacaoDaLeitura.VersaoFutura, lida.Situacao, "situação");
-        Afirmar.Igual(6, lida.Versao, "versão");
+        Afirmar.Igual(7, lida.Versao, "versão");
         Afirmar.Nulo(lida.MotivoIlegivel, "motivo");
         Afirmar.Igual(new ConfiguracoesSalvas(new PosicaoDoPersonagem("a", 0.25, 1, default), new Preferencias(NivelDeEnergia.Baixa, true, true) { EmocaoDominante = Expressao.Travesso, ConteudoAdulto = false })
             {
@@ -688,12 +734,13 @@ internal static class EsquemaDeConfiguracoesTestes
             lida.Configuracoes, "valores da v4");
 
         Afirmar.Igual(SituacaoDaLeitura.VersaoFutura, Ler("""{"schemaVersion": 2147483647}""").Situacao, "a maior versão possível");
-        Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 5}""").Situacao, "a versão atual");
+        Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 6}""").Situacao, "a versão atual");
+        Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 5}""").Situacao, "a versão anterior, sem a seleção dos itens adultos");
         Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 4}""").Situacao, "a versão anterior, sem o topo e a escala");
         Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 3}""").Situacao, "a versão anterior, sem o conteúdo adulto");
         Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 2}""").Situacao, "a versão anterior, sem a postura");
         Afirmar.Igual(SituacaoDaLeitura.Valida, Ler("""{"schemaVersion": 1}""").Situacao, "a primeira, sem a emoção");
-        Afirmar.Igual(5, EsquemaDeConfiguracoes.VersaoAtual, "versão atual");
+        Afirmar.Igual(6, EsquemaDeConfiguracoes.VersaoAtual, "versão atual");
     }
 
     // Arquivos v1 e v2 (sem a postura) são lidos sem migração e sem aviso: sem esconderijo e solto. Com os campos nulos,
@@ -903,7 +950,7 @@ internal static class EsquemaDeConfiguracoesTestes
             new Press(default), new Click(), new DoubleClick(), new DragStart(), new DragMove(default), new DragEnd(default), new DragCancel(),
             new ContextMenu(default), new EnergyPanelOpen(), new EnergySelected(NivelDeEnergia.Alta), new EnergyPanelClose(),
             new CmdHide(), new CmdShow(), new CmdPauseAutonomy(), new CmdResumeAutonomy(), new CmdOpenSettings(), new CmdResetPosition(), new CmdExit(),
-            new CmdSetDominantEmotion(Expressao.Feliz), new CmdSetAdultContent(false), new CmdSetFullscreenMode(false), new Loaded(UmMonitor, null, Preferencias.Padrao), new TopologyChanged(UmMonitor), new SessionLocked(), new SessionUnlocked(),
+            new CmdSetDominantEmotion(Expressao.Feliz), new CmdSetAdultContent(false), new CmdSetAdultItemEnabled(Item.Md, false), new CmdSetFullscreenMode(false), new Loaded(UmMonitor, null, Preferencias.Padrao), new TopologyChanged(UmMonitor), new SessionLocked(), new SessionUnlocked(),
             new Suspending(), new Resumed(), new SessionEnding(), new FullscreenTargetsChanged(MonitoresOcupados.Nenhum),
             new SettingsChanged(Preferencias.Padrao), new Tick(), new MovementSignal(default), new AutonomyTimer(1), new ExpressionChange(default),
             new ItemEffectTimer(1),

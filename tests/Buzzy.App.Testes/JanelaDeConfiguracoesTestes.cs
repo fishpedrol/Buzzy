@@ -74,7 +74,7 @@ internal sealed class JanelaDeConfiguracoesTestes
         Afirmar.Igual(1, todos.OfType<StackPanel>().Count(p => p.MaxWidth == JanelaDeConfiguracoes.LarguraMaxima), "largura máxima na coluna");
 
         List<Control> controles = [.. todos.OfType<Control>().Where(c => c is ButtonBase or RadioButton)];
-        Afirmar.Igual(11, controles.Count, "3 de energia, 2 caixas, 3 de tamanho, o topo, o início e o Fechar");
+        Afirmar.Igual(20, controles.Count, "3 de energia, 2 caixas, os 9 itens adultos (DEC-041), 3 de tamanho, o topo, o início e o Fechar");
         foreach (Control c in controles)
             Afirmar.Verdadeiro(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(c)), $"{c.GetType().Name} {c}: com nome");
         foreach (CaixaDeComando caixa in controles.OfType<CaixaDeComando>())
@@ -83,9 +83,23 @@ internal sealed class JanelaDeConfiguracoesTestes
             Afirmar.Igual(AutomationControlType.Group, UIElementAutomationPeer.CreatePeerForElement(grupo).GetAutomationControlType(), $"{grupo.Header}: grupo na UIA");
         Afirmar.Igual(5, todos.OfType<GroupBox>().Count(), "Comportamento, Energia, Aparência, Tamanho e Windows");
 
+        // Os itens adultos (DEC-041): uma caixa por item, na ordem do enum, com o nome do item e a ajuda; o ícone é enfeite,
+        // sem peer de automação, e o nome não tem tecla de acesso (nove letras a mais não caberiam sem repetir).
+        Item[] adultos = [.. TabelaDoTamagotchi.Itens.Where(TabelaDoTamagotchi.Adulto)];
+        Afirmar.Sequencia(adultos, janela.CaixasDosItensAdultos.Keys, "os nove, na ordem do enum");
+        foreach ((Item item, CaixaDeComando caixa) in janela.CaixasDosItensAdultos)
+        {
+            // O nome sem a tecla de acesso do menu (o "&" do Win32 não é tecla no WPF e apareceria escrito).
+            Afirmar.Igual(Textos.Item(item).Replace("&", "", StringComparison.Ordinal), AutomationProperties.GetName(caixa), $"{item}: o nome do item");
+            Afirmar.Falso(AutomationProperties.GetName(caixa).Contains('&') || AutomationProperties.GetName(caixa).Contains('_'), $"{item}: sem marca de tecla de acesso");
+            Afirmar.Igual(AutomationProperties.GetName(caixa), Descendentes(caixa).OfType<TextBlock>().Single().Text, $"{item}: o texto visível é o nome");
+            Image icone = Descendentes(caixa).OfType<Image>().Single();
+            Afirmar.Nulo(UIElementAutomationPeer.CreatePeerForElement(icone), $"{item}: o ícone sem peer");
+        }
+
         char[] teclas = [.. controles.Select(c => c.GetValue(ContentControl.ContentProperty) as string).OfType<string>()
             .Where(t => t.Contains('_')).Select(t => char.ToLowerInvariant(t[t.IndexOf('_') + 1]))];
-        Afirmar.Igual(controles.Count, teclas.Length, "toda opção tem tecla de acesso");
+        Afirmar.Igual(controles.Count - adultos.Length, teclas.Length, "toda opção, fora os itens adultos, tem tecla de acesso");
         Afirmar.Igual(teclas.Length, teclas.Distinct().Count(), $"teclas de acesso únicas: {new string(teclas)}");
     }
 

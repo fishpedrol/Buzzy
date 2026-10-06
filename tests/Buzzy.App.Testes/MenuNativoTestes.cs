@@ -327,7 +327,8 @@ internal sealed class MenuNativoTestes
         // Revisão de correção, achado 3: o menu real lê do núcleo, na abertura, a marca de rádio, quantos itens estão na tela
         // ("Recolher itens" só vale com algum) e a chave do tamagotchi; o resto vem da raiz.
         var nucleo = new Nucleo(ConfiguracaoDoNucleo.DoAplicativo(new TamanhoDip(128, 128)), 7);
-        nucleo.Enfileirar(new Loaded(new Topologia([Principal96]), PosicaoSalva: null, Preferencias.Padrao));
+        // Com a chave adulta ligada e os nove marcados, que o padrão (DEC-041) não traz.
+        nucleo.Enfileirar(new Loaded(new Topologia([Principal96]), PosicaoSalva: null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos }));
         nucleo.Processar();
         Afirmar.Igual(new ModeloDoMenu(true, false, null, AltoContraste: false, Tamagotchi: true, ItensNaTela: 0, PainelDeEnergia: true, Configuracoes: true),
             MenuNativo.ModeloAoAbrir(nucleo, visivel: true, altoContraste: false), "recém-carregado: Automática, nenhum item, chave ligada");
@@ -351,6 +352,13 @@ internal sealed class MenuNativoTestes
         nucleo.Enfileirar(new CmdSetAdultContent(false));
         nucleo.Processar();
         Afirmar.Falso(MenuNativo.ModeloAoAbrir(nucleo, true, false).ConteudoAdulto, "o conteúdo adulto desligado vem do núcleo");
+        nucleo.Enfileirar(new CmdSetAdultContent(true));
+        nucleo.Enfileirar(new CmdSetAdultItemEnabled(Item.Md, false));
+        nucleo.Processar();
+        ModeloDoMenu semMd = MenuNativo.ModeloAoAbrir(nucleo, true, false);
+        Afirmar.Falso(semMd.ItensAdultosHabilitados.Contem(Item.Md), "a seleção dos itens adultos vem do núcleo (DEC-041)");
+        Afirmar.Falso(Todas(MenuNativo.Entradas(semMd)).Any(e => e.Item == Buzzy.App.Apresentacao.PoseDoPersonagem.NomeDoItem(Item.Md)), "o MD desmarcado some do submenu");
+        Afirmar.Igual(12, Todas(MenuNativo.Entradas(semMd)).Count(e => e.Item is not null), "os outros doze ficam");
 
         Afirmar.Verdadeiro(MenuNativo.ModeloAoAbrir(nucleo, true, false).ModoTelaCheia, "o modo de tela cheia ligado vem do núcleo");
         nucleo.Enfileirar(new CmdSetFullscreenMode(false));
@@ -359,8 +367,9 @@ internal sealed class MenuNativoTestes
 
         var desligada = new Nucleo(ConfiguracaoDoNucleo.DoAplicativo(new TamanhoDip(128, 128)) with { Tamagotchi = false }, 7);
         Afirmar.Falso(MenuNativo.ModeloAoAbrir(desligada, true, false).Tamagotchi, "a chave vem da configuração do núcleo");
-        Afirmar.Igual(new ModeloDoMenu(true, false, null, AltoContraste: false, Tamagotchi: false, ItensNaTela: 0),
-            MenuNativo.ModeloAoAbrir(null, visivel: true, altoContraste: false), "sem núcleo: o menu de partida");
+        Afirmar.Igual(new ModeloDoMenu(true, false, null, AltoContraste: false, Tamagotchi: false, ItensNaTela: 0, ConteudoAdulto: Preferencias.Padrao.ConteudoAdulto)
+            { ItensAdultosHabilitados = Preferencias.Padrao.ItensAdultosHabilitados },
+            MenuNativo.ModeloAoAbrir(null, visivel: true, altoContraste: false), "sem núcleo: o menu de partida, com as preferências padrão");
     }
 
     [Teste]

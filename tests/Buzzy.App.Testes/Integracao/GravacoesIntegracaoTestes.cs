@@ -7,7 +7,7 @@ namespace Buzzy.App.Testes.Integracao;
 
 /// <summary>
 /// Fase 9, passo F9-P7 (DEC-040, item 10; SECURITY.md 8, item 4, na parte automática): depois de uma execução que grava
-/// (abrir, mudar uma preferência pelo menu e sair), a pasta de dados do Buzzy só tem os nomes que o código grava, a pasta
+/// (abrir e sair, que grava as configurações no perfil de teste), a pasta de dados do Buzzy só tem os nomes que o código grava, a pasta
 /// do executável e a pasta Inicializar do usuário ficam iguais, e os arquivos reais, intocados. O Process Monitor, que
 /// exige administrador, fica [MANUAL] com <c>tools\verificar-gravacoes.ps1</c>.
 /// </summary>
@@ -32,6 +32,7 @@ internal sealed class GravacoesIntegracaoTestes
             // Sair grava as preferências na pasta do perfil (o comando de sair descarrega a gravação).
             Afirmar.Igual(0, b.FecharPorWmClose(), "saída limpa");
         }
+        Afirmar.Verdadeiro(File.Exists(Path.Combine(dados, "testes", PerfilDeTeste.Integracao, "settings.json")), "houve gravação: o settings.json do perfil de teste existe");
 
         foreach (string nome in Directory.EnumerateFileSystemEntries(dados).Select(f => Path.GetFileName(f)))
             Afirmar.Verdadeiro(NaRaiz.Contains(nome, StringComparer.OrdinalIgnoreCase), $"{nome} na pasta de dados não é um nome que o Buzzy grava");

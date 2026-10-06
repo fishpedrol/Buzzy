@@ -25,6 +25,37 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
+  <!--
+    O .exe único autocontido do download pelo site (DEC-042, item 9; F9-P10): só com -p:BuzzyExeUnico=true, no
+    tools\empacotar.ps1 -Formato exe. O identificador de runtime fica no projeto, não na linha de comando, para não virar
+    propriedade global e vazar para as ferramentas referenciadas. O runtime do .NET extrai as 5 DLLs nativas do WPF para
+    %TEMP%\.net\Buzzy na primeira execução (IncludeNativeLibrariesForSelfExtract), a escrita aprovada no item 9.
+  -->
+  <PropertyGroup Condition="'$(BuzzyExeUnico)' == 'true'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!--
+      Lockfile próprio do .exe único: o build comum fica sem o grafo de win-x64 e não baixa pacotes de runtime (revisão
+      adversarial do F9-P10); só o publish do .exe precisa deles, e o restore travado confere este arquivo.
+    -->
+    <NuGetLockFilePath>packages.win-x64.lock.json</NuGetLockFilePath>
+    <!-- Só os dois frameworks que o Buzzy usa: sem o pacote de runtime do ASP.NET Core na procedência do portão. -->
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!--
+      Sem o analisador de arquivo único, que traria o pacote Microsoft.NET.ILLink.Tasks: a cerca de zero pacotes
+      (DEC-016, item 2) fica. O que ele acusaria (Assembly.Location, GetFile, CodeBase, vazios num arquivo único) é
+      regra do portão, no IL de todos os assemblies do produto (BZP001, categoria Arquivo único).
+    -->
+    <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+    <!-- O portão e o validador de clipes são executáveis só do build (ReferenceOutputAssembly=false): não entram no pacote. -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Buzzy.Core\Buzzy.Core.csproj" />
     <!-- Pixel art do Buzzy (DEC-018 e DEC-019): o sprite parado e o ícone da bandeja. -->
@@ -48,14 +79,48 @@
                       ReferenceOutputAssembly="false"
                       Private="false"
                       SkipGetTargetFrameworkProperties="true"
-                      SetTargetFramework="TargetFramework=net10.0" />
+                      SetTargetFramework="TargetFramework=net10.0"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained" />
   </ItemGroup>
 
   <Target Name="PortaoDeApisProibidas" AfterTargets="Build" Condition="'$(PularPortaoDeApis)' != 'true'">
     <PropertyGroup>
       <_BuzzyPortao>$(MSBuildThisFileDirectory)..\..\tools\Buzzy.PortaoApis\bin\$(Configuration)\net10.0\Buzzy.PortaoApis.dll</_BuzzyPortao>
     </PropertyGroup>
-    <Exec Command="dotnet &quot;$(_BuzzyPortao)&quot; --binarios &quot;$(OutDir).&quot; --fonte &quot;$(MSBuildThisFileDirectory).&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Core&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Visual&quot; --manifesto &quot;$(MSBuildThisFileDirectory)app.manifest&quot;"
+    <!--
+      Autocontido (F9-P10): o runtime na pasta de saída só passa com o mesmo nome e SHA-256 dos pacotes de runtime do SDK,
+      e só dos dois frameworks que o Buzzy usa.
+    -->
+    <ItemGroup Condition="'$(SelfContained)' == 'true'">
+      <_BuzzyPacoteDeRuntime Include="@(ResolvedRuntimePack)"
+                             Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App' Or '%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.WindowsDesktop.App'" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(SelfContained)' == 'true'">
+      <_BuzzyRuntimes>@(_BuzzyPacoteDeRuntime->'--runtime &quot;%(PackageDirectory)&quot;', ' ')</_BuzzyRuntimes>
+    </PropertyGroup>
+    <Exec Command="dotnet &quot;$(_BuzzyPortao)&quot; --binarios &quot;$(OutDir).&quot; $(_BuzzyRuntimes) --fonte &quot;$(MSBuildThisFileDirectory).&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Core&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Visual&quot; --manifesto &quot;$(MSBuildThisFileDirectory)app.manifest&quot;"
+          StdOutEncoding="utf-8"
+          StdErrEncoding="utf-8" />
+  </Target>
+
+  <!--
+    O portão no .exe único (F9-P10, DEC-042), depois do publish: o host contra o singlefilehost.exe do SDK, os
+    assemblies do Buzzy lidos de dentro do pacote, a procedência de todo o resto e o manifesto embutido.
+  -->
+  <Target Name="PortaoDoPacoteDeArquivoUnico" AfterTargets="Publish"
+          Condition="'$(PularPortaoDeApis)' != 'true' And '$(PublishSingleFile)' == 'true'">
+    <!-- Item próprio: os itens do alvo do build continuam existindo aqui e repetiriam os pacotes. -->
+    <ItemGroup>
+      <_BuzzyPacoteDeRuntimeDoPacote Include="@(ResolvedRuntimePack)"
+                                     Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App' Or '%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.WindowsDesktop.App'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_BuzzyPortao>$(MSBuildThisFileDirectory)..\..\tools\Buzzy.PortaoApis\bin\$(Configuration)\net10.0\Buzzy.PortaoApis.dll</_BuzzyPortao>
+      <_BuzzyRuntimes>@(_BuzzyPacoteDeRuntimeDoPacote->'--runtime &quot;%(PackageDirectory)&quot;', ' ')</_BuzzyRuntimes>
+    </PropertyGroup>
+    <Error Condition="'@(_BuzzyPacoteDeRuntimeDoPacote)' == ''" Text="Sem os pacotes de runtime do .NET e do WindowsDesktop para a procedência do portão." />
+    <Error Condition="!Exists('$(SingleFileHostSourcePath)')" Text="O singlefilehost.exe do SDK não foi encontrado: $(SingleFileHostSourcePath)" />
+    <Exec Command="dotnet &quot;$(_BuzzyPortao)&quot; --pacote &quot;$(PublishDir)$(AssemblyName).exe&quot; --host-de-arquivo-unico &quot;$(SingleFileHostSourcePath)&quot; $(_BuzzyRuntimes) --fonte &quot;$(MSBuildThisFileDirectory).&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Core&quot; --fonte &quot;$(MSBuildThisFileDirectory)..\Buzzy.Visual&quot; --manifesto &quot;$(MSBuildThisFileDirectory)app.manifest&quot;"
           StdOutEncoding="utf-8"
           StdErrEncoding="utf-8" />
   </Target>
@@ -70,7 +135,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\tools\Buzzy.ValidadorDeClipes\Buzzy.ValidadorDeClipes.csproj"
                       ReferenceOutputAssembly="false"
-                      Private="false" />
+                      Private="false"
+                      GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained" />
   </ItemGroup>
 
   <Target Name="ValidacaoDoManifestoDeClipes" AfterTargets="Build" Condition="'$(PularValidacaoDeClipes)' != 'true'">

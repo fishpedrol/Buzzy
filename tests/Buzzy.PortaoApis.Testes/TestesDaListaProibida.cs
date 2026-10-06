@@ -141,7 +141,8 @@ public sealed class TestesDaListaProibida
         Categoria[] categorias = [.. Enum.GetValues<Categoria>().Where(c => c != Categoria.Manifesto)];
         foreach (Categoria categoria in categorias)
             Afirmar.Verdadeiro(ListaProibida.Regras.Any(r => r.Categoria == categoria), $"nenhuma regra para {categoria.Nome()}");
-        Afirmar.Igual(9, categorias.Length);
+        Afirmar.Igual(10, categorias.Length);
+        Afirmar.Igual("Arquivo único", Categoria.ArquivoUnico.Nome());
     }
 
     [Teste]
@@ -237,13 +238,16 @@ public sealed class TestesDaListaProibida
             Afirmar.Igual(categoria, ListaProibida.ProcurarTipo(ns, nome)?.Categoria, $"{ns}.{nome}");
         foreach ((string tipo, string membro, Categoria categoria) in new[]
         {
-            ("System.Environment", "UserName", Categoria.LerOutrosAplicativos), ("System.Environment", "MachineName", Categoria.LerOutrosAplicativos),
+            ("System.Environment", "get_UserName", Categoria.LerOutrosAplicativos), ("System.Environment", "get_MachineName", Categoria.LerOutrosAplicativos),
             ("System.Type", "GetTypeFromProgID", Categoria.CodigoDinamico), ("System.Type", "InvokeMember", Categoria.CodigoDinamico),
             ("System.Runtime.InteropServices.Marshal", "BindToMoniker", Categoria.CodigoDinamico),
         })
             Afirmar.Igual(categoria, ListaProibida.ProcurarMembro(tipo, membro)?.Categoria, $"{tipo}.{membro}");
-        foreach (string metodo in new[] { "ElementFromHandle", "ElementFromPoint", "GetFocusedElement" })
+        foreach (string metodo in new[] { "ElementFromHandle", "ElementFromPoint" })
             Afirmar.Igual(Categoria.LerOutrosAplicativos, ListaProibida.ProcurarMetodoCom(metodo)?.Categoria, metodo);
+        // O FocusManager do WPF não é UIA de outro aplicativo: nada com esse nome é proibido.
+        Afirmar.Nulo(ListaProibida.ProcurarMetodoCom("GetFocusedElement"));
+        Afirmar.Nulo(ListaProibida.ProcurarMembro("System.Windows.Input.FocusManager", "GetFocusedElement"));
     }
 
     [Teste]

@@ -36,6 +36,21 @@ internal static class Repositorio
         }
         return caminho;
     }
+
+    /// <summary>
+    /// O singlefilehost.exe do pacote de host do .NET instalado, na versão do runtime que roda os testes (F9-P10): a pasta
+    /// do runtime é dotnet\shared\Microsoft.NETCore.App\&lt;versão&gt;, e o host fica em dotnet\packs. Falha com mensagem
+    /// clara se ele não existir.
+    /// </summary>
+    public static string HostDeArquivoUnicoReal()
+    {
+        string runtime = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
+        string dotnet = Path.GetFullPath(Path.Combine(runtime, "..", "..", ".."));
+        string caminho = Path.Combine(dotnet, "packs", "Microsoft.NETCore.App.Host.win-x64", Path.GetFileName(runtime), "runtimes", "win-x64", "native", "singlefilehost.exe");
+        if (!File.Exists(caminho))
+            Afirmar.Falhar($"Host de arquivo único não encontrado: {caminho}. Ele vem com o SDK do .NET (pacote Microsoft.NETCore.App.Host.win-x64).");
+        return caminho;
+    }
 }
 
 /// <summary>Pasta temporária apagada no fim do teste.</summary>

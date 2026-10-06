@@ -76,9 +76,16 @@ internal sealed class Cenario
         return this;
     }
 
+    /// <summary>
+    /// As preferências dos cenários: as padrão com o tamagotchi completo, o conteúdo adulto e os nove itens ligados. Os
+    /// cenários exercitam a mecânica; o padrão do arquivo (adulto desligado, quatro itens marcados; DEC-041) tem os
+    /// testes dele em ConteudoAdultoTestes.
+    /// </summary>
+    public static readonly Preferencias PreferenciasDosCenarios = PreferenciasDeTeste.Completas;
+
     /// <summary>Núcleo carregado e parado no chão.</summary>
     public static Cenario Parado(ConfiguracaoDoNucleo? config = null, Topologia? topologia = null, ulong semente = 7)
-        => new Cenario(config, semente).Aplicar(new Loaded(topologia ?? TopologiasDeExemplo.UmMonitor, null, Preferencias.Padrao));
+        => new Cenario(config, semente).Aplicar(new Loaded(topologia ?? TopologiasDeExemplo.UmMonitor, null, PreferenciasDosCenarios));
 
     /// <summary>
     /// Leva o núcleo ao estado pedido pelo caminho da tabela. Para os estados autônomos, a

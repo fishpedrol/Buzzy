@@ -358,9 +358,12 @@ internal sealed class AgendaDeGravacaoTestes : IDisposable
         Directory.CreateDirectory(pasta);
         string principal = Path.Combine(pasta, ArquivoDeConfiguracoes.NomePrincipal), reserva = Path.Combine(pasta, ArquivoDeConfiguracoes.NomeReserva);
         var conteudo = new ConfiguracoesSalvas(NoChao, Preferencias.Padrao);
-        byte[] v4 = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(conteudo))
-            .Replace("\"schemaVersion\": 5", "\"schemaVersion\": 4", StringComparison.Ordinal)
-            .Replace(",\n    \"sempreNoTopo\": true,\n    \"escala\": \"media\"", "", StringComparison.Ordinal));
+        // A v4 a partir da escrita atual: a versão trocada, e sem os campos que vieram depois (o topo, a escala e a lista
+        // dos itens adultos), que vão do sempre no topo até o fim das preferências.
+        byte[] v4 = Encoding.UTF8.GetBytes(System.Text.RegularExpressions.Regex.Replace(
+            Encoding.UTF8.GetString(EsquemaDeConfiguracoes.Escrever(conteudo))
+                .Replace($"\"schemaVersion\": {EsquemaDeConfiguracoes.VersaoAtual}", "\"schemaVersion\": 4", StringComparison.Ordinal),
+            @",\n    ""sempreNoTopo""[\s\S]*?(?=\n  \})", ""));
         File.WriteAllBytes(principal, v4);
         Afirmar.Igual((int?)4, EsquemaDeConfiguracoes.Ler(v4).Versao, "a amostra é v4");
 
@@ -439,7 +442,7 @@ internal sealed class AgendaDeGravacaoTestes : IDisposable
         string pasta = NovaPasta();
         Directory.CreateDirectory(pasta);
         string principal = Path.Combine(pasta, ArquivoDeConfiguracoes.NomePrincipal);
-        byte[] futura = """{"schemaVersion": 6, "preferencias": {"energia": "alta"}}"""u8.ToArray();
+        byte[] futura = Encoding.UTF8.GetBytes($$$"""{"schemaVersion": {{{EsquemaDeConfiguracoes.VersaoAtual + 1}}}, "preferencias": {"energia": "alta"}}""");
         File.WriteAllBytes(principal, futura);
         AgendaDeGravacao agenda = Nova(new ArquivoDeConfiguracoes(pasta));
         Afirmar.Falso(agenda.Ligada, "bloqueada");

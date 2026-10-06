@@ -278,6 +278,8 @@ internal sealed partial class Verificacao
         {
             if (abertos.Length > 0)
                 throw new FalhaDeVerificacao($"já há Buzzy aberto (pids {string.Join(", ", abertos.Select(p => p.Id))}); a verificação não mexe em processos que não abriu. Nada foi iniciado.");
+            if (Buzzy.App.Testes.Integracao.InstanciaDoBuzzy.Aberta())
+                throw new FalhaDeVerificacao("já há um Buzzy aberto nesta sessão (o mutex de instância única existe; talvez com outro nome de arquivo); a verificação não mexe em processos que não abriu. Nada foi iniciado.");
         }
         finally
         {

@@ -194,6 +194,24 @@ internal static class PerfilDaVerificacao
             throw new FalhaDeVerificacao($"{e.Message} Nada foi iniciado.");
         }
     }
+
+    /// <summary>
+    /// Grava, na pasta do perfil (nunca a real), as preferências com a chave adulta ligada e os nove itens adultos marcados,
+    /// sem posição: desde a DEC-041 o padrão é a chave desligada e só quatro marcados, e a verificação do tamagotchi usa
+    /// todos os itens. Só com nenhum Buzzy aberto, logo depois de <see cref="Limpar"/>.
+    /// </summary>
+    internal static void ComOsNoveAdultos()
+    {
+        string pasta = PastaDeDados.DoPerfilDeTeste(Nome) ?? throw new FalhaDeVerificacao("O Windows não informou a pasta local do usuário. Nada foi iniciado.");
+        Directory.CreateDirectory(pasta);
+        var preferencias = Buzzy.Core.Personagem.Preferencias.Padrao with
+        {
+            ConteudoAdulto = true,
+            ItensAdultosHabilitados = Buzzy.Core.Personagem.Preferencias.TodosOsItensAdultos,
+        };
+        File.WriteAllBytes(Path.Combine(pasta, "settings.json"),
+            Buzzy.Core.Persistencia.EsquemaDeConfiguracoes.Escrever(new Buzzy.Core.Persistencia.ConfiguracoesSalvas(null, preferencias)));
+    }
 }
 
 /// <summary>Processos filhos de um processo, para conferir que o Buzzy não cria nenhum.</summary>

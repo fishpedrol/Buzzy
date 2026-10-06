@@ -41,7 +41,9 @@ internal static class Programa
         // SECURITY.md 8, item 5, e DEC-040, item 2: o Buzzy não usa privilégio de administrador. Iniciado elevado (por um
         // terminal de administrador ou "Executar como administrador"), ele avisa e sai antes de tudo: sem log, sem ler as
         // opções, sem criar pasta, janela ou objeto nomeado. Um processo elevado nunca grava através de um link plantado
-        // por um processo comum na pasta do Buzzy.
+        // por um processo comum na pasta do Buzzy. Limite do .exe único (F9-P10; DEC-042, item 9; SECURITY.md 9): antes
+        // deste Main, o host do .NET já extraiu (ou reaproveitou) as DLLs nativas do WPF em %TEMP%\.net\<nome do exe>,
+        // também quando iniciado elevado; daqui em diante, nada do Buzzy roda elevado.
         if (Environment.IsPrivilegedProcess)
         {
             MessageBox.Show(Textos.AvisoElevado, Textos.DicaDaBandeja, MessageBoxButton.OK, MessageBoxImage.Information);
