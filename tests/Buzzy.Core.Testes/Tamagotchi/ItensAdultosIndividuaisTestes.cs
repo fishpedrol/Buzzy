@@ -7,7 +7,7 @@ namespace Buzzy.Core.Testes.Tamagotchi;
 
 /// <summary>
 /// A seleção individual dos itens adultos (DEC-041, pedido do usuário de 2026-10-05): o padrão (a chave geral desligada;
-/// vodka, cerveja, cigarro e baseado marcados), o comando de cada item, a invocação recusada de um item desmarcado e o que
+/// vodka, cerveja e cigarro marcados), o comando de cada item, a invocação recusada de um item desmarcado e o que
 /// desmarcar faz no mundo, no uso, nas ondas e na mistura da paranoia, sem sortear nada de novo e sem mexer nos outros
 /// itens. O esperado vem da decisão, escrito aqui à parte do núcleo.
 /// </summary>
@@ -18,10 +18,10 @@ internal static class ItensAdultosIndividuaisTestes
     private static ConjuntoDeItens Conjunto(params Item[] itens) => itens.Aggregate(ConjuntoDeItens.Vazio, (c, i) => c.Com(i));
 
     [Teste]
-    public static void Padrao_ChaveDesligada_QuatroMarcados_ENoveAdultos()
+    public static void Padrao_ChaveDesligada_TresMarcados_ENoveAdultos()
     {
         Afirmar.Falso(Preferencias.Padrao.ConteudoAdulto, "a chave geral desligada por padrão");
-        Afirmar.Igual(Conjunto(Item.Vodka, Item.Cerveja, Item.Cigarro, Item.Baseado), Preferencias.Padrao.ItensAdultosHabilitados, "os quatro marcados");
+        Afirmar.Igual(Conjunto(Item.Vodka, Item.Cerveja, Item.Cigarro), Preferencias.Padrao.ItensAdultosHabilitados, "os três marcados, sem o baseado");
         Afirmar.Igual(Conjunto(Item.Vodka, Item.Cerveja, Item.Baseado, Item.Cigarro, Item.Cocaina, Item.Md, Item.LancaPerfume, Item.Cogumelo, Item.Bala),
             Preferencias.TodosOsItensAdultos, "os nove adultos");
         Afirmar.Igual(Conjunto(Item.Vodka), Preferencias.NormalizarItensAdultos(Conjunto(Item.Vodka, Item.Banana, Item.Agua)), "normalizar tira os de alívio");

@@ -5,7 +5,7 @@ namespace Buzzy.Core.Testes;
 /// <summary>
 /// As preferências dos testes de mecânica e de formato: as padrão com o conteúdo adulto e os nove itens adultos ligados,
 /// o que valia antes da DEC-041 e o que as reproduções gravadas assumem quando não trazem os campos. O padrão do arquivo de
-/// configurações (adulto desligado, quatro itens marcados; DEC-041, item 2) tem os testes dele em ConteudoAdultoTestes e
+/// configurações (adulto desligado, três itens marcados; DEC-041, item 7) tem os testes dele em ConteudoAdultoTestes e
 /// EsquemaDeConfiguracoesTestes.
 /// </summary>
 internal static class PreferenciasDeTeste

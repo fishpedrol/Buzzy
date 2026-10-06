@@ -464,14 +464,14 @@ public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bo
     public bool ConteudoAdulto { get; init; }
 
     /// <summary>
-    /// Itens adultos permitidos individualmente (DEC-041). O padrão habilita vodka, cerveja, cigarro e baseado. As caixas
+    /// Itens adultos permitidos individualmente (DEC-041). O padrão habilita vodka, cerveja e cigarro; baseado fica desmarcado. As caixas
     /// continuam configuráveis com a chave geral desligada, mas isso não libera o conteúdo enquanto ela estiver desligada.
     /// </summary>
     public ConjuntoDeItens ItensAdultosHabilitados { get; init; } = ItensAdultosPadrao;
 
-    /// <summary>Seleção inicial de conteúdo adulto, conforme o pedido do usuário de 2026-10-05.</summary>
+    /// <summary>Seleção inicial de conteúdo adulto, conforme DEC-041, item 7.</summary>
     public static ConjuntoDeItens ItensAdultosPadrao => ConjuntoDeItens.Vazio
-        .Com(Item.Vodka).Com(Item.Cerveja).Com(Item.Cigarro).Com(Item.Baseado);
+        .Com(Item.Vodka).Com(Item.Cerveja).Com(Item.Cigarro);
 
     /// <summary>Os nove itens adultos (DEC-033 e DEC-041), todos marcados: o que valia antes da DEC-041.</summary>
     public static ConjuntoDeItens TodosOsItensAdultos

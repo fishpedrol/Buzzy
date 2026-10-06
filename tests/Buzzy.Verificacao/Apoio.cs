@@ -197,7 +197,7 @@ internal static class PerfilDaVerificacao
 
     /// <summary>
     /// Grava, na pasta do perfil (nunca a real), as preferências com a chave adulta ligada e os nove itens adultos marcados,
-    /// sem posição: desde a DEC-041 o padrão é a chave desligada e só quatro marcados, e a verificação do tamagotchi usa
+    /// sem posição: desde a DEC-041 o padrão é a chave desligada e só três marcados, e a verificação do tamagotchi usa
     /// todos os itens. Só com nenhum Buzzy aberto, logo depois de <see cref="Limpar"/>.
     /// </summary>
     internal static void ComOsNoveAdultos()

@@ -78,7 +78,7 @@ internal sealed class Cenario
 
     /// <summary>
     /// As preferências dos cenários: as padrão com o tamagotchi completo, o conteúdo adulto e os nove itens ligados. Os
-    /// cenários exercitam a mecânica; o padrão do arquivo (adulto desligado, quatro itens marcados; DEC-041) tem os
+    /// cenários exercitam a mecânica; o padrão do arquivo (adulto desligado, três itens marcados; DEC-041, item 7) tem os
     /// testes dele em ConteudoAdultoTestes.
     /// </summary>
     public static readonly Preferencias PreferenciasDosCenarios = PreferenciasDeTeste.Completas;

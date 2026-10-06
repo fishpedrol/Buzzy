@@ -14,7 +14,7 @@ namespace Buzzy.Core.Persistencia;
 /// DEC-024); a v4, a chave do conteúdo adulto (<c>preferencias.conteudoAdulto</c>, DEC-033); a v5, o sempre no topo e a
 /// escala (<c>preferencias.sempreNoTopo</c> e <c>preferencias.escala</c>, DEC-038); a v6, os itens adultos habilitados
 /// (<c>preferencias.itensAdultosHabilitados</c>, DEC-041). Campos ausentes usam os padrões atuais: chave geral adulta
-/// desligada e vodka, cerveja, cigarro e baseado selecionados. Valores gerais já gravados continuam preservados; a raiz só
+/// desligada e vodka, cerveja e cigarro selecionados; o baseado fica desmarcado. Valores gerais já gravados continuam preservados; a raiz só
 /// regrava uma versão anterior no primeiro pedido, conforme a agenda existente.
 ///
 /// A leitura é tolerante campo a campo e nunca lança. Só é ilegível o arquivo grande demais, fora de
@@ -497,7 +497,7 @@ public static class EsquemaDeConfiguracoes
     /// <summary>
     /// Preferências campo a campo: ausente vale o padrão, sem aviso; inválido vale o padrão, com aviso. A emoção dominante
     /// nula ou ausente é automática; conteúdo adulto ausente é desligado; topo ausente é ligado; escala ausente é Média;
-    /// seleção de itens ausente habilita vodka, cerveja, cigarro e baseado.
+    /// seleção de itens ausente habilita vodka, cerveja e cigarro; o baseado fica desmarcado.
     /// </summary>
     private static Preferencias LerPreferencias(JsonElement? valor, List<string> avisos)
     {

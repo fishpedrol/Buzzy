@@ -180,7 +180,7 @@ internal sealed class BuzzyEmTeste : IDisposable
 
     /// <summary>
     /// As preferências dos testes do tamagotchi: a chave adulta ligada e os nove itens adultos marcados. Desde a DEC-041, o
-    /// padrão é a chave desligada e só quatro marcados; estes testes exercitam todos os itens, então partem destas.
+    /// padrão é a chave desligada e só três marcados; estes testes exercitam todos os itens, então partem destas.
     /// </summary>
     internal static readonly Preferencias PreferenciasComOsNoveAdultos
         = Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos };

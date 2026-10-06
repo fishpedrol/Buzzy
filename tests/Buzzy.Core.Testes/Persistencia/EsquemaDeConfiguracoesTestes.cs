@@ -76,7 +76,7 @@ internal static class EsquemaDeConfiguracoesTestes
         LeituraDasConfiguracoes lida = EsquemaDeConfiguracoes.Ler(File.ReadAllBytes(CaminhoDaAmostra(AmostraV5)));
         Afirmar.Igual((SituacaoDaLeitura.Valida, (int?)5), (lida.Situacao, lida.Versao), "situação e versão");
         Afirmar.Sequencia([], lida.Avisos, "avisos");
-        // A amostra v5 grava "conteudoAdulto": true, que se preserva; sem a lista da v6, valem os quatro marcados (DEC-041, item 4).
+        // A amostra v5 grava "conteudoAdulto": true, que se preserva; sem a lista da v6, valem os três marcados (DEC-041, item 7).
         Afirmar.Igual(new ConfiguracoesSalvas(PosicaoS2(), Preferencias.Padrao with { ConteudoAdulto = true }), lida.Configuracoes, "configurações");
 
         string v5 = Amostra(AmostraV5);
@@ -118,7 +118,6 @@ internal static class EsquemaDeConfiguracoesTestes
     "itensAdultosHabilitados": [
       "vodka",
       "cerveja",
-      "baseado",
       "cigarro"
     ]
 """.Replace("\r\n", "\n", StringComparison.Ordinal), $"    \"itensAdultosHabilitados\": {conteudo}\n", StringComparison.Ordinal);
@@ -130,8 +129,8 @@ internal static class EsquemaDeConfiguracoesTestes
             ("[\"xyz-desconhecido\"]", [], 1),
             ("[\"md\", \"md\"]", [Item.Md], 1),
             ("[1, \"cerveja\"]", [Item.Cerveja], 1),
-            ("\"vodka\"", [Item.Vodka, Item.Cerveja, Item.Baseado, Item.Cigarro], 1),
-            ("null", [Item.Vodka, Item.Cerveja, Item.Baseado, Item.Cigarro], 1),
+            ("\"vodka\"", [Item.Vodka, Item.Cerveja, Item.Cigarro], 1),
+            ("null", [Item.Vodka, Item.Cerveja, Item.Cigarro], 1),
         })
         {
             LeituraDasConfiguracoes l = Ler(Lista(conteudo));
