@@ -48,3 +48,6 @@ node_modules/
 
 # O site terá um repositório independente.
 /site/
+
+# Originais privados e backups da reescrita do histórico (DEC-044, item 1): nunca versionados.
+/privado/

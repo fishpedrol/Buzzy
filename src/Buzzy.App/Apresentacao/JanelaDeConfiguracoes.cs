@@ -25,13 +25,16 @@ internal sealed class JanelaDeConfiguracoes : Window
     private readonly EscalaDoPersonagem _escalaEmVigor;
     private readonly TextBlock _proximaVez;
     private readonly Dictionary<Item, CaixaDeComando> _caixasDosItensAdultos = [];
+    // Só os itens adultos desta edição ganham caixa (DEC-044, item 2).
+    private readonly ConjuntoDeItens _itensDaEdicao;
     private readonly Dictionary<Item, Image> _iconesDosItensAdultos = [];
 
     /// <param name="preferencias">As preferências do núcleo na abertura.</param>
     /// <param name="escalaEmVigor">O tamanho com que o Buzzy abriu, para o aviso de "próxima vez".</param>
     /// <param name="comConteudoAdulto">Se a caixa do conteúdo adulto existe (só com o tamagotchi).</param>
-    internal JanelaDeConfiguracoes(Preferencias preferencias, EscalaDoPersonagem escalaEmVigor, bool comConteudoAdulto)
+    internal JanelaDeConfiguracoes(Preferencias preferencias, EscalaDoPersonagem escalaEmVigor, bool comConteudoAdulto, ConjuntoDeItens? itensDaEdicao = null)
     {
+        _itensDaEdicao = itensDaEdicao ?? TabelaDoTamagotchi.ItensDaEdicao(EdicaoDoBuzzy.Completa);
         ArgumentNullException.ThrowIfNull(preferencias);
         _escalaEmVigor = escalaEmVigor;
         Title = Textos.ConfigTitulo;
@@ -205,7 +208,7 @@ internal sealed class JanelaDeConfiguracoes : Window
         grupo.Children.Add(titulo);
         grupo.Children.Add(Ajuda(Textos.ConfigItensAdultosAjuda));
 
-        foreach (Item item in TabelaDoTamagotchi.Itens.Where(TabelaDoTamagotchi.Adulto))
+        foreach (Item item in TabelaDoTamagotchi.Itens.Where(i => TabelaDoTamagotchi.Adulto(i) && _itensDaEdicao.Contem(i)))
         {
             string nome = Textos.NomeDoItem(item);
             var icone = new IconeDecorativo

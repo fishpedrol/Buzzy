@@ -73,6 +73,8 @@ public static partial class Maquina
         private void InvocarItem(Item item)
         {
             if (!Enum.IsDefined(item) || !_s.Carregado || !_s.Estado.Visivel() || _s.Topologia is null || _s.Lugar is null || _cfg.MaximoDeItens < 1) return;
+            // Um item fora da edição (DEC-044, item 2) não existe aqui.
+            if (!_cfg.ItensDaEdicao.Contem(item)) return;
             // A chave geral e a seleção individual (DEC-033/041) são ambas exigidas para invocar um item adulto.
             if (ItemAdulto(item) && (!_s.Preferencias.ConteudoAdulto || !_s.Preferencias.ItensAdultosHabilitados.Contem(item))) return;
             while (_s.Itens.Quantidade >= _cfg.MaximoDeItens)

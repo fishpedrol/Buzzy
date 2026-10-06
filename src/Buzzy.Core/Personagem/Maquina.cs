@@ -158,7 +158,7 @@ public static partial class Maquina
                 lugar = Posicionador.Inicial(e.Topologia, _cfg.Tamanho);
                 posicao = Posicionador.Descrever(lugar);
             }
-            _s = _s with { Carregado = true, Topologia = e.Topologia, Preferencias = Sanear(e.Preferencias), Lugar = lugar, Posicao = posicao };
+            _s = _s with { Carregado = true, Topologia = e.Topologia, Preferencias = Sanear(e.Preferencias, _cfg), Lugar = lugar, Posicao = posicao };
 
             // A postura gravada com a posição (esquema v3, DEC-029, item 11): a acomodação abaixo o devolve escondido na
             // mesma borda (DEC-025), ou agarrado e ainda preso onde o usuário o deixou (DEC-024); longe da parede e do cipó,
@@ -1154,21 +1154,24 @@ public static partial class Maquina
 
         /// <summary>
         /// SECURITY.md 7: nível de energia fora de BAIXA/MEDIA/ALTA vira o padrão seguro, Média; emoção dominante fora
-        /// das 14 caras de humor vira "Automática" (DEC-027); escala fora das três vira a Média (DEC-038).
+        /// das 14 caras de humor vira "Automática" (DEC-027); escala fora das três vira a Média (DEC-038); um item adulto fora
+        /// da edição sai da seleção (DEC-044, item 2).
         /// </summary>
-        private static Preferencias Sanear(Preferencias preferencias)
+        private static Preferencias Sanear(Preferencias preferencias, ConfiguracaoDoNucleo cfg)
         {
             if (!Enum.IsDefined(preferencias.Energia)) preferencias = preferencias with { Energia = Preferencias.Padrao.Energia };
             if (preferencias.EmocaoDominante is { } emocao && !Expressoes.EhDeHumor(emocao)) preferencias = preferencias with { EmocaoDominante = null };
             if (!Enum.IsDefined(preferencias.Escala)) preferencias = preferencias with { Escala = Preferencias.Padrao.Escala };
-            preferencias = preferencias with { ItensAdultosHabilitados = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados) };
-            return preferencias;
+            ConjuntoDeItens itens = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados);
+            foreach (Item item in TabelaDoTamagotchi.Itens)
+                if (!cfg.ItensDaEdicao.Contem(item)) itens = itens.Sem(item);
+            return preferencias with { ItensAdultosHabilitados = itens };
         }
 
         private void MudarPreferencias(Preferencias novas)
         {
             Preferencias antes = _s.Preferencias;
-            novas = Sanear(novas);
+            novas = Sanear(novas, _cfg);
             _s = _s with { Preferencias = novas };
             // Uma emoção dominante nova aparece na hora, como pelo menu (DEC-027), a não ser com a onda de um item, que tem
             // precedência (DEC-028); antes da carga, quem decide a cara de partida é a carga.

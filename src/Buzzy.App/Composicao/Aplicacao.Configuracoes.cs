@@ -33,7 +33,7 @@ internal sealed partial class Aplicacao
             Diagnostico.Evento("CONFIGURACOES", ("ativada", "sim"));
             return;
         }
-        var janela = new JanelaDeConfiguracoes(_nucleo.Estado.Preferencias, _escalaEmVigor, _nucleo.Configuracao.Tamagotchi);
+        var janela = new JanelaDeConfiguracoes(_nucleo.Estado.Preferencias, _escalaEmVigor, _nucleo.Configuracao.Tamagotchi, _nucleo.Configuracao.ItensDaEdicao);
         janela.PediuEnergia += nivel => Enviar(new CmdSetEnergy(nivel), "configurações");
         janela.PediuTelaCheia += ligado => Enviar(new CmdSetFullscreenMode(ligado), "configurações");
         janela.PediuAdulto += ligado => Enviar(new CmdSetAdultContent(ligado), "configurações");

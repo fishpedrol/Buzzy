@@ -239,7 +239,7 @@ internal sealed partial class Aplicacao
         AplicarSempreNoTopo(_gravacao.Lidas.Preferencias.SempreNoTopo, "partida");
 
         ulong semente = _opcoes.Semente ?? unchecked((ulong)Environment.TickCount64);
-        _nucleo = new Nucleo(ConfiguracaoDoNucleo.DoAplicativo(_escalaEmVigor), semente);
+        _nucleo = new Nucleo(ConfiguracaoDoNucleo.DoAplicativo(_escalaEmVigor, EdicaoDoBuild.Atual), semente);
         Diagnostico.Evento("NUCLEO", ("semente", semente), ("pausado", _opcoes.MovimentoPausado ? "sim" : "nao"));
         // A carga leva o que a partida leu (DEC-029 e DEC-030): a posição salva, com a tela do monitor da época, que o
         // núcleo restaura pela cascata; a borda do esconderijo e a marca de preso; e as preferências, com a emoção

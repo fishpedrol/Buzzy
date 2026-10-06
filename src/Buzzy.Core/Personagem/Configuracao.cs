@@ -132,6 +132,12 @@ public sealed record ConfiguracaoDoNucleo
     public Chance ChanceDaParanoia { get; init; } = new(1, 8);
 
     /// <summary>
+    /// Os itens que existem nesta edição (DEC-044, item 2); a completa por padrão. Um item fora dela não nasce, não é marcado
+    /// e sai das preferências carregadas ou trocadas.
+    /// </summary>
+    public ConjuntoDeItens ItensDaEdicao { get; init; } = TabelaDoTamagotchi.ItensDaEdicao(EdicaoDoBuzzy.Completa);
+
+    /// <summary>
     /// O tamanho do personagem em cada passo da escala (DEC-038, item 9): 96, 128 ou 192 DIP (1,5×, 2× ou 3× a arte de
     /// 64 px, ampliada sem suavização); fora do enum, o passo Médio.
     /// </summary>
@@ -143,19 +149,23 @@ public sealed record ConfiguracaoDoNucleo
     };
 
     /// <summary>A configuração do aplicativo com o personagem no passo de escala dado (DEC-038, item 9); os itens continuam com 48 DIP.</summary>
-    public static ConfiguracaoDoNucleo DoAplicativo(EscalaDoPersonagem escala) => DoAplicativo(TamanhoDoPersonagem(escala));
+    public static ConfiguracaoDoNucleo DoAplicativo(EscalaDoPersonagem escala, EdicaoDoBuzzy edicao = EdicaoDoBuzzy.Completa)
+        => DoAplicativo(TamanhoDoPersonagem(escala), edicao);
 
     /// <summary>
     /// A configuração que o aplicativo usa hoje. É a fonte única: o app e as simulações dos testes
     /// que escolhem sementes para ele partem daqui, para nunca divergirem.
     /// </summary>
-    public static ConfiguracaoDoNucleo DoAplicativo(TamanhoDip tamanho) => new()
+    public static ConfiguracaoDoNucleo DoAplicativo(TamanhoDip tamanho, EdicaoDoBuzzy edicao = EdicaoDoBuzzy.Completa) => new()
     {
         Tamanho = tamanho,
+        // A edição (DEC-044, item 2): a pública não tem as drogas ilícitas nem, com o baseado, o baseado por conta própria.
+        ItensDaEdicao = TabelaDoTamagotchi.ItensDaEdicao(edicao),
         // Fase 4 (DEC-022 a DEC-025): física, queda animada, todas as ações, esconderijo no clique duplo. E o baseado por
         // conta própria (pedido do usuário de 2026-10-01, 19:10: ele às vezes fuma um baseado sozinho, quando quer), que
         // fica fora de Todas e só existe com a chave do tamagotchi ligada.
-        Acoes = AcoesAutonomas.Todas | AcoesAutonomas.FumarBaseado | AcoesAutonomas.IrAoOutroMonitor,
+        Acoes = AcoesAutonomas.Todas | AcoesAutonomas.IrAoOutroMonitor
+            | (TabelaDoTamagotchi.ItensDaEdicao(edicao).Contem(Item.Baseado) ? AcoesAutonomas.FumarBaseado : 0),
         QuedaFisica = true,
         Movimento = true,
         EsconderijoNoCliqueDuplo = true,

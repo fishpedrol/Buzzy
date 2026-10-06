@@ -1,8 +1,8 @@
 namespace Buzzy.Visual.Pixel;
 
 /// <summary>
-/// Cores da pixel art do Buzzy. Os tons-base vêm das pranchas de referência
-/// (assets/references/): azul-marinho do pelo #283A5F, creme #FDD5A6, pêssego #F6996D e castanho
+/// Cores da pixel art do Buzzy. Os tons-base vêm das pranchas de referência do usuário (fora do repositório desde a
+/// DEC-044, item 1): azul-marinho do pelo #283A5F, creme #FDD5A6, pêssego #F6996D e castanho
 /// #9A5236, lidos da paleta da prancha, e o chapéu de palha com a faixa vermelha #B83A37 (DEC-019).
 /// </summary>
 public enum Cor : byte

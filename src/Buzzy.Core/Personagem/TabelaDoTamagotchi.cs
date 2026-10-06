@@ -12,6 +12,21 @@ namespace Buzzy.Core.Personagem;
 /// </summary>
 public static class TabelaDoTamagotchi
 {
+    /// <summary>
+    /// Os itens que existem na edição (DEC-044, item 2): a completa tem os treze; a pública, a do download do site, não tem
+    /// as seis drogas ilícitas (baseado, cocaína, MD, lança-perfume, cogumelo e bala), e com elas some o que só nasce delas
+    /// (o baseado por conta própria e a paranoia, que precisa de uma sintética).
+    /// </summary>
+    public static ConjuntoDeItens ItensDaEdicao(EdicaoDoBuzzy edicao)
+    {
+        ConjuntoDeItens itens = ConjuntoDeItens.Vazio;
+        foreach (Item item in Itens)
+            if (edicao == EdicaoDoBuzzy.Completa || !ForaDaEdicaoPublica.Contains(item)) itens = itens.Com(item);
+        return itens;
+    }
+
+    private static readonly Item[] ForaDaEdicaoPublica = [Item.Baseado, Item.Cocaina, Item.Md, Item.LancaPerfume, Item.Cogumelo, Item.Bala];
+
     /// <summary>Os itens na ordem do menu, a da resposta do usuário.</summary>
     public static IReadOnlyList<Item> Itens { get; } =
     [
@@ -228,4 +243,11 @@ public static class TabelaDoTamagotchi
             [(Expressao.Sonolento, 2), (Expressao.Pensativo, 1), (Expressao.Neutro, 1)]);
         return new(Onda.Paranoico, 4, S(1), S(40), S(15), Expressao.Assustado, Expressao.Paranoico, Expressao.Sonolento, [pico, pico, pico], queda, DeSubstancia: true);
     }
+}
+
+/// <summary>A edição do Buzzy (DEC-044, item 2): a completa, com os treze itens, e a pública, a do download do site.</summary>
+public enum EdicaoDoBuzzy
+{
+    Completa,
+    Publica,
 }

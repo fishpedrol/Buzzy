@@ -9,14 +9,17 @@
       2. publica src\Buzzy.App em Release, numa pasta temporária:
          -Formato zip (padrão): dependente do framework (exige o .NET 10 Desktop Runtime);
          -Formato exe: o .exe único autocontido para Windows x64 (-p:BuzzyExeUnico=true; F9-P10), sem exigir runtime;
+         -Edicao publica: a edição pública do download, sem as drogas ilícitas (-p:BuzzyEdicao=publica; DEC-044, item 2);
+         -Edicao completa (padrão): a de sempre, com os treze itens, para a página separada do site;
       3. o portão de APIs: no zip, roda na pasta publicada; no exe, roda dentro do publish duas vezes (a pasta
          autocontida, com a procedência do runtime, e o pacote por dentro, com o host contra o singlefilehost.exe do SDK),
          e o script exige os dois APROVADO;
       4. recusa qualquer arquivo fora da lista esperada (os .pdb ficam fora);
-      5. gera resultados\Buzzy-<versão>.zip ou resultados\Buzzy-<versão>-win-x64.exe, e o SHA-256 dele;
+      5. gera resultados\Buzzy-<versão>[-completo].zip ou resultados\Buzzy-<versão>[-completo]-win-x64.exe (o sufixo só na
+         edição completa), e o SHA-256 dele;
       6. põe o pacote numa pasta temporária (o ZIP extraído; o .exe copiado, como um download), abre o Buzzy.exe de lá com
          o perfil de teste "pacote" (sem instalar nem elevar), espera a janela, fecha por WM_CLOSE e exige saída limpa
-         (código 0). O .exe vai com o nome do download e roda duas vezes: a primeira faz o runtime extrair as DLLs
+         (código 0); a linha INICIO do log tem de dizer a edição pedida (edicao=publica ou edicao=completa). O .exe vai com o nome do download e roda duas vezes: a primeira faz o runtime extrair as DLLs
          nativas do WPF em %TEMP%\.net\Buzzy-<versão>-win-x64\<id>, a segunda tem de reaproveitá-las sem gravar de novo;
          o script mede o caminho, os arquivos e o tamanho, e apaga só as pastas <id> que esta execução criou;
       7. confere que a pasta temporária não mudou (o Buzzy não grava ao lado do executável) e que os arquivos e o registro
@@ -27,7 +30,10 @@
 [CmdletBinding()]
 param(
     [ValidateSet('zip', 'exe')]
-    [string] $Formato = 'zip'
+    [string] $Formato = 'zip',
+
+    [ValidateSet('completa', 'publica')]
+    [string] $Edicao = 'completa'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -154,7 +160,7 @@ try {
     if ($Formato -eq 'exe') {
         Write-Host '== publicar (Release, .exe único autocontido, win-x64; o portão roda dentro do publish) =='
         $ErrorActionPreference = 'Continue'
-        $saidaPublish = & dotnet publish (Join-Path $raiz 'src\Buzzy.App\Buzzy.App.csproj') -c Release -o $publicado -p:BuzzyExeUnico=true -nologo -v n 2>&1 | Out-String
+        $saidaPublish = & dotnet publish (Join-Path $raiz 'src\Buzzy.App\Buzzy.App.csproj') -c Release -o $publicado -p:BuzzyExeUnico=true "-p:BuzzyEdicao=$Edicao" -nologo -v n 2>&1 | Out-String
         $codigoDoPublish = $LASTEXITCODE
         $ErrorActionPreference = 'Stop'
         $resumos = @($saidaPublish -split "`r?`n" | Where-Object { $_ -match 'Resumo: ' } | ForEach-Object { $_.Trim() })
@@ -166,7 +172,7 @@ try {
         }
     } else {
         Write-Host '== publicar (Release, dependente do framework, win-x64) =='
-        & dotnet publish (Join-Path $raiz 'src\Buzzy.App\Buzzy.App.csproj') -c Release -o $publicado --self-contained false -nologo -v q
+        & dotnet publish (Join-Path $raiz 'src\Buzzy.App\Buzzy.App.csproj') -c Release -o $publicado --self-contained false "-p:BuzzyEdicao=$Edicao" -nologo -v q
         if ($LASTEXITCODE -ne 0) { Abortar 'dotnet publish falhou.' }
 
         Write-Host '== portão de APIs na pasta publicada =='
@@ -190,19 +196,31 @@ try {
 
     # ---- 5. O pacote e o SHA-256 ---------------------------------------------------------------------------------------
     $versao = (Get-Item (Join-Path $publicado 'Buzzy.exe')).VersionInfo.ProductVersion -replace '\+.*$', ''
+    # A pública leva o nome de sempre; a completa, o sufixo (DEC-044, item 2). Os dois começam com "Buzzy", como pede a regra
+    # do início com o Windows (DEC-038, item 10), e extraem o runtime em pastas separadas.
+    $sufixo = if ($Edicao -eq 'completa') { '-completo' } else { '' }
     $resultados = Join-Path $raiz 'resultados'
     New-Item -ItemType Directory -Force -Path $resultados | Out-Null
     if ($Formato -eq 'exe') {
-        $pacote = Join-Path $resultados ('Buzzy-{0}-win-x64.exe' -f $versao)
+        $pacote = Join-Path $resultados ('Buzzy-{0}{1}-win-x64.exe' -f $versao, $sufixo)
         Copy-Item -LiteralPath (Join-Path $publicado 'Buzzy.exe') -Destination $pacote -Force
     } else {
-        $pacote = Join-Path $resultados ('Buzzy-{0}.zip' -f $versao)
+        $pacote = Join-Path $resultados ('Buzzy-{0}{1}.zip' -f $versao, $sufixo)
         if (Test-Path -LiteralPath $pacote) { Remove-Item -LiteralPath $pacote -Force }
         Compress-Archive -Path ($esperados | ForEach-Object { Join-Path $publicado $_ }) -DestinationPath $pacote
     }
     $hash = (Get-FileHash -LiteralPath $pacote -Algorithm SHA256).Hash
     Set-Content -LiteralPath ($pacote + '.sha256') -Value ('{0}  {1}' -f $hash, (Split-Path -Leaf $pacote)) -Encoding ascii
     Write-Host ('== {0}: {1:N0} bytes, SHA-256 {2} ==' -f (Split-Path -Leaf $pacote), (Get-Item $pacote).Length, $hash)
+    if ($Formato -eq 'exe') {
+        # DEC-044, item 4: a licença e os avisos de terceiros da Microsoft acompanham cada release do .exe.
+        if ($saidaPublish -notmatch 'Microsoft\.NETCore\.App\.Host\.win-x64\\(\d+\.\d+\.\d+)\\') { Falhar 'a versão do runtime não apareceu no publish (avisos de terceiros).' }
+        else {
+            & (Join-Path $PSScriptRoot 'avisos-de-terceiros.ps1') -VersaoDoRuntime $Matches[1] -Destino (Join-Path $resultados 'THIRD-PARTY-NOTICES.txt')
+            Copy-Item -LiteralPath (Join-Path $raiz 'LICENSE') -Destination (Join-Path $resultados 'LICENSE.txt') -Force
+            Write-Host '   LICENSE.txt copiado'
+        }
+    }
 
     # ---- 6. Rodar da pasta temporária ----------------------------------------------------------------------------------
     # O .exe vai com o nome do download, porque o runtime extrai numa pasta com o nome do arquivo (revisão adversarial).
@@ -241,6 +259,10 @@ try {
             $linhas = LerLogDesde $marca
             $inicio = $linhas | Where-Object { $_ -match ('BUZZY\|INICIO\|pid={0}\|' -f $proc.Id) } | Select-Object -First 1
             $janela = $linhas | Where-Object { $_ -match 'BUZZY\|JANELA\|.*hwnd=(\d+)' } | Select-Object -First 1
+            if ($inicio -and $inicio -notmatch ('\|edicao={0}(\||$)' -f $Edicao)) {
+                Falhar ('a partida não é da edição {0}: {1}' -f $Edicao, $inicio)
+                break
+            }
             if ($inicio -and $janela -and ($janela -match 'hwnd=(\d+)')) {
                 $candidato = [IntPtr][int64]$Matches[1]
                 $pid2 = [uint32]0

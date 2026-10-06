@@ -31,7 +31,7 @@ public static partial class Maquina
         /// <summary>CMD_SET_ADULT_ITEM: salva uma escolha individual e, ao desmarcar, remove só a contribuição daquele item.</summary>
         private void EscolherItemAdulto(Item item, bool ligado)
         {
-            if (!_cfg.Tamagotchi || !_s.Carregado || !Enum.IsDefined(item) || !ItemAdulto(item)) return;
+            if (!_cfg.Tamagotchi || !_s.Carregado || !Enum.IsDefined(item) || !ItemAdulto(item) || !_cfg.ItensDaEdicao.Contem(item)) return;
             bool estavaLigado = _s.Preferencias.ItensAdultosHabilitados.Contem(item);
             if (estavaLigado == ligado) return;
 

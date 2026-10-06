@@ -57,6 +57,7 @@ internal static class Programa
         Diagnostico.Evento("INICIO",
             ("pid", Environment.ProcessId),
             ("versao", Assembly.GetExecutingAssembly().GetName().Version),
+            ("edicao", EdicaoDoBuild.NomeNoLog),
             ("runtime", RuntimeInformation.FrameworkDescription),
             ("so", RuntimeInformation.OSDescription));
 

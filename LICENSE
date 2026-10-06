@@ -1,0 +1,30 @@
+Buzzy — licença e termos de uso
+================================
+
+Copyright (c) 2026 fishpedrol. Todos os direitos reservados, na medida dos direitos de autor.
+
+1. O que é permitido. Ver o código-fonte deste repositório e baixar o executável publicado nas releases oficiais
+   (https://github.com/fishpedrol/Buzzy/releases) para uso pessoal e não comercial no seu próprio computador.
+
+2. O que não é permitido sem autorização por escrito. Redistribuir, publicar, vender, alugar, sublicenciar ou
+   distribuir versões modificadas do código, da arte ou do executável, no todo ou em parte.
+
+3. Componentes da Microsoft. O executável inclui componentes do .NET e do WPF da Microsoft, licenciados (não vendidos)
+   sob os termos deles: a .NET Library License, a Windows SDK License e a licença MIT, listadas com os avisos de
+   terceiros no arquivo THIRD-PARTY-NOTICES.txt que acompanha cada release. Ao usar o executável, você também concorda
+   em: não separar esses componentes do Buzzy para usá-los ou distribuí-los; não remover nem alterar os avisos deles;
+   não fazer engenharia reversa deles além do que a lei aplicável permite; e usá-los só no Windows. Nada aqui sugere
+   endosso da Microsoft.
+
+4. Projeto não oficial. O Buzzy é um projeto pessoal, gratuito e não oficial, sem afiliação nem endosso de titulares de
+   obras, personagens ou marcas de terceiros; nomes e marcas de terceiros pertencem aos seus titulares. Não há venda
+   nem pedido de doação. Para pedir a remoção de algum conteúdo, abra uma issue em
+   https://github.com/fishpedrol/Buzzy/issues.
+
+5. Conteúdo adulto. O Buzzy tem itens adultos de desenho animado (bebida alcoólica e cigarro; numa edição separada,
+   também drogas ilícitas), opcionais e desligados por padrão, destinados a maiores de 18 anos. São regra de jogo, sem
+   relação com o mundo real, e não incentivam o uso de nenhuma substância.
+
+6. Sem garantia. O Buzzy é fornecido "como está", sem garantia de nenhum tipo, expressa ou implícita, inclusive de
+   funcionamento, adequação a um fim ou ausência de defeitos. Na máxima extensão permitida pela lei, o autor não
+   responde por danos de qualquer natureza decorrentes do uso ou da impossibilidade de uso do Buzzy.
