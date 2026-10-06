@@ -1193,7 +1193,7 @@ internal static class InvariantesTestes
             MonitorDoDesktop m = Maquina.MonitorDaAncora(topologiaAoLargar, largado.Lugar.Ancora);
             ConferirSolto(antes, depois, largado, Posicionador.PrenderNaAreaUtil(largado.Lugar.Ancora, cfg.TamanhoDoItem.ParaPixels(m.Dpi), m.AreaUtil), m, onde);
         }
-        // Invariante 23 ajustado: um uso vem do ITEM_DRAG_END do usuário ou da ação autônoma FumarBaseado, só o baseado, só em
+        // Invariante 23 ajustado: um uso vem do ITEM_DRAG_END do usuário ou da ação autônoma UsarPorContaPropria, só o baseado, só em
         // IDLE no chão, e nunca cria nem tira item do mundo.
         if (entrouNoUso)
             Verificar(evento is ItemDragEnd || fumouSozinho, () => $"invariante 23: {onde()}: entrou em USING por {evento.GetType().Name}");
@@ -1369,9 +1369,14 @@ internal static class InvariantesTestes
             DadosDoItem dados = cfg.TabelaDeItens(depois.Uso!.Item);
             (EstadoDaOnda? frente, EstadoDaOnda? fundo, string caso) = OndaDepoisDoUso(antes.Onda, antes.OndaDeFundo, dados, cfg);
             Contar(caso);
-            // O soltar nunca sorteia no gerador principal: nem o alívio, nem a combinação, nem a paranoia. O baseado por conta
-            // própria gasta só o sorteio da agenda, um passo, e o resto do caminho é o mesmo.
-            Aleatorio principalEsperado = fumouSozinho ? antes.Aleatorio.Sortear().Proximo : antes.Aleatorio;
+            // O soltar nunca sorteia no gerador principal: nem o alívio, nem a combinação, nem a paranoia. O uso por conta
+            // própria gasta o sorteio da agenda, um passo, e, com mais de uma droga possível, o da droga (DEC-045), outro passo;
+            // o resto do caminho é o mesmo.
+            int possiveis = TabelaDoTamagotchi.Ilicitos.Itens.Count(i => antes.Preferencias.ItensPorContaPropria.Contem(i)
+                && antes.Preferencias.ItensAdultosHabilitados.Contem(i) && cfg.ItensDaEdicao.Contem(i)
+                && !(antes.Onda is { } frente && frente.Tipo == cfg.TabelaDeItens(i).Onda));
+            Aleatorio principalEsperado = !fumouSozinho ? antes.Aleatorio
+                : possiveis > 1 ? antes.Aleatorio.Sortear().Proximo.Sortear().Proximo : antes.Aleatorio.Sortear().Proximo;
             Verificar(depois.Aleatorio == principalEsperado,
                 () => $"paranoia: {onde()}: o {(fumouSozinho ? "baseado por conta própria" : $"soltar do {dados.Item}")} mudou o gerador principal além do sorteio da agenda");
             // A paranoia, depois da combinação: a carga do episódio e, com ela na frente, a subida; sem ela, o sorteio, só no uso
@@ -1467,7 +1472,7 @@ internal static class InvariantesTestes
     /// <summary>
     /// O baseado por conta própria (pedido do usuário de 2026-10-01, 19:10; adendo da DEC-028), escrito aqui à parte do núcleo.
     /// Só um AUTONOMY_TIMER que vale (a geração agendada, visível, com a autonomia livre e sem item na mão do usuário) o faz
-    /// fumar, e só com a chave ligada e a ação FumarBaseado na configuração, em IDLE, no chão (a âncora na borda de baixo da
+    /// fumar, e só com a chave ligada e a ação UsarPorContaPropria na configuração, em IDLE, no chão (a âncora na borda de baixo da
     /// área útil), sem estar escondido e sem a onda Chapado ou a paranoia na frente. O uso é o do baseado, no chão, por uma
     /// transição só, de IDLE para USING, com a regra "IDLE + AUTONOMY_TIMER: Fumar Baseado por conta própria" (mais o texto da
     /// paranoia); nenhum item nasce nem sai, nenhum Id é gasto e nenhuma janela de item muda. O resto do uso (a combinação, a
@@ -1481,18 +1486,26 @@ internal static class InvariantesTestes
         EstadoDoNucleo depois = r.Estado;
         bool vale = antes.DecisaoAgendada && timer.Geracao == antes.Geracao && antes.Estado.Visivel() && !antes.Estado.ControladoPeloUsuario()
             && !antes.AutonomiaPausada && !antes.PainelAberto && antes.Itens.NaMao is null;
-        bool ligada = cfg.Tamagotchi && (cfg.Acoes & AcoesAutonomas.FumarBaseado) == AcoesAutonomas.FumarBaseado;
+        bool ligada = cfg.Tamagotchi && (cfg.Acoes & AcoesAutonomas.UsarPorContaPropria) == AcoesAutonomas.UsarPorContaPropria;
         bool noChao = antes.Estado == Estado.Idle && antes.Esconderijo == LadoDoEsconderijo.Nenhum && antes.Lugar is { } l && l.Ancora.Y == l.Monitor.AreaUtil.Base;
         bool chapadoOuParanoico = antes.Onda?.Tipo is Onda.Chapado or Onda.Paranoico;
+        // DEC-045: as drogas que podem, escritas aqui à parte do núcleo: marcadas por conta própria e nos itens adultos, da
+        // edição, com a chave adulta ligada, sem a paranoia na frente e sem a onda delas na frente.
+        Item[] podem = antes.Preferencias.ConteudoAdulto && antes.Onda?.Tipo != Onda.Paranoico
+            ? [.. TabelaDoTamagotchi.Ilicitos.Itens.Where(i => antes.Preferencias.ItensPorContaPropria.Contem(i) && antes.Preferencias.ItensAdultosHabilitados.Contem(i)
+                && cfg.ItensDaEdicao.Contem(i) && antes.Onda?.Tipo != cfg.TabelaDeItens(i).Onda)]
+            : [];
         if (fumou)
         {
             contagens.Contar("fumou por conta própria");
-            Verificar(vale && ligada && noChao && !chapadoOuParanoico,
-                () => $"invariante 23: {onde()}: fumou por conta própria sem poder (decisão que vale {vale}, ação ligada {ligada}, em IDLE no chão {noChao}, onda {antes.Onda})");
-            string regra = $"IDLE + AUTONOMY_TIMER: {cfg.TabelaDeItens(Item.Baseado).Verbo} {Item.Baseado} por conta própria";
+            Item usado = depois.Uso?.Item ?? Item.Baseado;
+            Verificar(vale && ligada && noChao && podem.Contains(usado),
+                () => $"invariante 23: {onde()}: usou {usado} por conta própria sem poder (decisão que vale {vale}, ação ligada {ligada}, em IDLE no chão {noChao}, onda {antes.Onda}, podiam [{string.Join(",", podem)}])");
+            if (usado != Item.Baseado) contagens.Contar("outra droga por conta própria");
+            string regra = $"IDLE + AUTONOMY_TIMER: {cfg.TabelaDeItens(usado).Verbo} {usado} por conta própria";
             Verificar(r.Transicoes.Count == 1 && r.Transicoes[0].De == Estado.Idle && r.Transicoes[0].Para == Estado.Using && r.Transicoes[0].Regra.StartsWith(regra, StringComparison.Ordinal),
                 () => $"baseado por conta própria: {onde()}: transições [{string.Join("; ", r.Transicoes)}]");
-            Verificar(depois.Uso is { Item: Item.Baseado, Apoio: ApoioDoUso.Chao }, () => $"baseado por conta própria: {onde()}: o uso foi {depois.Uso}, e não o do baseado no chão");
+            Verificar(depois.Uso is { Apoio: ApoioDoUso.Chao }, () => $"uso por conta própria: {onde()}: o uso foi {depois.Uso}, e não no chão");
             Verificar(itensQueMudaram == 0 && depois.Itens == antes.Itens && depois.ProximoIdDeItem == antes.ProximoIdDeItem,
                 () => $"invariante 23: {onde()}: o baseado por conta própria mexeu nos itens ([{antes.Itens}] → [{depois.Itens}], próximo Id {antes.ProximoIdDeItem} → {depois.ProximoIdDeItem})");
             Verificar(!r.Efeitos.Any(e => e is MostrarItem or MoverItem or EsconderItem or RemoverItem or LiberarCapturaDoItem),
@@ -1500,6 +1513,8 @@ internal static class InvariantesTestes
             return;
         }
         if (vale && ligada && noChao && chapadoOuParanoico) contagens.Contar("não fumou chapado nem paranoico");
+        Verificar(!(vale && ligada && noChao && podem.Length == 0 && depois.Estado == Estado.Using),
+            () => $"invariante 23: {onde()}: entrou em uso sem nenhuma droga que podia");
         // Em IDLE fora do chão (sem a física, depois do pouso pelos sinais), sem estar escondido e sem Chapado nem paranoia na
         // frente, só o chão o impede (revisão do baseado, achado 4): com a ação ligada, a decisão que vale não o fez fumar.
         bool foraDoChao = antes.Estado == Estado.Idle && antes.Esconderijo == LadoDoEsconderijo.Nenhum && antes.Lugar is { } noAr && noAr.Ancora.Y != noAr.Monitor.AreaUtil.Base;
@@ -2287,14 +2302,14 @@ internal static class InvariantesTestes
         ConfiguracaoDoNucleo cfgDoTamagotchi = cfg with { Tamagotchi = true, Fisica = cfg.Fisica with { Gravidade = cfg.Fisica.Gravidade * 4 } };
         if (usoCurto) cfgDoTamagotchi = cfgDoTamagotchi with { TabelaDeItens = ItemDeUsoCurto };
         // O baseado por conta própria (pedido do usuário de 2026-10-01, 19:10): em metade das sequências, por outro bit da
-        // semente (sem sorteio a mais), a execução com o tamagotchi tem a ação FumarBaseado, como o aplicativo, com o peso 6
+        // semente (sem sorteio a mais), a execução com o tamagotchi tem a ação UsarPorContaPropria, como o aplicativo, com o peso 6
         // em vez de 1, para ele fumar sozinho muitas vezes (e o clique interromper, e o baseado fechar a mistura). A execução
         // principal e a repetida com a chave ligada continuam sem ela (o invariante 22 é sem o baseado por conta própria).
         bool fumaSozinho = ((uint)semente >> 1) % 2 == 0;
         if (fumaSozinho)
         {
             Func<NivelDeEnergia, PerfilDeEnergia> perfil = cfgDoTamagotchi.Perfil;
-            cfgDoTamagotchi = cfgDoTamagotchi with { Acoes = cfgDoTamagotchi.Acoes | AcoesAutonomas.FumarBaseado, Perfil = n => perfil(n) with { PesoFumarBaseado = 6 } };
+            cfgDoTamagotchi = cfgDoTamagotchi with { Acoes = cfgDoTamagotchi.Acoes | AcoesAutonomas.UsarPorContaPropria, Perfil = n => perfil(n) with { PesoUsarPorContaPropria = 6 } };
         }
         var sombraDoTamagotchi = new Nucleo(cfgDoTamagotchi, (ulong)semente);
         var aplicadosDoTamagotchi = new List<(int Lote, EstadoDoNucleo Antes, Evento Evento, Resultado Resultado)>();
@@ -2440,7 +2455,7 @@ internal static class InvariantesTestes
     }
 
     /// <summary>
-    /// Nas sequências com o baseado por conta própria (a ação FumarBaseado na configuração; revisão do baseado, achado 4), às
+    /// Nas sequências com o baseado por conta própria (a ação UsarPorContaPropria na configuração; revisão do baseado, achado 4), às
     /// vezes o gerador leva a duas situações que ele quase nunca alcançava sozinho. Fora do chão: sem a física (os invariantes
     /// rodam sem ela), com a queda pelos sinais, ele pousa e fica em IDLE onde o pouso acabou, no ar, e ali não pode fumar; mas
     /// o pouso (12 TICKs) quase nunca terminava sem outro evento no meio, e a decisão que vale em IDLE fora do chão, com a ação
@@ -2451,7 +2466,7 @@ internal static class InvariantesTestes
     /// </summary>
     private static List<Evento>? PuxarOBaseadoPorContaPropria(Random rnd, EstadoDoNucleo s, ConfiguracaoDoNucleo cfg)
     {
-        if ((cfg.Acoes & AcoesAutonomas.FumarBaseado) != AcoesAutonomas.FumarBaseado || s.Lugar is not { } lugar) return null;
+        if ((cfg.Acoes & AcoesAutonomas.UsarPorContaPropria) != AcoesAutonomas.UsarPorContaPropria || s.Lugar is not { } lugar) return null;
         if (s.Estado == Estado.Using)
             return s.Uso?.Item == Item.Baseado && rnd.Next(8) == 0 ? [new ContextMenu(new PontoPx(lugar.Ancora.X, lugar.Ancora.Y - 20))] : null;
         if (lugar.Ancora.Y == lugar.Monitor.AreaUtil.Base) return null;

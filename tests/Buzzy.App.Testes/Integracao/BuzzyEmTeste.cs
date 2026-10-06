@@ -183,7 +183,7 @@ internal sealed class BuzzyEmTeste : IDisposable
     /// padrão é a chave desligada e só três marcados; estes testes exercitam todos os itens, então partem destas.
     /// </summary>
     internal static readonly Preferencias PreferenciasComOsNoveAdultos
-        = Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos };
+        = Preferencias.Padrao with { AtravessarMonitores = true, ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos, ItensPorContaPropria = ConjuntoDeItens.Vazio.Com(Item.Baseado) };
 
     internal static BuzzyEmTeste Iniciar(bool pausado = true, ulong? semente = null, string perfil = PerfilDeTeste.Integracao, bool limpar = true, bool telaCheia = false,
         bool comOsNoveAdultos = false)

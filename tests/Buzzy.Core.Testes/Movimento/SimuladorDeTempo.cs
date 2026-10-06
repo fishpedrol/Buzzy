@@ -23,7 +23,7 @@ internal sealed class SimuladorDeTempo
     /// <param name="preferencias">Nula, as dos cenários: a chave adulta ligada e os nove itens (o arquivo também entra na verificação de tela, sem o Cenario).</param>
     /// <param name="posicaoSalva">A posição salva da carga, como a partida a lê do settings.json (Fase 5); nula, a inicial.</param>
     public SimuladorDeTempo(ConfiguracaoDoNucleo config, ulong semente, Topologia topologia, Preferencias? preferencias = null, PosicaoDoPersonagem? posicaoSalva = null)
-        : this(config, semente, new Loaded(topologia, posicaoSalva, preferencias ?? Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos }))
+        : this(config, semente, new Loaded(topologia, posicaoSalva, preferencias ?? Preferencias.Padrao with { AtravessarMonitores = true, ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos, ItensPorContaPropria = ConjuntoDeItens.Vazio.Com(Item.Baseado) }))
     {
     }
 

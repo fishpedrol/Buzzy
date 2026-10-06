@@ -7,13 +7,14 @@ using Buzzy.Core.Personagem;
 namespace Buzzy.Core.Persistencia;
 
 /// <summary>
-/// Esquema v6 do settings.json (Fase 5; ARCHITECTURE.md 2.12; SECURITY.md 7): converte bytes em
+/// Esquema v7 do settings.json (Fase 5; ARCHITECTURE.md 2.12; SECURITY.md 7): converte bytes em
 /// <see cref="ConfiguracoesSalvas"/> e de volta, sem E/S. A v2 acrescentou a emoção dominante
 /// (<c>preferencias.emocaoDominante</c>, DEC-027); a v3, a postura gravada com a posição (DEC-029, item 11): a borda do
 /// esconderijo (<c>posicao.esconderijo</c>, DEC-025) e a marca "preso pelo usuário" (<c>posicao.presoPeloUsuario</c>,
 /// DEC-024); a v4, a chave do conteúdo adulto (<c>preferencias.conteudoAdulto</c>, DEC-033); a v5, o sempre no topo e a
 /// escala (<c>preferencias.sempreNoTopo</c> e <c>preferencias.escala</c>, DEC-038); a v6, os itens adultos habilitados
-/// (<c>preferencias.itensAdultosHabilitados</c>, DEC-041). Campos ausentes usam os padrões atuais: chave geral adulta
+/// (<c>preferencias.itensAdultosHabilitados</c>, DEC-041); a v7, o uso por conta própria das seis drogas ilícitas
+/// (<c>preferencias.itensPorContaPropria</c>, DEC-045; ausente, nenhuma). Campos ausentes usam os padrões atuais: chave geral adulta
 /// desligada e vodka, cerveja e cigarro selecionados; o baseado fica desmarcado. Valores gerais já gravados continuam preservados; a raiz só
 /// regrava uma versão anterior no primeiro pedido, conforme a agenda existente.
 ///
@@ -35,9 +36,10 @@ public static class EsquemaDeConfiguracoes
     /// <summary>
     /// Versão escrita no campo <c>schemaVersion</c>. Toda ampliação do esquema a incrementa: a 2 acrescentou a emoção
     /// dominante, a 3, a borda do esconderijo e a marca de preso, a 4, o conteúdo adulto, a 5, o sempre no topo e a escala
-    /// (DEC-038), e a 6, os itens adultos habilitados (DEC-041); um build anterior vê o arquivo novo como versão futura e não grava por cima.
+    /// (DEC-038), a 6, os itens adultos habilitados (DEC-041), e a 7, o uso por conta própria (DEC-045); um build anterior vê o
+    /// arquivo novo como versão futura e não grava por cima.
     /// </summary>
-    public const int VersaoAtual = 6;
+    public const int VersaoAtual = 7;
 
     /// <summary>Tamanho máximo do arquivo, contando um BOM; maior, é ilegível sem ser interpretado.</summary>
     public const int TamanhoMaximoEmBytes = 65_536;
@@ -56,7 +58,7 @@ public static class EsquemaDeConfiguracoes
     private static readonly string[] CamposDaPosicao = ["chaveMonitor", "telaDoMonitor", "fracaoX", "fracaoY", "ancoraAbsoluta", "esconderijo", "presoPeloUsuario"];
     private static readonly string[] CamposDaTela = ["esquerda", "topo", "direita", "base"];
     private static readonly string[] CamposDaAncora = ["x", "y"];
-    private static readonly string[] CamposDasPreferencias = ["energia", "modoTelaCheia", "atravessarMonitores", "emocaoDominante", "conteudoAdulto", "sempreNoTopo", "escala", "itensAdultosHabilitados"];
+    private static readonly string[] CamposDasPreferencias = ["energia", "modoTelaCheia", "atravessarMonitores", "emocaoDominante", "conteudoAdulto", "sempreNoTopo", "escala", "itensAdultosHabilitados", "itensPorContaPropria"];
 
     private static readonly EscalaDoPersonagem[] Escalas = [EscalaDoPersonagem.Pequena, EscalaDoPersonagem.Media, EscalaDoPersonagem.Grande];
 
@@ -175,6 +177,11 @@ public static class EsquemaDeConfiguracoes
             json.WriteStartArray("itensAdultosHabilitados");
             foreach (Item item in TabelaDoTamagotchi.Itens)
                 if (TabelaDoTamagotchi.Adulto(item) && normalizadas.Preferencias.ItensAdultosHabilitados.Contem(item))
+                    json.WriteStringValue(NomeDoItemAdulto(item));
+            json.WriteEndArray();
+            json.WriteStartArray("itensPorContaPropria");
+            foreach (Item item in TabelaDoTamagotchi.Itens)
+                if (TabelaDoTamagotchi.Ilicitos.Contem(item) && normalizadas.Preferencias.ItensPorContaPropria.Contem(item))
                     json.WriteStringValue(NomeDoItemAdulto(item));
             json.WriteEndArray();
             json.WriteEndObject();
@@ -365,7 +372,10 @@ public static class EsquemaDeConfiguracoes
             return Ilegivel("schemaVersion");
 
         (PosicaoDoPersonagem? posicao, LadoDoEsconderijo esconderijo, bool preso) = LerPosicao(campos[1], avisos);
-        var configuracoes = new ConfiguracoesSalvas(posicao, LerPreferencias(campos[2], avisos)) { Esconderijo = esconderijo, PresoPeloUsuario = preso };
+        Preferencias lidas = LerPreferencias(campos[2], avisos);
+        // Até a v6, a travessia era gravada sempre ligada, sem a opção nas Configurações: vale o padrão novo (DEC-046).
+        if (versao < 7) lidas = lidas with { AtravessarMonitores = Preferencias.Padrao.AtravessarMonitores };
+        var configuracoes = new ConfiguracoesSalvas(posicao, lidas) { Esconderijo = esconderijo, PresoPeloUsuario = preso };
         SituacaoDaLeitura situacao = versao > VersaoAtual ? SituacaoDaLeitura.VersaoFutura : SituacaoDaLeitura.Valida;
         return new LeituraDasConfiguracoes(situacao, versao, configuracoes, avisos.AsReadOnly(), null);
     }
@@ -531,29 +541,36 @@ public static class EsquemaDeConfiguracoes
             SempreNoTopo = LerBooleano(campos[5], "preferencias.sempreNoTopo", padrao.SempreNoTopo, avisos),
             Escala = escala,
             ItensAdultosHabilitados = LerItensAdultos(campos[7], padrao.ItensAdultosHabilitados, avisos),
+            ItensPorContaPropria = LerItensAdultos(campos[8], padrao.ItensPorContaPropria, avisos, "itensPorContaPropria", TabelaDoTamagotchi.Ilicitos),
         };
     }
 
-    private static ConjuntoDeItens LerItensAdultos(JsonElement? valor, ConjuntoDeItens padrao, List<string> avisos)
+    /// <summary>
+    /// Uma lista fechada de itens adultos pelos nomes estáveis: a dos habilitados (os nove) ou, com <paramref name="aceitos"/>,
+    /// a do uso por conta própria (só as seis ilícitas, DEC-045). Um nome fora da lista ou repetido é ignorado, com aviso.
+    /// </summary>
+    private static ConjuntoDeItens LerItensAdultos(JsonElement? valor, ConjuntoDeItens padrao, List<string> avisos,
+        string campo = "itensAdultosHabilitados", ConjuntoDeItens? aceitos = null)
     {
         if (valor is null) return padrao;
         if (valor.Value.ValueKind != JsonValueKind.Array)
         {
-            avisos.Add("preferencias.itensAdultosHabilitados: não é uma lista; valem os padrões");
+            avisos.Add($"preferencias.{campo}: não é uma lista; valem os padrões");
             return padrao;
         }
 
         ConjuntoDeItens itens = ConjuntoDeItens.Vazio;
         foreach (JsonElement elemento in valor.Value.EnumerateArray())
         {
-            if (elemento.ValueKind != JsonValueKind.String || !TentarLerItemAdulto(elemento.GetString()!, out Item item))
+            if (elemento.ValueKind != JsonValueKind.String || !TentarLerItemAdulto(elemento.GetString()!, out Item item)
+                || (aceitos is { } lista && !lista.Contem(item)))
             {
-                avisos.Add("preferencias.itensAdultosHabilitados: identificador desconhecido ou inválido; ignorado");
+                avisos.Add($"preferencias.{campo}: identificador desconhecido ou inválido; ignorado");
                 continue;
             }
             if (itens.Contem(item))
             {
-                avisos.Add($"preferencias.itensAdultosHabilitados: {NomeDoItemAdulto(item)} repetido; ignorado");
+                avisos.Add($"preferencias.{campo}: {NomeDoItemAdulto(item)} repetido; ignorado");
                 continue;
             }
             itens = itens.Com(item);
@@ -596,7 +613,11 @@ public static class EsquemaDeConfiguracoes
         if (!Enum.IsDefined(preferencias.Energia)) preferencias = preferencias with { Energia = Preferencias.Padrao.Energia };
         if (preferencias.EmocaoDominante is { } emocao && !Expressoes.EhDeHumor(emocao)) preferencias = preferencias with { EmocaoDominante = null };
         if (!Enum.IsDefined(preferencias.Escala)) preferencias = preferencias with { Escala = Preferencias.Padrao.Escala };
-        preferencias = preferencias with { ItensAdultosHabilitados = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados) };
+        preferencias = preferencias with
+        {
+            ItensAdultosHabilitados = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados),
+            ItensPorContaPropria = Preferencias.NormalizarPorContaPropria(preferencias.ItensPorContaPropria),
+        };
         return preferencias;
     }
 

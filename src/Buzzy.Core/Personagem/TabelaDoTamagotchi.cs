@@ -21,11 +21,16 @@ public static class TabelaDoTamagotchi
     {
         ConjuntoDeItens itens = ConjuntoDeItens.Vazio;
         foreach (Item item in Itens)
-            if (edicao == EdicaoDoBuzzy.Completa || !ForaDaEdicaoPublica.Contains(item)) itens = itens.Com(item);
+            if (edicao == EdicaoDoBuzzy.Completa || !Ilicitos.Contem(item)) itens = itens.Com(item);
         return itens;
     }
 
-    private static readonly Item[] ForaDaEdicaoPublica = [Item.Baseado, Item.Cocaina, Item.Md, Item.LancaPerfume, Item.Cogumelo, Item.Bala];
+    /// <summary>
+    /// As seis drogas ilícitas de desenho animado (DEC-044 e DEC-045): fora da edição pública, e as únicas que ele pode usar
+    /// por conta própria.
+    /// </summary>
+    public static ConjuntoDeItens Ilicitos { get; } = ConjuntoDeItens.Vazio
+        .Com(Item.Baseado).Com(Item.Cocaina).Com(Item.Md).Com(Item.LancaPerfume).Com(Item.Cogumelo).Com(Item.Bala);
 
     /// <summary>Os itens na ordem do menu, a da resposta do usuário.</summary>
     public static IReadOnlyList<Item> Itens { get; } =

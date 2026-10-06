@@ -25,7 +25,7 @@ internal static class SementesDoBaseado
         for (ulong semente = 1; semente <= ultima; semente++)
         {
             var nucleo = new Nucleo(cfg, semente);
-            nucleo.Enfileirar(new Loaded(topologia, null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos }));
+            nucleo.Enfileirar(new Loaded(topologia, null, Preferencias.Padrao with { AtravessarMonitores = true, ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos, ItensPorContaPropria = ConjuntoDeItens.Vazio.Com(Item.Baseado) }));
             AgendarDecisao? agenda = nucleo.Processar().OfType<AgendarDecisao>().LastOrDefault();
             if (agenda is null || agenda.Atraso > ate) continue;
             nucleo.Enfileirar(new AutonomyTimer(agenda.Geracao));

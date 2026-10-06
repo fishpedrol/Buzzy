@@ -28,6 +28,8 @@ internal sealed class JanelaDeConfiguracoes : Window
     // Só os itens adultos desta edição ganham caixa (DEC-044, item 2).
     private readonly ConjuntoDeItens _itensDaEdicao;
     private readonly Dictionary<Item, Image> _iconesDosItensAdultos = [];
+    // Ao lado de cada droga ilícita da edição, o uso por conta própria (DEC-045).
+    private readonly Dictionary<Item, CaixaDeComando> _caixasPorContaPropria = [];
 
     /// <param name="preferencias">As preferências do núcleo na abertura.</param>
     /// <param name="escalaEmVigor">O tamanho com que o Buzzy abriu, para o aviso de "próxima vez".</param>
@@ -54,6 +56,7 @@ internal sealed class JanelaDeConfiguracoes : Window
             (NivelDeEnergia.Alta, Textos.EnergiaAlta, null),
         ], Textos.ConfigEnergiaAjuda);
         TelaCheia = Caixa(Textos.ConfigTelaCheia, Textos.ConfigTelaCheiaAjuda);
+        Travessia = Caixa(Textos.ConfigTravessia, Textos.ConfigTravessiaAjuda);
         Adulto = comConteudoAdulto ? Caixa(Textos.ConfigAdulto, Textos.ConfigAdultoAjuda) : null;
         Tamanho = new Seletor<EscalaDoPersonagem>(Textos.ConfigTamanho,
         [
@@ -71,6 +74,8 @@ internal sealed class JanelaDeConfiguracoes : Window
         comportamento.Children.Add(Energia);
         comportamento.Children.Add(TelaCheia);
         comportamento.Children.Add(Ajuda(Textos.ConfigTelaCheiaAjuda));
+        comportamento.Children.Add(Travessia);
+        comportamento.Children.Add(Ajuda(Textos.ConfigTravessiaAjuda));
         if (Adulto is not null)
         {
             comportamento.Children.Add(Adulto);
@@ -115,9 +120,12 @@ internal sealed class JanelaDeConfiguracoes : Window
         Energia.Escolheu += nivel => PediuEnergia?.Invoke(nivel);
         Tamanho.Escolheu += escala => PediuEscala?.Invoke(escala);
         TelaCheia.Pedido += ligado => PediuTelaCheia?.Invoke(ligado);
+        Travessia.Pedido += ligado => PediuTravessia?.Invoke(ligado);
         if (Adulto is not null) Adulto.Pedido += ligado => PediuAdulto?.Invoke(ligado);
         foreach ((Item item, CaixaDeComando caixa) in _caixasDosItensAdultos)
             caixa.Pedido += ligado => PediuItemAdulto?.Invoke(item, ligado);
+        foreach ((Item item, CaixaDeComando caixa) in _caixasPorContaPropria)
+            caixa.Pedido += ligado => PediuPorContaPropria?.Invoke(item, ligado);
         Topo.Pedido += ligado => PediuTopo?.Invoke(ligado);
         Activated += (_, _) => Ativada?.Invoke();
         Loaded += (_, _) =>
@@ -130,6 +138,8 @@ internal sealed class JanelaDeConfiguracoes : Window
 
     internal event Action<NivelDeEnergia>? PediuEnergia;
     internal event Action<bool>? PediuTelaCheia;
+    internal event Action<bool>? PediuTravessia;
+    internal event Action<Item, bool>? PediuPorContaPropria;
     internal event Action<bool>? PediuAdulto;
     internal event Action<Item, bool>? PediuItemAdulto;
     internal event Action<EscalaDoPersonagem>? PediuEscala;
@@ -140,8 +150,14 @@ internal sealed class JanelaDeConfiguracoes : Window
 
     internal Seletor<NivelDeEnergia> Energia { get; }
     internal CaixaDeComando TelaCheia { get; }
+
+    /// <summary>"Atravessar entre monitores" (DEC-046), desligada por padrão.</summary>
+    internal CaixaDeComando Travessia { get; }
     internal CaixaDeComando? Adulto { get; }
     internal IReadOnlyDictionary<Item, CaixaDeComando> CaixasDosItensAdultos => _caixasDosItensAdultos;
+
+    /// <summary>As caixas "por conta própria", uma por droga ilícita da edição (DEC-045); nenhuma na pública.</summary>
+    internal IReadOnlyDictionary<Item, CaixaDeComando> CaixasPorContaPropria => _caixasPorContaPropria;
     internal Seletor<EscalaDoPersonagem> Tamanho { get; }
     internal CaixaDeComando Topo { get; }
     internal Button Fechar { get; }
@@ -179,9 +195,12 @@ internal sealed class JanelaDeConfiguracoes : Window
         ArgumentNullException.ThrowIfNull(preferencias);
         Energia.Marcar(preferencias.Energia);
         TelaCheia.Marcar(preferencias.ModoTelaCheia);
+        Travessia.Marcar(preferencias.AtravessarMonitores);
         Adulto?.Marcar(preferencias.ConteudoAdulto);
         foreach ((Item item, CaixaDeComando caixa) in _caixasDosItensAdultos)
             caixa.Marcar(preferencias.ItensAdultosHabilitados.Contem(item));
+        foreach ((Item item, CaixaDeComando caixa) in _caixasPorContaPropria)
+            caixa.Marcar(preferencias.ItensPorContaPropria.Contem(item));
         Tamanho.Marcar(preferencias.Escala);
         Topo.Marcar(preferencias.SempreNoTopo);
         _proximaVez.Visibility = preferencias.Escala == _escalaEmVigor ? Visibility.Collapsed : Visibility.Visible;
@@ -229,7 +248,21 @@ internal sealed class JanelaDeConfiguracoes : Window
             AutomationProperties.SetName(caixa, nome);
             AutomationProperties.SetHelpText(caixa, Textos.ConfigItemAdultoAjuda);
             _caixasDosItensAdultos.Add(item, caixa);
-            grupo.Children.Add(caixa);
+            if (!TabelaDoTamagotchi.Ilicitos.Contem(item))
+            {
+                grupo.Children.Add(caixa);
+                continue;
+            }
+            // A droga ilícita ganha, na mesma linha, a caixa do uso por conta própria (DEC-045).
+            string nomeProprio = string.Format(System.Globalization.CultureInfo.InvariantCulture, Textos.ConfigPorContaPropriaNome, nome);
+            var propria = new CaixaDeComando { Content = Textos.ConfigPorContaPropria, Margin = new Thickness(12, 3, 6, 2), VerticalContentAlignment = VerticalAlignment.Center };
+            AutomationProperties.SetName(propria, nomeProprio);
+            AutomationProperties.SetHelpText(propria, Textos.ConfigPorContaPropriaAjuda);
+            _caixasPorContaPropria.Add(item, propria);
+            var linha = new WrapPanel { Orientation = Orientation.Horizontal };
+            linha.Children.Add(caixa);
+            linha.Children.Add(propria);
+            grupo.Children.Add(linha);
         }
         return grupo;
     }

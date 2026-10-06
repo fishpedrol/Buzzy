@@ -321,9 +321,9 @@ internal sealed class PoseDeUsoTestes
     [Teste]
     public void BaseadoPorContaPropria_OQuadroDoBaseadoSoltoPeloUsuario()
     {
-        var cfg = new ConfiguracaoDoNucleo { Tamagotchi = true, Acoes = AcoesAutonomas.FumarBaseado };
+        var cfg = new ConfiguracaoDoNucleo { Tamagotchi = true, Acoes = AcoesAutonomas.UsarPorContaPropria };
         var topologia = new Topologia([new MonitorDoDesktop("m1", new RetanguloPx(0, 0, 1920, 1080), new RetanguloPx(0, 0, 1920, 1040), 96, true)]);
-        EstadoDoNucleo s = Maquina.Aplicar(EstadoDoNucleo.Inicial(7), new Loaded(topologia, null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos }), cfg).Estado;
+        EstadoDoNucleo s = Maquina.Aplicar(EstadoDoNucleo.Inicial(7), new Loaded(topologia, null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos, ItensPorContaPropria = ConjuntoDeItens.Vazio.Com(Item.Baseado) }), cfg).Estado;
         s = Maquina.Aplicar(s, new AutonomyTimer(s.Geracao), cfg).Estado;
         Afirmar.Igual(Estado.Using, s.Estado, "fumou por conta própria");
         Afirmar.Igual(ItensNoMundo.Nenhum, s.Itens, "sem item no mundo");

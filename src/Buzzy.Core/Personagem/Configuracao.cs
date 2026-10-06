@@ -165,7 +165,7 @@ public sealed record ConfiguracaoDoNucleo
         // conta própria (pedido do usuário de 2026-10-01, 19:10: ele às vezes fuma um baseado sozinho, quando quer), que
         // fica fora de Todas e só existe com a chave do tamagotchi ligada.
         Acoes = AcoesAutonomas.Todas | AcoesAutonomas.IrAoOutroMonitor
-            | (TabelaDoTamagotchi.ItensDaEdicao(edicao).Contem(Item.Baseado) ? AcoesAutonomas.FumarBaseado : 0),
+            | (edicao == EdicaoDoBuzzy.Completa ? AcoesAutonomas.UsarPorContaPropria : 0),
         QuedaFisica = true,
         Movimento = true,
         EsconderijoNoCliqueDuplo = true,
@@ -238,14 +238,14 @@ public sealed record PerfilDeEnergia(
     public int ChanceDoFoguete { get; init; } = 30;
 
     /// <summary>
-    /// O peso de fumar um baseado por conta própria (<see cref="AcoesAutonomas.FumarBaseado"/>; pedido do usuário de
+    /// O peso de fumar um baseado por conta própria (<see cref="AcoesAutonomas.UsarPorContaPropria"/>; pedido do usuário de
     /// 2026-10-01, 19:10), o último do sorteio de IDLE. Vale só com a chave do tamagotchi ligada, em IDLE no chão, sem estar
     /// escondido, e é zero com a onda Chapado ou a paranoia na frente, para ele não emendar um no outro; a onda de um item não
     /// o muda. O mesmo nos três níveis, calibrado por simulação do núcleo, só com a autonomia, para cerca de um baseado a
     /// cada 4 minutos de tempo elegível (IDLE no chão, sem Chapado nem paranoia na frente) na energia Média; o nível muda a
     /// frequência pelos intervalos e pelos outros pesos, como em toda ação. Número de jogo, de desenho animado.
     /// </summary>
-    public int PesoFumarBaseado { get; init; } = 1;
+    public int PesoUsarPorContaPropria { get; init; } = 1;
 
     /// <summary>
     /// O peso de atravessar para o monitor vizinho ao chegar a uma porta plana andando (Fase 5, passo P13; DEC-032), contra o

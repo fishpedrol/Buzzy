@@ -28,6 +28,20 @@ public static partial class Maquina
             if (!ligado) TirarOConteudoAdulto();
         }
 
+        /// <summary>
+        /// CMD_SET_SELF_USE_ITEM (DEC-045): salva a escolha do uso por conta própria de uma das seis drogas ilícitas da edição.
+        /// Só vale para o futuro: um uso em curso continua.
+        /// </summary>
+        private void EscolherUsoPorContaPropria(Item item, bool ligado)
+        {
+            if (!_cfg.Tamagotchi || !_s.Carregado || !Enum.IsDefined(item) || !TabelaDoTamagotchi.Ilicitos.Contem(item) || !_cfg.ItensDaEdicao.Contem(item)) return;
+            if (_s.Preferencias.ItensPorContaPropria.Contem(item) == ligado) return;
+            ConjuntoDeItens itens = ligado ? _s.Preferencias.ItensPorContaPropria.Com(item) : _s.Preferencias.ItensPorContaPropria.Sem(item);
+            _s = _s with { Preferencias = _s.Preferencias with { ItensPorContaPropria = itens } };
+            _depois.Add(new GravarPreferencias(_s.Preferencias));
+            _transicoes.Add(new Transicao(_s.Estado, _s.Estado, "CMD_SET_SELF_USE_ITEM: preferência atualizada"));
+        }
+
         /// <summary>CMD_SET_ADULT_ITEM: salva uma escolha individual e, ao desmarcar, remove só a contribuição daquele item.</summary>
         private void EscolherItemAdulto(Item item, bool ligado)
         {

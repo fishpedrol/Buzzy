@@ -1,9 +1,9 @@
-# descricao: o baseado por conta própria (pedido do usuário de 2026-10-01, 19:10), de desenho animado: na agenda, a ação FumarBaseado e a troca de cara; com a semente 2, a primeira decisão é o baseado: ele fuma sozinho, sem item no mundo, com o uso do baseado da tabela (fumar, 210 passos, no chão) e a onda Chapado 2, e a carga conta uma substância, sem sorteio; chapado, não acende outro (no pico, nos níveis 2 e 1, e na queda, a agenda só troca a cara); a onda acaba e a carga volta a 0; a primeira decisão depois dela é o baseado de novo, e o clique o interrompe: o uso acaba e a onda continua; depois da reação, a subida vira pico e, chapado, a agenda só troca a cara. A ordem respeita o tempo real onde ele obriga: na energia Média, a subida (10 s desde o começo do uso) acaba antes da decisão seguinte ao uso ou à reação, que vence 12,8 s ou mais depois deles; no resto, a história é roteirizada, com uma decisão por fase do chapado (no tempo real são várias, todas só de cara)
+# descricao: o baseado por conta própria (pedido do usuário de 2026-10-01, 19:10), de desenho animado: na agenda, a ação UsarPorContaPropria (antes FumarBaseado; DEC-045) e a troca de cara; com a semente 2, a primeira decisão é o baseado: ele fuma sozinho, sem item no mundo, com o uso do baseado da tabela (fumar, 210 passos, no chão) e a onda Chapado 2, e a carga conta uma substância, sem sorteio; chapado, não acende outro (no pico, nos níveis 2 e 1, e na queda, a agenda só troca a cara); a onda acaba e a carga volta a 0; a primeira decisão depois dela é o baseado de novo, e o clique o interrompe: o uso acaba e a onda continua; depois da reação, a subida vira pico e, chapado, a agenda só troca a cara. A ordem respeita o tempo real onde ele obriga: na energia Média, a subida (10 s desde o começo do uso) acaba antes da decisão seguinte ao uso ou à reação, que vence 12,8 s ou mais depois deles; no resto, a história é roteirizada, com uma decisão por fase do chapado (no tempo real são várias, todas só de cara)
 # semente: 2
 # queda-fisica: sim
 # movimento: sim
 # tamagotchi: sim
-# acoes: TrocarExpressao,FumarBaseado
+# acoes: TrocarExpressao,UsarPorContaPropria
 > Loaded topologia=UmMonitor energia=Media telaCheia=sim
 ~ Booting -> Settling (BOOTING: configurações e topologia carregadas)
 ~ Settling -> Idle (SETTLING com apoio)

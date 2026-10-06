@@ -9,7 +9,7 @@ namespace Buzzy.Core.Testes.Tamagotchi;
 /// <summary>
 /// O baseado por conta própria (pedido do usuário de 2026-10-01, 19:10: "uma funcionalidade que o macaco fume maconha à
 /// vontade quando ele quiser"; decisão do coordenador, adendo da DEC-028), de desenho animado. É uma ação autônoma nova,
-/// <see cref="AcoesAutonomas.FumarBaseado"/>, no fim do enum, fora de <see cref="AcoesAutonomas.Todas"/>, que o aplicativo
+/// <see cref="AcoesAutonomas.UsarPorContaPropria"/>, no fim do enum, fora de <see cref="AcoesAutonomas.Todas"/>, que o aplicativo
 /// liga e que só existe com a chave do tamagotchi ligada. Só em IDLE no chão, sem estar escondido, com a autonomia livre e
 /// sem item na mão do usuário; o peso é zero com a onda Chapado ou a paranoia na frente, para ele não emendar. Ele "tira do
 /// chapéu" o baseado, sem item no mundo, e o usa no chão com o uso do baseado da tabela (fumar, 210 passos), pelo mesmo
@@ -36,7 +36,7 @@ internal static class BaseadoPorContaPropriaTestes
     private const string RegraDoBaseado = "IDLE + AUTONOMY_TIMER: Fumar Baseado por conta própria";
 
     /// <summary>A configuração com só o baseado por conta própria na agenda: toda decisão em que ele pode fumar é fumar.</summary>
-    private static ConfiguracaoDoNucleo SoOBaseado(ConfiguracaoDoNucleo cfg) => cfg with { Acoes = AcoesAutonomas.FumarBaseado };
+    private static ConfiguracaoDoNucleo SoOBaseado(ConfiguracaoDoNucleo cfg) => cfg with { Acoes = AcoesAutonomas.UsarPorContaPropria };
 
     /// <summary>Invoca o item, deixa cair, solta sobre ele, deixa o uso acabar e, se ele olha pro teto, o gesto acabar.</summary>
     private static void UsarEAcabar(Cenario c, Item item)
@@ -68,14 +68,14 @@ internal static class BaseadoPorContaPropriaTestes
     public static void AcaoNova_NoFimDoEnum_ForaDeTodas_LigadaNoAplicativo()
     {
         Afirmar.Sequencia([0, 1, 2, 4, 8, 16, 32, 63, 64, 128], Enum.GetValues<AcoesAutonomas>().Select(a => (int)a), "os valores de sempre, a nova e, depois dela, a de ir ao outro monitor (Fase 5, passo P13)");
-        Afirmar.Igual(64, (int)AcoesAutonomas.FumarBaseado, "FumarBaseado no bit seguinte");
+        Afirmar.Igual(64, (int)AcoesAutonomas.UsarPorContaPropria, "UsarPorContaPropria no bit seguinte");
         Afirmar.Igual(63, (int)AcoesAutonomas.Todas, "Todas continua as seis ações de sempre");
         ConfiguracaoDoNucleo app = ConfiguracaoDoNucleo.DoAplicativo(Sprite);
-        Afirmar.Igual(AcoesAutonomas.Todas | AcoesAutonomas.FumarBaseado | AcoesAutonomas.IrAoOutroMonitor, app.Acoes, "o aplicativo liga a ação nova (e a de ir ao outro monitor, do passo P13)");
+        Afirmar.Igual(AcoesAutonomas.Todas | AcoesAutonomas.UsarPorContaPropria | AcoesAutonomas.IrAoOutroMonitor, app.Acoes, "o aplicativo liga a ação nova (e a de ir ao outro monitor, do passo P13)");
         Afirmar.Verdadeiro(app.Tamagotchi, "com a chave do tamagotchi");
         Afirmar.Igual(AcoesAutonomas.Todas, new ConfiguracaoDoNucleo().Acoes, "a configuração padrão do núcleo continua com as de sempre");
         foreach (NivelDeEnergia nivel in Enum.GetValues<NivelDeEnergia>())
-            Afirmar.Igual(1, PerfilDeEnergia.Padrao(nivel).PesoFumarBaseado, $"{nivel}: o peso calibrado");
+            Afirmar.Igual(1, PerfilDeEnergia.Padrao(nivel).PesoUsarPorContaPropria, $"{nivel}: o peso calibrado");
     }
 
     // ---------------------------------------------------------------- o uso
@@ -252,7 +252,7 @@ internal static class BaseadoPorContaPropriaTestes
     {
         ConfiguracaoDoNucleo comAAcao = ConfiguracaoDoNucleo.DoAplicativo(Sprite) with { Tamagotchi = false };
         ConfiguracaoDoNucleo semAAcao = comAAcao with { Acoes = AcoesAutonomas.Todas };
-        Afirmar.Verdadeiro((comAAcao.Acoes & AcoesAutonomas.FumarBaseado) != 0, "a ação ligada");
+        Afirmar.Verdadeiro((comAAcao.Acoes & AcoesAutonomas.UsarPorContaPropria) != 0, "a ação ligada");
         var mestre = new Random(20261002);
         long eventos = 0, decisoes = 0;
         for (int n = 0; n < 12; n++)

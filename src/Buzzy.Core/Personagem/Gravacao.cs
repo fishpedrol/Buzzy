@@ -44,7 +44,9 @@ public static class Gravacao
             CmdSetDominantEmotion e => $"CmdSetDominantEmotion emocao={e.Emocao?.ToString() ?? Automatica}",
             CmdSetAdultContent e => $"CmdSetAdultContent ligado={SimNao(e.Ligado)}",
             CmdSetAdultItemEnabled e => $"CmdSetAdultItemEnabled item={e.Item} ligado={SimNao(e.Ligado)}",
+            CmdSetSelfUseItem e => $"CmdSetSelfUseItem item={e.Item} ligado={SimNao(e.Ligado)}",
             CmdSetFullscreenMode e => $"CmdSetFullscreenMode ligado={SimNao(e.Ligado)}",
+            CmdSetCrossMonitors e => $"CmdSetCrossMonitors ligado={SimNao(e.Ligado)}",
             CmdSetEnergy e => $"CmdSetEnergy nivel={e.Nivel}",
             CmdSetAlwaysOnTop e => $"CmdSetAlwaysOnTop ligado={SimNao(e.Ligado)}",
             CmdSetScale e => $"CmdSetScale escala={e.Escala}",
@@ -131,7 +133,9 @@ public static class Gravacao
             "CmdSetDominantEmotion" => new CmdSetDominantEmotion(LerEmocao(Campo("emocao"))),
             "CmdSetAdultContent" => new CmdSetAdultContent(SimOuNao("ligado", Campo("ligado"))),
             "CmdSetAdultItemEnabled" => new CmdSetAdultItemEnabled(LerValor<Item>("item", Campo("item"), "não é um item"), SimOuNao("ligado", Campo("ligado"))),
+            "CmdSetSelfUseItem" => new CmdSetSelfUseItem(LerValor<Item>("item", Campo("item"), "não é um item"), SimOuNao("ligado", Campo("ligado"))),
             "CmdSetFullscreenMode" => new CmdSetFullscreenMode(SimOuNao("ligado", Campo("ligado"))),
+            "CmdSetCrossMonitors" => new CmdSetCrossMonitors(SimOuNao("ligado", Campo("ligado"))),
             "CmdSetEnergy" => new CmdSetEnergy(LerValor<NivelDeEnergia>("nivel", Campo("nivel"), "não é um nível de energia")),
             "CmdSetAlwaysOnTop" => new CmdSetAlwaysOnTop(SimOuNao("ligado", Campo("ligado"))),
             "CmdSetScale" => new CmdSetScale(LerValor<EscalaDoPersonagem>("escala", Campo("escala"), "não é uma escala")),
@@ -265,13 +269,19 @@ public static class Gravacao
     /// está desligada, <c>emocao=Feliz</c> só com a emoção dominante escolhida (DEC-027), <c>topo=nao</c> e
     /// <c>escala=Grande</c> só fora do padrão (DEC-038), e <c>adultos=Vodka,Cerveja</c> (ou <c>adultos=nenhum</c>) só
     /// quando a seleção individual não é a dos nove (DEC-041): a ausência vale os nove, como antes da DEC-041, e as
-    /// referências gravadas 01 a 09 continuam as mesmas, mesmo com o padrão do arquivo de configurações mudado.
+    /// referências gravadas 01 a 09 continuam as mesmas, mesmo com o padrão do arquivo de configurações mudado. Do mesmo
+    /// jeito, <c>proprio=Baseado,Md</c> (ou <c>proprio=nenhum</c>) só quando o uso por conta própria não é só o do baseado
+    /// (DEC-045): a ausência vale o baseado, o que valia antes.
     /// </summary>
     private static string DescreverPreferencias(Preferencias p)
         => $"energia={p.Energia} telaCheia={SimNao(p.ModoTelaCheia)}" + (p.AtravessarMonitores ? "" : " travessia=nao")
             + (p.EmocaoDominante is { } emocao ? $" emocao={emocao}" : "") + (p.ConteudoAdulto ? "" : " adulto=nao")
             + (p.SempreNoTopo ? "" : " topo=nao") + (p.Escala == EscalaDoPersonagem.Media ? "" : $" escala={p.Escala}")
-            + (p.ItensAdultosHabilitados == Preferencias.TodosOsItensAdultos ? "" : $" adultos={DescreverItensAdultos(p.ItensAdultosHabilitados)}");
+            + (p.ItensAdultosHabilitados == Preferencias.TodosOsItensAdultos ? "" : $" adultos={DescreverItensAdultos(p.ItensAdultosHabilitados)}")
+            + (p.ItensPorContaPropria == SoOBaseado ? "" : $" proprio={DescreverItensAdultos(p.ItensPorContaPropria)}");
+
+    /// <summary>O uso por conta própria de antes da DEC-045: só o baseado.</summary>
+    private static readonly ConjuntoDeItens SoOBaseado = ConjuntoDeItens.Vazio.Com(Item.Baseado);
 
     private static string DescreverItensAdultos(ConjuntoDeItens itens)
     {
@@ -292,13 +302,14 @@ public static class Gravacao
     private static Preferencias LerPreferencias(Dictionary<string, string> campos) => new(
         campos.TryGetValue("energia", out string? e) ? Enum.Parse<NivelDeEnergia>(e) : Preferencias.Padrao.Energia,
         campos.TryGetValue("telaCheia", out string? t) ? SimOuNao("telaCheia", t) : Preferencias.Padrao.ModoTelaCheia,
-        campos.TryGetValue("travessia", out string? a) ? SimOuNao("travessia", a) : Preferencias.Padrao.AtravessarMonitores)
+        campos.TryGetValue("travessia", out string? a) ? SimOuNao("travessia", a) : true)
     {
         EmocaoDominante = campos.TryGetValue("emocao", out string? m) ? LerEmocao(m) : null,
         ConteudoAdulto = !campos.TryGetValue("adulto", out string? adulto) || SimOuNao("adulto", adulto),
         SempreNoTopo = !campos.TryGetValue("topo", out string? topo) || SimOuNao("topo", topo),
         Escala = campos.TryGetValue("escala", out string? escala) ? LerValor<EscalaDoPersonagem>("escala", escala, "não é uma escala") : EscalaDoPersonagem.Media,
         ItensAdultosHabilitados = campos.TryGetValue("adultos", out string? adultos) ? LerItensAdultos(adultos) : Preferencias.TodosOsItensAdultos,
+        ItensPorContaPropria = campos.TryGetValue("proprio", out string? proprio) ? LerItensAdultos(proprio) : SoOBaseado,
     };
 
     /// <summary>

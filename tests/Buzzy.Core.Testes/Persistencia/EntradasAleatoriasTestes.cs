@@ -30,7 +30,7 @@ internal static class EntradasAleatoriasTestes
     private static byte[][] Corpus()
     {
         var corpus = new List<byte[]>();
-        foreach (string v in new[] { "settings-v1.json", "settings-v2.json", "settings-v3.json", "settings-v4.json", "settings-v5.json", "settings-v6.json" })
+        foreach (string v in new[] { "settings-v1.json", "settings-v2.json", "settings-v3.json", "settings-v4.json", "settings-v5.json", "settings-v6.json", "settings-v7.json" })
             corpus.Add(File.ReadAllBytes(Path.Combine(ReproducaoTestes.PastaDasFontes(), "Persistencia", "Amostras", v)));
         var r = new Random(Semente);
         for (int i = 0; i < 40; i++)

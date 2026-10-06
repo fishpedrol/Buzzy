@@ -74,7 +74,7 @@ internal sealed class JanelaDeConfiguracoesTestes
         Afirmar.Igual(1, todos.OfType<StackPanel>().Count(p => p.MaxWidth == JanelaDeConfiguracoes.LarguraMaxima), "largura máxima na coluna");
 
         List<Control> controles = [.. todos.OfType<Control>().Where(c => c is ButtonBase or RadioButton)];
-        Afirmar.Igual(20, controles.Count, "3 de energia, 2 caixas, os 9 itens adultos (DEC-041), 3 de tamanho, o topo, o início e o Fechar");
+        Afirmar.Igual(27, controles.Count, "3 de energia, 3 caixas (tela cheia, travessia e adulto), os 9 itens adultos (DEC-041), as 6 por conta própria (DEC-045), 3 de tamanho, o topo, o início e o Fechar");
         foreach (Control c in controles)
             Afirmar.Verdadeiro(!string.IsNullOrWhiteSpace(AutomationProperties.GetName(c)), $"{c.GetType().Name} {c}: com nome");
         foreach (CaixaDeComando caixa in controles.OfType<CaixaDeComando>())
@@ -99,7 +99,7 @@ internal sealed class JanelaDeConfiguracoesTestes
 
         char[] teclas = [.. controles.Select(c => c.GetValue(ContentControl.ContentProperty) as string).OfType<string>()
             .Where(t => t.Contains('_')).Select(t => char.ToLowerInvariant(t[t.IndexOf('_') + 1]))];
-        Afirmar.Igual(controles.Count - adultos.Length, teclas.Length, "toda opção, fora os itens adultos, tem tecla de acesso");
+        Afirmar.Igual(controles.Count - adultos.Length - janela.CaixasPorContaPropria.Count, teclas.Length, "toda opção, fora os itens adultos e o uso por conta própria, tem tecla de acesso");
         Afirmar.Igual(teclas.Length, teclas.Distinct().Count(), $"teclas de acesso únicas: {new string(teclas)}");
     }
 

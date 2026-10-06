@@ -38,6 +38,8 @@ internal sealed partial class Aplicacao
         janela.PediuTelaCheia += ligado => Enviar(new CmdSetFullscreenMode(ligado), "configurações");
         janela.PediuAdulto += ligado => Enviar(new CmdSetAdultContent(ligado), "configurações");
         janela.PediuItemAdulto += (item, ligado) => Enviar(new CmdSetAdultItemEnabled(item, ligado), "configurações");
+        janela.PediuPorContaPropria += (item, ligado) => Enviar(new CmdSetSelfUseItem(item, ligado), "configurações");
+        janela.PediuTravessia += ligado => Enviar(new CmdSetCrossMonitors(ligado), "configurações");
         janela.PediuEscala += escala => Enviar(new CmdSetScale(escala), "configurações");
         janela.PediuTopo += ligado => Enviar(new CmdSetAlwaysOnTop(ligado), "configurações");
         // O início com o Windows não passa pelo núcleo: a caixa fala com a porta, só pelo pedido do usuário.

@@ -81,7 +81,7 @@ internal sealed partial class Verificacao
             return;
         }
         _rel.Linha($"   T1: semente {escolha.Semente}: a primeira decisão, prevista em {escolha.Atraso.TotalSeconds:0.0} s, é ir ao outro monitor ({escolha.Destino}); a travessia completa {escolha.AteCompletar.TotalSeconds:0.0} s depois");
-        AbrirBuzzyComAutonomia(escolha.Semente);
+        AbrirBuzzyComAutonomia(escolha.Semente, PerfilDaVerificacao.ComATravessia);
         try
         {
             int marcaR = _logReceptor.Contar();
@@ -151,7 +151,7 @@ internal sealed partial class Verificacao
         for (ulong semente = 1; semente < 20000; semente++)
         {
             var nucleo = new Nucleo(cfg, semente);
-            nucleo.Enfileirar(new Loaded(topologia, null, Preferencias.Padrao));
+            nucleo.Enfileirar(new Loaded(topologia, null, PerfilDaVerificacao.ComATravessia));
             AgendarDecisao? agenda = nucleo.Processar().OfType<AgendarDecisao>().LastOrDefault();
             if (agenda is null || agenda.Atraso > TimeSpan.FromSeconds(12)) continue;
             nucleo.Enfileirar(new AutonomyTimer(agenda.Geracao));

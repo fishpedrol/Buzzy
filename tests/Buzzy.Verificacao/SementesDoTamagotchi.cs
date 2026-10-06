@@ -306,7 +306,7 @@ internal static class SementesDoTamagotchi
     private static TimeSpan? PrimeiraDecisao(Topologia topologia, ulong semente)
     {
         var nucleo = new Nucleo(Configuracao, semente);
-        nucleo.Enfileirar(new Loaded(topologia, null, Preferencias.Padrao));
+        nucleo.Enfileirar(new Loaded(topologia, null, PerfilDaVerificacao.PreferenciasComOsNoveAdultos));
         return nucleo.Processar().OfType<AgendarDecisao>().LastOrDefault()?.Atraso;
     }
 

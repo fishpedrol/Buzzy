@@ -34,12 +34,12 @@ internal static class EdicaoPublicaTestes
     {
         ConfiguracaoDoNucleo completa = ConfiguracaoDoNucleo.DoAplicativo(EscalaDoPersonagem.Media);
         Afirmar.Igual(TabelaDoTamagotchi.ItensDaEdicao(EdicaoDoBuzzy.Completa), completa.ItensDaEdicao, "completa: os treze");
-        Afirmar.Verdadeiro(completa.Acoes.HasFlag(AcoesAutonomas.FumarBaseado), "completa: o baseado por conta própria continua");
+        Afirmar.Verdadeiro(completa.Acoes.HasFlag(AcoesAutonomas.UsarPorContaPropria), "completa: o baseado por conta própria continua");
 
         ConfiguracaoDoNucleo publica = ConfiguracaoDoNucleo.DoAplicativo(EscalaDoPersonagem.Media, EdicaoDoBuzzy.Publica);
         Afirmar.Igual(TabelaDoTamagotchi.ItensDaEdicao(EdicaoDoBuzzy.Publica), publica.ItensDaEdicao, "pública: sem as seis");
-        Afirmar.Falso(publica.Acoes.HasFlag(AcoesAutonomas.FumarBaseado), "pública: sem o baseado por conta própria");
-        Afirmar.Igual(completa.Acoes & ~AcoesAutonomas.FumarBaseado, publica.Acoes, "o resto das ações igual");
+        Afirmar.Falso(publica.Acoes.HasFlag(AcoesAutonomas.UsarPorContaPropria), "pública: sem o baseado por conta própria");
+        Afirmar.Igual(completa.Acoes & ~AcoesAutonomas.UsarPorContaPropria, publica.Acoes, "o resto das ações igual");
         Afirmar.Igual(completa.Tamanho, publica.Tamanho, "o mesmo tamanho");
     }
 

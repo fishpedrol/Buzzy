@@ -228,7 +228,7 @@ internal sealed class LigacaoDosItensTestes
     [Teste]
     public void BaseadoPorContaPropria_SoOTemporizadorDaOnda_NenhumaJanelaDeItem()
     {
-        var cfg = new ConfiguracaoDoNucleo { Tamagotchi = true, Acoes = AcoesAutonomas.FumarBaseado, ChanceDaParanoia = new Chance(1, 1) };
+        var cfg = new ConfiguracaoDoNucleo { Tamagotchi = true, Acoes = AcoesAutonomas.UsarPorContaPropria, ChanceDaParanoia = new Chance(1, 1) };
         var topologia = new Topologia([M96]);
         static bool DoTamagotchi(Efeito e) => e is MostrarItem or MoverItem or EsconderItem or RemoverItem or LiberarCapturaDoItem or AgendarOnda or CancelarOnda;
         (EstadoDoNucleo Estado, List<Efeito> Efeitos) Aplicar(EstadoDoNucleo s, params Evento[] eventos)
@@ -243,7 +243,7 @@ internal sealed class LigacaoDosItensTestes
             return (s, efeitos);
         }
 
-        (EstadoDoNucleo carregado, _) = Aplicar(EstadoDoNucleo.Inicial(7), new Loaded(topologia, null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos }));
+        (EstadoDoNucleo carregado, _) = Aplicar(EstadoDoNucleo.Inicial(7), new Loaded(topologia, null, Preferencias.Padrao with { ConteudoAdulto = true, ItensAdultosHabilitados = Preferencias.TodosOsItensAdultos, ItensPorContaPropria = ConjuntoDeItens.Vazio.Com(Item.Baseado) }));
         (EstadoDoNucleo fumando, List<Efeito> efeitos) = Aplicar(carregado, new AutonomyTimer(carregado.Geracao));
         Afirmar.Igual((Estado.Using, Item.Baseado), (fumando.Estado, fumando.Uso?.Item), "fumou por conta própria");
         Efeito[] doTamagotchi = [.. efeitos.Where(DoTamagotchi)];

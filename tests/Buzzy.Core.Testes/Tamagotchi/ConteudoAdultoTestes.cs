@@ -231,7 +231,7 @@ internal static class ConteudoAdultoTestes
     [Teste]
     public static void Desligado_NaoFumaPorContaPropria()
     {
-        ConfiguracaoDoNucleo soOBaseado = SemFisica() with { Acoes = AcoesAutonomas.FumarBaseado };
+        ConfiguracaoDoNucleo soOBaseado = SemFisica() with { Acoes = AcoesAutonomas.UsarPorContaPropria };
         Cenario c = Desligado(soOBaseado);
         for (int i = 0; i < 20; i++)
         {

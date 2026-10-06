@@ -65,6 +65,11 @@ internal static class Textos
     internal static string ConfigItensAdultos => Obter(nameof(ConfigItensAdultos));
     internal static string ConfigItensAdultosAjuda => Obter(nameof(ConfigItensAdultosAjuda));
     internal static string ConfigItemAdultoAjuda => Obter(nameof(ConfigItemAdultoAjuda));
+    internal static string ConfigTravessia => Obter(nameof(ConfigTravessia));
+    internal static string ConfigTravessiaAjuda => Obter(nameof(ConfigTravessiaAjuda));
+    internal static string ConfigPorContaPropria => Obter(nameof(ConfigPorContaPropria));
+    internal static string ConfigPorContaPropriaNome => Obter(nameof(ConfigPorContaPropriaNome));
+    internal static string ConfigPorContaPropriaAjuda => Obter(nameof(ConfigPorContaPropriaAjuda));
     internal static string ConfigTamanho => Obter(nameof(ConfigTamanho));
     internal static string ConfigTamanhoPequeno => Obter(nameof(ConfigTamanhoPequeno));
     internal static string ConfigTamanhoMedio => Obter(nameof(ConfigTamanhoMedio));
@@ -104,7 +109,7 @@ internal static class Textos
         nameof(MenuEsconder), nameof(MenuMostrar), nameof(MenuPausar), nameof(MenuRetomar), nameof(MenuSair), nameof(DicaDaBandeja), nameof(AvisoElevado),
         nameof(MenuEmocaoDominante), nameof(MenuEmocaoAutomatica), .. Expressoes.DeHumor.Select(ChaveDaEmocao),
         nameof(MenuItens), nameof(MenuRecolherItens), nameof(MenuConteudoAdulto), nameof(MenuModoTelaCheia), .. TabelaDoTamagotchi.Itens.Select(ChaveDoItem),
-        nameof(MenuEnergia), nameof(MenuConfiguracoes), nameof(PainelTitulo), nameof(EnergiaGrupo), nameof(EnergiaBaixa), nameof(EnergiaMedia), nameof(EnergiaAlta), nameof(PainelAjuda), nameof(ConfigTitulo), nameof(ConfigComportamento), nameof(ConfigAparencia), nameof(ConfigWindows), nameof(ConfigEnergiaAjuda), nameof(ConfigTelaCheia), nameof(ConfigTelaCheiaAjuda), nameof(ConfigAdulto), nameof(ConfigAdultoAjuda), nameof(ConfigItensAdultos), nameof(ConfigItensAdultosAjuda), nameof(ConfigItemAdultoAjuda), nameof(ConfigTamanho), nameof(ConfigTamanhoPequeno), nameof(ConfigTamanhoMedio), nameof(ConfigTamanhoGrande), nameof(ConfigTamanhoProximaVez), nameof(ConfigTopo), nameof(ConfigTopoAjuda), nameof(ConfigInicio), nameof(ConfigInicioDesativado), nameof(ConfigInicioOutraCopia), nameof(ConfigInicioIndisponivel), nameof(ConfigInicioAjuda), nameof(ConfigInicioFalhou), nameof(ConfigInicioSimulado), nameof(ConfigFechar),
+        nameof(MenuEnergia), nameof(MenuConfiguracoes), nameof(PainelTitulo), nameof(EnergiaGrupo), nameof(EnergiaBaixa), nameof(EnergiaMedia), nameof(EnergiaAlta), nameof(PainelAjuda), nameof(ConfigTitulo), nameof(ConfigComportamento), nameof(ConfigAparencia), nameof(ConfigWindows), nameof(ConfigEnergiaAjuda), nameof(ConfigTelaCheia), nameof(ConfigTelaCheiaAjuda), nameof(ConfigAdulto), nameof(ConfigAdultoAjuda), nameof(ConfigItensAdultos), nameof(ConfigItensAdultosAjuda), nameof(ConfigItemAdultoAjuda), nameof(ConfigTravessia), nameof(ConfigTravessiaAjuda), nameof(ConfigPorContaPropria), nameof(ConfigPorContaPropriaNome), nameof(ConfigPorContaPropriaAjuda), nameof(ConfigTamanho), nameof(ConfigTamanhoPequeno), nameof(ConfigTamanhoMedio), nameof(ConfigTamanhoGrande), nameof(ConfigTamanhoProximaVez), nameof(ConfigTopo), nameof(ConfigTopoAjuda), nameof(ConfigInicio), nameof(ConfigInicioDesativado), nameof(ConfigInicioOutraCopia), nameof(ConfigInicioIndisponivel), nameof(ConfigInicioAjuda), nameof(ConfigInicioFalhou), nameof(ConfigInicioSimulado), nameof(ConfigFechar),
     ];
 
     internal static string Obter(string chave)

@@ -176,7 +176,7 @@ internal static class ItensAdultosIndividuaisTestes
     [Teste]
     public static void SemOBaseado_NaoFumaPorContaPropria()
     {
-        ConfiguracaoDoNucleo soOBaseado = SemFisica() with { Acoes = AcoesAutonomas.FumarBaseado };
+        ConfiguracaoDoNucleo soOBaseado = SemFisica() with { Acoes = AcoesAutonomas.UsarPorContaPropria };
         Cenario com = Cenario.Parado(soOBaseado);
         com.Decidir();
         Afirmar.Igual(Estado.Using, com.Atual.Estado, "com o baseado marcado, fuma");

@@ -6,7 +6,7 @@ namespace Buzzy.Core.Personagem;
 /// nenhum efeito novo sai do núcleo. O item é uma entidade do núcleo: nasce pelo menu ao lado do personagem, cai com a
 /// gravidade dele e quica uma vez, é segurado e arrastado pelo usuário e, solto sobre o personagem num estado que aceita,
 /// é usado (<see cref="Estado.Using"/>). O app só desenha as janelas dos itens a partir dos efeitos. O outro uso é o do
-/// baseado por conta própria (pedido do usuário de 2026-10-01, 19:10; <see cref="AcoesAutonomas.FumarBaseado"/>): a agenda,
+/// baseado por conta própria (pedido do usuário de 2026-10-01, 19:10; <see cref="AcoesAutonomas.UsarPorContaPropria"/>): a agenda,
 /// em IDLE no chão, às vezes o faz fumar um baseado sozinho, sem item no mundo, pelo mesmo caminho do uso.
 /// </summary>
 public static partial class Maquina
@@ -224,29 +224,47 @@ public static partial class Maquina
         }
 
         /// <summary>
-        /// Se ele pode fumar um baseado por conta própria agora (<see cref="AcoesAutonomas.FumarBaseado"/>; pedido do usuário
-        /// de 2026-10-01, 19:10): só com a chave do tamagotchi ligada, em IDLE, no chão (a âncora na borda de baixo da área
-        /// útil do monitor dele), com o conteúdo adulto ligado e o baseado selecionado (DEC-033/041), sem estar escondido, com a autonomia livre, sem item na mão do usuário e sem a onda Chapado
-        /// ou a paranoia na frente, para ele não emendar. A agenda só decide visível, com a autonomia livre e sem item na mão;
-        /// a regra repete as três condições para valer sozinha.
+        /// As drogas que ele pode usar por conta própria agora (<see cref="AcoesAutonomas.UsarPorContaPropria"/>; DEC-028, item
+        /// 41; DEC-045), na ordem do menu: só com a chave do tamagotchi e a adulta ligadas, em IDLE, no chão (a âncora na borda
+        /// de baixo da área útil do monitor dele), sem estar escondido, com a autonomia livre, sem item na mão do usuário e sem a
+        /// paranoia na frente; e, de cada droga, marcada por conta própria, marcada nos itens adultos, na edição e sem a onda
+        /// dela na frente, para ele não emendar (para o baseado, a onda Chapado, como antes). A agenda só decide visível, com a
+        /// autonomia livre e sem item na mão; a regra repete as três condições para valer sozinha.
         /// </summary>
-        private bool PodeFumarPorContaPropria
-            => _cfg.Tamagotchi && _s.Preferencias.ConteudoAdulto && _s.Preferencias.ItensAdultosHabilitados.Contem(Item.Baseado)
-                && _s.Estado == Estado.Idle && _s.Esconderijo == LadoDoEsconderijo.Nenhum
-                && !_s.AutonomiaPausada && !_s.PainelAberto && !AtentoAoItem
-                && _s.Lugar is { } lugar && lugar.Ancora.Y == lugar.Monitor.AreaUtil.Base
-                && !(ComOnda && _s.Onda!.Tipo is Onda.Chapado or Onda.Paranoico);
+        private List<Item> CandidatasPorContaPropria()
+        {
+            var candidatas = new List<Item>();
+            Preferencias p = _s.Preferencias;
+            if (!_cfg.Tamagotchi || !p.ConteudoAdulto || p.ItensPorContaPropria == ConjuntoDeItens.Vazio
+                || _s.Estado != Estado.Idle || _s.Esconderijo != LadoDoEsconderijo.Nenhum
+                || _s.AutonomiaPausada || _s.PainelAberto || AtentoAoItem
+                || _s.Lugar is not { } lugar || lugar.Ancora.Y != lugar.Monitor.AreaUtil.Base
+                || (ComOnda && _s.Onda!.Tipo == Onda.Paranoico))
+                return candidatas;
+            foreach (Item item in TabelaDoTamagotchi.Itens)
+                if (p.ItensPorContaPropria.Contem(item) && p.ItensAdultosHabilitados.Contem(item) && _cfg.ItensDaEdicao.Contem(item)
+                    && !(ComOnda && _s.Onda!.Tipo == _cfg.TabelaDeItens(item).Onda))
+                    candidatas.Add(item);
+            return candidatas;
+        }
 
         /// <summary>
-        /// A agenda escolheu o baseado por conta própria (<see cref="PodeFumarPorContaPropria"/>): ele "tira do chapéu" um
-        /// baseado, sem item no mundo (nada nasce, nada sai e nenhum Id é gasto), e o usa no chão, com o uso do baseado da
-        /// tabela (<see cref="ConfiguracaoDoNucleo.TabelaDeItens"/>), pelo mesmo caminho do baseado que o usuário solta nele
-        /// (<see cref="ComecarOUso"/>): a combinação, o alívio, a carga e o sorteio da paranoia.
+        /// A agenda escolheu o uso por conta própria (<see cref="CandidatasPorContaPropria"/>): com uma droga só, ela; com
+        /// várias, uma sorteada no gerador principal. Ele a "tira do chapéu", sem item no mundo (nada nasce, nada sai e nenhum Id
+        /// é gasto), e a usa no chão, com o uso da tabela (<see cref="ConfiguracaoDoNucleo.TabelaDeItens"/>), pelo mesmo caminho
+        /// do item que o usuário solta nele (<see cref="ComecarOUso"/>): a combinação, o alívio, a carga e o sorteio da paranoia.
         /// </summary>
-        private void FumarPorContaPropria()
+        private void UsarPorContaPropria(List<Item> candidatas)
         {
-            DadosDoItem dados = _cfg.TabelaDeItens(Item.Baseado);
-            ComecarOUso(Item.Baseado, dados, ApoioDoUso.Chao, $"IDLE + AUTONOMY_TIMER: {dados.Verbo} {Item.Baseado} por conta própria");
+            Item item = candidatas[0];
+            if (candidatas.Count > 1)
+            {
+                (int indice, Aleatorio a) = _s.Aleatorio.Entre(0, candidatas.Count - 1);
+                _s = _s with { Aleatorio = a };
+                item = candidatas[indice];
+            }
+            DadosDoItem dados = _cfg.TabelaDeItens(item);
+            ComecarOUso(item, dados, ApoioDoUso.Chao, $"IDLE + AUTONOMY_TIMER: {dados.Verbo} {item} por conta própria");
         }
 
         /// <summary>

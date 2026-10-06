@@ -713,7 +713,7 @@ internal static class OndaTestes
     [Teste]
     public static void CarasEGestosDaFase_ComOsMesmosSorteios()
     {
-        // Sem o baseado por conta própria (FumarBaseado; BaseadoPorContaPropriaTestes): ele começaria uma onda de verdade na
+        // Sem o baseado por conta própria (UsarPorContaPropria; BaseadoPorContaPropriaTestes): ele começaria uma onda de verdade na
         // execução sem onda.
         ConfiguracaoDoNucleo cfg = Ligado() with { TabelaDeOndas = OndaNeutra, Acoes = AcoesAutonomas.Todas };
         PerfilDaOnda bebado = TabelaDoTamagotchi.DaOnda(Onda.Bebado).Perfil(FaseDaOnda.Pico, 1);

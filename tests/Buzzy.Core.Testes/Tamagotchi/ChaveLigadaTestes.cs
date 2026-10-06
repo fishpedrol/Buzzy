@@ -26,7 +26,7 @@ internal static class ChaveLigadaTestes
 
     // Invariante 22 com a física do aplicativo: sem itens, sem onda, com a emoção automática e sem o baseado por conta
     // própria, ligar a chave não muda nada. A configuração ligada é a do aplicativo (DoAplicativo, com a chave ligada desde o
-    // passo T9), com as ações de sempre (Todas, sem FumarBaseado: o baseado por conta própria muda o sorteio da agenda de
+    // passo T9), com as ações de sempre (Todas, sem UsarPorContaPropria: o baseado por conta própria muda o sorteio da agenda de
     // propósito, e tem os testes dele, BaseadoPorContaPropriaTestes), e a desligada, a mesma com a chave apagada. Com a mesma
     // semente e os mesmos eventos (10 minutos por semente, com cliques, arrastes, clique duplo, bandeja e pausa sorteados, e a
     // agenda livre quase todo o tempo), nos três níveis de energia, com todas as ações de sempre ou só escalar, com ou sem

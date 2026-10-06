@@ -62,7 +62,7 @@ public enum Estado
     /// animado, por um número fixo de passos, no apoio em que estava (chão, parede, cipó ou esconderijo). O relógio
     /// corre; no grupo do usuário, nada autônomo chega; um PRESS o segura na hora. No fim, a acomodação o devolve ao
     /// mesmo apoio. Também é o estado do baseado que ele fuma por conta própria, no chão, sem item no mundo
-    /// (<see cref="AcoesAutonomas.FumarBaseado"/>).
+    /// (<see cref="AcoesAutonomas.UsarPorContaPropria"/>).
     /// </summary>
     Using,
 }
@@ -391,7 +391,7 @@ public enum AcoesAutonomas
     TrocarExpressao = 32,
 
     /// <summary>
-    /// As seis ações de sempre (Fases 2 a 4). A do tamagotchi, <see cref="FumarBaseado"/>, fica de fora: só a configuração do
+    /// As seis ações de sempre (Fases 2 a 4). A do tamagotchi, <see cref="UsarPorContaPropria"/>, fica de fora: só a configuração do
     /// aplicativo a liga (<see cref="ConfiguracaoDoNucleo.DoAplicativo"/>) e os testes que a pedem, e toda configuração de
     /// antes continua igual.
     /// </summary>
@@ -401,10 +401,10 @@ public enum AcoesAutonomas
     /// Fumar um baseado por conta própria, quando ele quer (pedido do usuário de 2026-10-01, 19:10; DEC-028), de desenho
     /// animado: no fim do enum, sem mudar os valores das outras. Só existe com a chave do tamagotchi ligada
     /// (<see cref="ConfiguracaoDoNucleo.Tamagotchi"/>); desligada, o peso é zero e nada muda. Só em IDLE, no chão, sem estar
-    /// escondido, e nunca com a onda Chapado ou a paranoia na frente (<see cref="PerfilDeEnergia.PesoFumarBaseado"/>): ele
+    /// escondido, e nunca com a onda Chapado ou a paranoia na frente (<see cref="PerfilDeEnergia.PesoUsarPorContaPropria"/>): ele
     /// "tira do chapéu" o baseado, sem item no mundo, e o usa como o baseado que o usuário solta nele.
     /// </summary>
-    FumarBaseado = 64,
+    UsarPorContaPropria = 64,
 
     /// <summary>
     /// Ir ao outro monitor (Fase 5, passo P13; DEC-032): andar até a porta plana do monitor em que está e atravessar, sem o

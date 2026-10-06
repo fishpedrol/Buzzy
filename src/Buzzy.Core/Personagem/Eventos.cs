@@ -157,6 +157,15 @@ public sealed record CmdSetAdultContent(bool Ligado) : Evento
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
+/// <summary>
+/// CMD_SET_SELF_USE_ITEM: liga ou desliga o uso por conta própria de uma das seis drogas ilícitas nas Configurações
+/// (DEC-045). Só vale para as da edição; o resto é ignorado.
+/// </summary>
+public sealed record CmdSetSelfUseItem(Item Item, bool Ligado) : Evento
+{
+    public override Origem Origem => Origem.ComandoDoUsuario;
+}
+
 /// <summary>CMD_SET_ADULT_ITEM: altera a disponibilidade de um item adulto nas Configurações (DEC-041).</summary>
 public sealed record CmdSetAdultItemEnabled(Item Item, bool Ligado) : Evento
 {
@@ -169,6 +178,15 @@ public sealed record CmdSetAdultItemEnabled(Item Item, bool Ligado) : Evento
 /// vista num monitor já ocupado o tira de lá.
 /// </summary>
 public sealed record CmdSetFullscreenMode(bool Ligado) : Evento
+{
+    public override Origem Origem => Origem.ComandoDoUsuario;
+}
+
+/// <summary>
+/// CMD_SET_CROSS_MONITORS: liga ou desliga a travessia entre monitores nas Configurações (DEC-046). Grava a escolha; só vale
+/// para as próximas decisões (uma travessia já em curso termina).
+/// </summary>
+public sealed record CmdSetCrossMonitors(bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
@@ -443,12 +461,13 @@ public sealed class MonitoresOcupados : IEquatable<MonitoresOcupados>
 /// <param name="Energia">Nível de energia; padrão Média (DEC-014).</param>
 /// <param name="ModoTelaCheia">Modo automático de tela cheia (Q-09); padrão ligado.</param>
 /// <param name="AtravessarMonitores">
-/// Se o personagem pode passar sozinho de um monitor para outro (Q-05); padrão ligado. É a escolha do
-/// usuário; até a travessia entrar no núcleo, só é guardada e reproduzida.
+/// Se o personagem pode passar sozinho de um monitor para outro (Q-05; DEC-032), a escolha do usuário nas Configurações.
+/// O <see cref="Padrao"/> é desligado desde a DEC-046 (pedido do usuário: com ela ligada, quem não tem dois monitores via
+/// o personagem se comportar mal); o padrão deste parâmetro continua ligado, o de antes, para quem constrói à mão.
 /// </param>
 public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bool AtravessarMonitores = true)
 {
-    public static readonly Preferencias Padrao = new(NivelDeEnergia.Media, true, true);
+    public static readonly Preferencias Padrao = new(NivelDeEnergia.Media, true, false);
 
     /// <summary>
     /// A emoção dominante (DEC-027): uma das 14 caras de humor (<see cref="Expressoes.DeHumor"/>), que vira a cara
@@ -483,6 +502,22 @@ public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bo
                 if (TabelaDoTamagotchi.Adulto(item)) todos = todos.Com(item);
             return todos;
         }
+    }
+
+    /// <summary>
+    /// As drogas que ele usa por conta própria, quando quer (DEC-045): só as seis ilícitas
+    /// (<see cref="TabelaDoTamagotchi.Ilicitos"/>), e cada uma também precisa estar marcada nos itens adultos, com a chave
+    /// geral ligada. Nenhuma por padrão, inclusive o baseado (antes da DEC-045 ele fumava sempre que podia).
+    /// </summary>
+    public ConjuntoDeItens ItensPorContaPropria { get; init; } = ConjuntoDeItens.Vazio;
+
+    /// <summary>Deixa só as seis ilícitas num conjunto recebido de arquivo ou preferência externa.</summary>
+    public static ConjuntoDeItens NormalizarPorContaPropria(ConjuntoDeItens itens)
+    {
+        ConjuntoDeItens normalizados = ConjuntoDeItens.Vazio;
+        foreach (Item item in TabelaDoTamagotchi.Itens)
+            if (TabelaDoTamagotchi.Ilicitos.Contem(item) && itens.Contem(item)) normalizados = normalizados.Com(item);
+        return normalizados;
     }
 
     /// <summary>Remove itens não adultos de um conjunto recebido de arquivo ou preferência externa.</summary>

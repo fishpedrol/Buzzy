@@ -229,6 +229,26 @@
     <value>Desmarcar remove este item da tela e do menu e encerra só o uso e o efeito dele.</value>
     <comment>Ajuda de cada caixa de item adulto.</comment>
   </data>
+  <data name="ConfigTravessia" xml:space="preserve">
+    <value>Atra_vessar entre monitores</value>
+    <comment>Caixa da travessia entre monitores (DEC-046); o sublinhado marca a tecla de acesso.</comment>
+  </data>
+  <data name="ConfigTravessiaAjuda" xml:space="preserve">
+    <value>Com mais de um monitor, ele passa sozinho de um para o outro. Vem desligado.</value>
+    <comment>Ajuda da travessia.</comment>
+  </data>
+  <data name="ConfigPorContaPropria" xml:space="preserve">
+    <value>por conta própria</value>
+    <comment>Caixa do uso por conta própria, ao lado de cada droga ilícita (DEC-045).</comment>
+  </data>
+  <data name="ConfigPorContaPropriaNome" xml:space="preserve">
+    <value>{0} por conta própria</value>
+    <comment>Nome da caixa para o leitor de tela; {0} é o nome do item.</comment>
+  </data>
+  <data name="ConfigPorContaPropriaAjuda" xml:space="preserve">
+    <value>Marcado, ele às vezes usa este item sozinho, quando quer, se o item também estiver marcado e o conteúdo adulto ligado.</value>
+    <comment>Ajuda de cada caixa do uso por conta própria.</comment>
+  </data>
   <data name="ConfigTamanho" xml:space="preserve">
     <value>Tamanho do Buzzy</value>
     <comment>Grupo do tamanho (DEC-038, item 9).</comment>

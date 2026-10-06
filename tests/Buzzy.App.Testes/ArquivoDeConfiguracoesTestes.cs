@@ -32,10 +32,10 @@ internal sealed class ArquivoDeConfiguracoesTestes : IDisposable
 
     private static readonly byte[] Lixo = "{ lixo"u8.ToArray();
 
-    /// <summary>Versão futura (a 7, depois da v6 atual) com campos que a v6 não conhece, na raiz, na posição e nas preferências.</summary>
+    /// <summary>Versão futura (a 8, depois da v7 atual) com campos que a v7 não conhece, na raiz, na posição e nas preferências.</summary>
     private static readonly byte[] Futura = """
         {
-          "schemaVersion": 7,
+          "schemaVersion": 8,
           "posicao": { "chaveMonitor": "\\\\.\\DISPLAY2", "fracaoX": 0.25, "fracaoY": 1, "campoNovo": [1, 2] },
           "preferencias": { "energia": "alta", "preferenciaNova": "x" },
           "secaoNova": { "a": 1 }

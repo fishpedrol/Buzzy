@@ -550,13 +550,15 @@ internal sealed partial class Verificacao
         => new(Nativo.Monitores().Select(m => new MonitorDoDesktop(m.Info.szDevice, R(m.Info.rcMonitor), R(m.Info.rcWork), m.Dpi, m.Principal)));
 
     /// <summary>Abre o Buzzy com a autonomia ligada e a semente dada; confere que as janelas são deste processo.</summary>
-    private void AbrirBuzzyComAutonomia(ulong semente)
+    /// <param name="preferencias">Gravadas no perfil depois de apagá-lo (a Fase 5 liga a travessia, DEC-046); nulas, as padrão.</param>
+    private void AbrirBuzzyComAutonomia(ulong semente, Preferencias? preferencias = null)
     {
         _inicioLogBuzzy = LogDoBuzzy.Marca();
         ProcessStartInfo psi = PerfilDaVerificacao.Descrever(_exeBuzzy, "--semente", semente.ToString(CultureInfo.InvariantCulture));
         ExigirNenhumBuzzyAberto();
         // A escolha da semente simula a partida sem posição salva: a pasta do perfil é apagada antes de cada abertura.
         PerfilDaVerificacao.Limpar();
+        if (preferencias is not null) PerfilDaVerificacao.Gravar(preferencias);
         ExigirNenhumBuzzyAberto(); // repetida imediatamente antes de iniciar
         _buzzy = Process.Start(psi) ?? throw new FalhaDeVerificacao("Buzzy.exe não iniciou.");
         _inicioBuzzy = _buzzy.StartTime;

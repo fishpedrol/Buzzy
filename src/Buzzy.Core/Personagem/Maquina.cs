@@ -99,7 +99,9 @@ public static partial class Maquina
                 case CmdSetDominantEmotion e: EscolherEmocao(e.Emocao); break;
                 case CmdSetAdultContent e: EscolherConteudoAdulto(e.Ligado); break;
                 case CmdSetAdultItemEnabled e: EscolherItemAdulto(e.Item, e.Ligado); break;
+                case CmdSetSelfUseItem e: EscolherUsoPorContaPropria(e.Item, e.Ligado); break;
                 case CmdSetFullscreenMode e: EscolherModoTelaCheia(e.Ligado); break;
+                case CmdSetCrossMonitors e: EscolherTravessia(e.Ligado); break;
                 case CmdSetEnergy e: EscolherEnergiaPorComando(e.Nivel); break;
                 case CmdSetAlwaysOnTop e: EscolherSempreNoTopo(e.Ligado); break;
                 case CmdSetScale e: EscolherEscala(e.Escala); break;
@@ -1140,6 +1142,15 @@ public static partial class Maquina
         /// tela cheia tivesse acabado de começar, e um salto planejado para um monitor ocupado cai; num gesto do usuário,
         /// nada muda (invariante 14). Antes da carga ou igual ao atual, é ignorado.
         /// </summary>
+        /// <summary>CMD_SET_CROSS_MONITORS (DEC-046): grava a escolha da travessia; só vale para as próximas decisões.</summary>
+        private void EscolherTravessia(bool ligado)
+        {
+            if (!_s.Carregado || ligado == _s.Preferencias.AtravessarMonitores) return;
+            _transicoes.Add(new Transicao(_s.Estado, _s.Estado, $"CMD_SET_CROSS_MONITORS: {(ligado ? "ligado" : "desligado")}"));
+            MudarPreferencias(_s.Preferencias with { AtravessarMonitores = ligado });
+            _depois.Add(new GravarPreferencias(_s.Preferencias));
+        }
+
         private void EscolherModoTelaCheia(bool ligado)
         {
             if (!_s.Carregado || ligado == _s.Preferencias.ModoTelaCheia) return;
@@ -1163,9 +1174,14 @@ public static partial class Maquina
             if (preferencias.EmocaoDominante is { } emocao && !Expressoes.EhDeHumor(emocao)) preferencias = preferencias with { EmocaoDominante = null };
             if (!Enum.IsDefined(preferencias.Escala)) preferencias = preferencias with { Escala = Preferencias.Padrao.Escala };
             ConjuntoDeItens itens = Preferencias.NormalizarItensAdultos(preferencias.ItensAdultosHabilitados);
+            ConjuntoDeItens proprios = Preferencias.NormalizarPorContaPropria(preferencias.ItensPorContaPropria);
             foreach (Item item in TabelaDoTamagotchi.Itens)
-                if (!cfg.ItensDaEdicao.Contem(item)) itens = itens.Sem(item);
-            return preferencias with { ItensAdultosHabilitados = itens };
+                if (!cfg.ItensDaEdicao.Contem(item))
+                {
+                    itens = itens.Sem(item);
+                    proprios = proprios.Sem(item);
+                }
+            return preferencias with { ItensAdultosHabilitados = itens, ItensPorContaPropria = proprios };
         }
 
         private void MudarPreferencias(Preferencias novas)
@@ -1403,9 +1419,10 @@ public static partial class Maquina
             Opcao(AcoesAutonomas.Descansar, perfil.PesoDescansar);
             Opcao(AcoesAutonomas.Gesto, perfil.PesoGesto);
             Opcao(AcoesAutonomas.TrocarExpressao, perfil.PesoTrocarExpressao);
-            // O baseado por conta própria (DEC-028; pedido do usuário de 2026-10-01, 19:10), a última opção: sem ela (a chave
-            // desligada, fora do chão, com a onda Chapado ou a paranoia na frente), o sorteio é o de sempre.
-            Opcao(AcoesAutonomas.FumarBaseado, PodeFumarPorContaPropria ? perfil.PesoFumarBaseado : 0);
+            // O uso por conta própria (DEC-028, item 41; DEC-045), a última opção, com um peso só, seja qual for o número de
+            // drogas marcadas: sem nenhuma que possa agora, o sorteio é o de sempre.
+            List<Item> proprias = CandidatasPorContaPropria();
+            Opcao(AcoesAutonomas.UsarPorContaPropria, proprias.Count > 0 ? perfil.PesoUsarPorContaPropria : 0);
             // Ir ao outro monitor (Fase 5, passo P13), a última opção: só com uma porta plana, numa lateral do monitor dele.
             (bool portaEsquerda, bool portaDireita) = PortasDeTravessia();
             Opcao(AcoesAutonomas.IrAoOutroMonitor, portaEsquerda || portaDireita ? perfil.PesoIrAoOutroMonitor : 0);
@@ -1452,8 +1469,8 @@ public static partial class Maquina
                     Expressao nova = SortearTrocaDeCara();
                     _s = _s with { Expressao = nova };
                     break;
-                case AcoesAutonomas.FumarBaseado:
-                    FumarPorContaPropria();
+                case AcoesAutonomas.UsarPorContaPropria:
+                    UsarPorContaPropria(proprias);
                     break;
                 case AcoesAutonomas.IrAoOutroMonitor:
                     PlanejarIdaAoOutroMonitor(perfil, portaEsquerda, portaDireita);

@@ -200,15 +200,29 @@ internal static class PerfilDaVerificacao
     /// sem posição: desde a DEC-041 o padrão é a chave desligada e só três marcados, e a verificação do tamagotchi usa
     /// todos os itens. Só com nenhum Buzzy aberto, logo depois de <see cref="Limpar"/>.
     /// </summary>
-    internal static void ComOsNoveAdultos()
+    internal static void ComOsNoveAdultos() => Gravar(PreferenciasComOsNoveAdultos);
+
+    /// <summary>
+    /// As preferências da verificação do tamagotchi, as mesmas da escolha das sementes (SementesDoTamagotchi): a chave adulta
+    /// ligada, os nove itens marcados, o baseado por conta própria (DEC-045; antes era sempre) e a travessia ligada (DEC-046;
+    /// antes era o padrão).
+    /// </summary>
+    internal static readonly Buzzy.Core.Personagem.Preferencias PreferenciasComOsNoveAdultos = Buzzy.Core.Personagem.Preferencias.Padrao with
+    {
+        AtravessarMonitores = true,
+        ConteudoAdulto = true,
+        ItensAdultosHabilitados = Buzzy.Core.Personagem.Preferencias.TodosOsItensAdultos,
+        ItensPorContaPropria = Buzzy.Core.Personagem.ConjuntoDeItens.Vazio.Com(Buzzy.Core.Personagem.Item.Baseado),
+    };
+
+    /// <summary>As preferências padrão com a travessia ligada (DEC-046), para a verificação da Fase 5.</summary>
+    internal static readonly Buzzy.Core.Personagem.Preferencias ComATravessia = Buzzy.Core.Personagem.Preferencias.Padrao with { AtravessarMonitores = true };
+
+    /// <summary>Grava as preferências dadas na pasta do perfil (nunca a real), sem posição. Só com nenhum Buzzy aberto, logo depois de <see cref="Limpar"/>.</summary>
+    internal static void Gravar(Buzzy.Core.Personagem.Preferencias preferencias)
     {
         string pasta = PastaDeDados.DoPerfilDeTeste(Nome) ?? throw new FalhaDeVerificacao("O Windows não informou a pasta local do usuário. Nada foi iniciado.");
         Directory.CreateDirectory(pasta);
-        var preferencias = Buzzy.Core.Personagem.Preferencias.Padrao with
-        {
-            ConteudoAdulto = true,
-            ItensAdultosHabilitados = Buzzy.Core.Personagem.Preferencias.TodosOsItensAdultos,
-        };
         File.WriteAllBytes(Path.Combine(pasta, "settings.json"),
             Buzzy.Core.Persistencia.EsquemaDeConfiguracoes.Escrever(new Buzzy.Core.Persistencia.ConfiguracoesSalvas(null, preferencias)));
     }
