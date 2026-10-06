@@ -73,7 +73,7 @@ internal sealed partial class Verificacao
             // Parte 1: pausado. O menu dá o primeiro plano ao dono dele de propósito (DEC-016): o período sem nenhuma
             // perda de foco fecha antes do primeiro menu; depois, o foco é conferido cenário a cenário.
             _prefixo = "Fase 1 (regressão) — ";
-            AbrirBuzzy(_sementeDoTamagotchi);
+            AbrirBuzzy(_sementeDoTamagotchi, comOsNoveAdultos: true);
             _prefixo = "Tamagotchi — ";
             _marcaFoco = _logReceptor.Contar();
             Digitar("T1-inicio;");

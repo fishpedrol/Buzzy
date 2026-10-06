@@ -216,7 +216,11 @@ internal sealed partial class Verificacao
     /// <c>--semente</c> do Buzzy (verificação do tamagotchi: os sorteios de cara que a onda faz mesmo pausado se repetem);
     /// nula, a do relógio, como nas Fases 1, 3 e 4.
     /// </param>
-    private void AbrirBuzzy(ulong? semente = null)
+    /// <param name="comOsNoveAdultos">
+    /// Grava no perfil, depois de apagá-lo, a chave adulta ligada e os nove itens marcados (a verificação do tamagotchi usa
+    /// todos; desde a DEC-041 o padrão tem a chave desligada).
+    /// </param>
+    private void AbrirBuzzy(ulong? semente = null, bool comOsNoveAdultos = false)
     {
         nint frenteAntes = Nativo.GetForegroundWindow();
         int marcaReceptor = _logReceptor.Contar();
@@ -228,6 +232,7 @@ internal sealed partial class Verificacao
         ExigirNenhumBuzzyAberto();
         // Sem nenhum Buzzy aberto, ninguém usa a pasta do perfil: apagada, o Buzzy parte da posição inicial esperada.
         PerfilDaVerificacao.Limpar();
+        if (comOsNoveAdultos) PerfilDaVerificacao.ComOsNoveAdultos();
         ExigirNenhumBuzzyAberto(); // repetida imediatamente antes de iniciar
         _buzzy = Process.Start(psi) ?? throw new FalhaDeVerificacao("Buzzy.exe não iniciou.");
         _inicioBuzzy = _buzzy.StartTime;
