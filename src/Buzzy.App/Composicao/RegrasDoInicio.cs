@@ -69,15 +69,18 @@ internal static class RegrasDoInicio
     internal const int CaminhoMaximo = 1024;
 
     /// <summary>
-    /// Se o caminho do executável desta cópia serve para o valor Run: absoluto, terminado em <c>\Buzzy.exe</c> (sem diferenciar
-    /// maiúsculas), sem aspas nem caractere de controle e com até <see cref="CaminhoMaximo"/> caracteres. Rodando por
-    /// <c>dotnet Buzzy.dll</c>, o caminho é o do dotnet e é recusado.
+    /// Se o caminho do executável desta cópia serve para o valor Run: absoluto, de um arquivo <c>Buzzy*.exe</c> (sem diferenciar
+    /// maiúsculas: o <c>Buzzy.exe</c> da pasta e o <c>Buzzy-&lt;versão&gt;-win-x64.exe</c> de download, DEC-042, item 12), sem aspas
+    /// nem caractere de controle e com até <see cref="CaminhoMaximo"/> caracteres. Rodando por <c>dotnet Buzzy.dll</c>, o
+    /// caminho é o do dotnet e é recusado.
     /// </summary>
     internal static bool CaminhoValido(string? caminho)
         => caminho is { Length: > 0 and <= CaminhoMaximo }
            && Path.IsPathFullyQualified(caminho)
-           && caminho.EndsWith(@"\Buzzy.exe", StringComparison.OrdinalIgnoreCase)
-           && !caminho.Contains('"') && !caminho.Any(char.IsControl);
+           && !caminho.Contains('"') && !caminho.Any(char.IsControl)
+           && Path.GetFileName(caminho) is var nome
+           && nome.StartsWith("Buzzy", StringComparison.OrdinalIgnoreCase)
+           && nome.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>O dado gravado: o caminho entre aspas, sem argumentos (evita o caminho sem aspas sequestrável).</summary>
     internal static string DadoDoRun(string caminho) => $"\"{caminho}\"";

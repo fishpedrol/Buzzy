@@ -30,6 +30,10 @@ internal sealed class InicioComOWindowsTestes
         {
             (Aqui, true), (@"D:\x\BUZZY.EXE", true), (@"C:\Program Files\dotnet\dotnet.exe", false), (@"Buzzy.exe", false), (@"C:\a""b\Buzzy.exe", false),
             ("C:\\a\tb\\Buzzy.exe", false), (null, false), ("", false), (@"C:\" + new string('a', 1100) + @"\Buzzy.exe", false), (@"\\servidor\pasta\Buzzy.exe", true),
+            // O .exe único de download leva a versão no nome (DEC-042, item 12), e o navegador pode numerar uma cópia repetida.
+            (@"C:\Users\x\Downloads\Buzzy-0.1.1-win-x64.exe", true), (@"C:\Users\x\Downloads\Buzzy-0.1.1-win-x64 (1).exe", true),
+            (@"C:\x\buzzy-0.1.1-WIN-X64.EXE", true), (@"C:\Buzzy\mascote.exe", false), (@"C:\x\Buzzy.exe.bak", false), (@"C:\x\Buzzy", false),
+            (@"C:\x\Buzzy.dll", false), (@"C:\Buzzy.exe\", false), (@"C:\x\Buzzy-0.1.1-win-x64.exe --perfil-de-teste x", false),
         })
             Afirmar.Igual(valido, RegrasDoInicio.CaminhoValido(caminho), $"caminho {caminho?[..Math.Min(40, caminho.Length)]}");
         Afirmar.Igual($"\"{Aqui}\"", RegrasDoInicio.DadoDoRun(Aqui), "entre aspas, sem argumentos");
