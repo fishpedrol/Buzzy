@@ -1,10 +1,7 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>
-/// Poses-chave da pixel art, uma por estado ou gesto de ARCHITECTURE.md 2.6 (as mesmas da
-/// identidade anterior). Ângulos dos membros em graus na tela: 0 para baixo, 90 para a direita,
-/// −90 para a esquerda, 180 para cima.
-/// </summary>
+// Uma pose-chave por estado ou gesto. Ângulos em graus na tela: 0 = baixo, 90 = direita,
+// -90 = esquerda, 180 = cima.
 public static class PosesPixel
 {
     public static readonly IReadOnlyList<PosePixel> Todas =
@@ -67,7 +64,7 @@ public static class PosesPixel
             Cauda = Cauda.Caida,
             Expressao = "feliz",
         },
-        // Cipó da borda de cima (DEC-024): segura o cipó com a mão B e balança; o quadro 2 é o do meio.
+        // Cipó na borda de cima: segura com a mão B e balança; o quadro 2 é o do meio.
         Cipo("cipo-1", tronco: 9, deslocamentoDoCipo: 5.5, pernaA: new(-2, 10), pernaB: new(24, 44)),
         Cipo("cipo-2", tronco: 0, deslocamentoDoCipo: 0, pernaA: new(-8, 0), pernaB: new(18, 34)),
         Cipo("cipo-3", tronco: -9, deslocamentoDoCipo: -5.5, pernaA: new(-18, -8), pernaB: new(10, 22)),
@@ -150,8 +147,8 @@ public static class PosesPixel
             Cauda = Cauda.Alta,
             Expressao = "curioso",
         },
-        // Esconderijo (DEC-025): o "espiando" com a borda na última linha do quadro, onde fica a borda
-        // da tela. Só o chapéu, a cabeça e as mãos, que seguram a borda; nas laterais, girado.
+        // Esconderijo: o "espiando" com a borda na última linha do quadro (a borda da tela). Só
+        // aparecem chapéu, cabeça e mãos; nas laterais, girado.
         new PosePixel
         {
             Nome = "escondido",
@@ -248,16 +245,10 @@ public static class PosesPixel
         },
     ];
 
-    /// <summary>
-    /// Poses dos gestos da onda do tamagotchi (DEC-028; crítica, L11), com os nomes que o núcleo gera do enum
-    /// <c>Gesto</c> em minúsculas, na ordem dele. As seis primeiras são provisórias: a dança é o "brincando", a
-    /// gargalhada é o "reagindo", a tremedeira é o parado deslocado 1 pixel (a apresentação alterna as duas) e o
-    /// soluço, a tosse e o espirro são o parado com a cara e o efeito do gesto (a fumaça da tosse sai da
-    /// boca; o espirro solta a poeira do nariz). As duas últimas são da paranoia (adicional de 2026-10-01, "os cara
-    /// tá no teto"), desenhadas para ela, com a cara "paranoico": o "olharproteto" aponta para o teto e o "agachar"
-    /// segura o chapéu com as duas mãos. Ficam fora de <see cref="Todas"/>, como as poses de uso: a folha nativa e
-    /// as prévias das poses não mudam. <see cref="PorNome"/> acha as três listas.
-    /// </summary>
+    // Gestos da onda, com o nome do enum Gesto do núcleo em minúsculas e na mesma ordem. As seis
+    // primeiras são provisórias, reaproveitando poses (tremedeira = parado deslocado 1 px, a
+    // apresentação alterna). As duas últimas são da paranoia, com desenho próprio. Ficam fora de
+    // Todas pra não mudar a folha nativa nem as prévias.
     public static readonly IReadOnlyList<PosePixel> DosGestos = CriarGestos();
 
     private static PosePixel[] CriarGestos()
@@ -273,10 +264,9 @@ public static class PosesPixel
             parado with { Nome = "espirro", Estado = "gesto: espirrar", Expressao = "tossindo", EfeitoDaPose = EfeitoVisual.Poeira },
             parado with { Nome = "tosse", Estado = "gesto: tossir", Expressao = "tossindo", EfeitoDaPose = EfeitoVisual.Fumaca },
             parado with { Nome = "tremedeira", Estado = "gesto: tremer", Expressao = "eletrico", QuadrilX = parado.QuadrilX + 1 },
-            // Paranoia: de joelhos dobrados, olha para cima e aponta o teto com o indicador, reto para cima; o braço sobe
-            // pela frente da orelha, longe do rosto, com o punho à direita da ponta da aba (o dedo não encosta nela), e a
-            // outra mão aperta o peito. De frente, o boneco não inclina a cabeça para trás: o pescoço estica 1 pixel,
-            // esticando-se para ver o teto (revisão da paranoia, achados 4 e 5).
+            // Joelhos dobrados, aponta o teto; o braço sobe pela frente da orelha com o punho à
+            // direita da ponta da aba (o dedo não encosta nela), a outra mão aperta o peito. De frente
+            // não dá pra inclinar a cabeça pra trás, então o pescoço estica 1 px.
             parado with
             {
                 Nome = "olharproteto",
@@ -293,9 +283,8 @@ public static class PosesPixel
                 Cauda = Cauda.Alta,
                 Expressao = "paranoico",
             },
-            // Paranoia: agachado, com a cabeça encolhida entre os ombros, segura a aba com os dois punhos e espia para
-            // cima; os cotovelos abrem para fora e os antebraços sobem ao lado dos olhos, sem cobrir o rosto. (Abertas e
-            // de dedos para cima, acima da aba, as mãos pareciam orelhas.)
+            // Agachado, cabeça encolhida, segura a aba com os punhos; cotovelos pra fora, antebraços
+            // ao lado dos olhos sem cobrir o rosto. (Mãos abertas acima da aba pareciam orelhas.)
             parado with
             {
                 Nome = "agachar",
@@ -315,12 +304,8 @@ public static class PosesPixel
         ];
     }
 
-    /// <summary>
-    /// Os quadros extras dos clipes da Fase 6 (DEC-036, item 5): o segundo (ou o primeiro) quadro de cada animação nova,
-    /// feito da pose-chave com poucos ângulos mudados, para o corpo não pular de um quadro para o outro. Ficam fora de
-    /// <see cref="Todas"/>, como os gestos da onda: a folha nativa não muda. O manifesto de clipes do app diz a ordem e os
-    /// tempos; <see cref="PorNome"/> acha estes também.
-    /// </summary>
+    // Quadros extras dos clipes: a pose-chave com poucos ângulos mudados, pro corpo não pular entre
+    // quadros. Ordem e tempos ficam no manifesto. Fora de Todas pela mesma razão dos gestos.
     public static readonly IReadOnlyList<PosePixel> DosClipes = CriarQuadrosDosClipes();
 
     private static PosePixel[] CriarQuadrosDosClipes()
@@ -328,8 +313,8 @@ public static class PosesPixel
         PosePixel Chave(string nome) => Todas.First(p => p.Nome == nome);
         PosePixel cocando = Chave("cocando"), espreguicando = Chave("espreguicando"), olhando = Chave("olhando"), espiando = Chave("espiando"),
             brincando = Chave("brincando"), caindo = Chave("caindo"), reagindo = Chave("reagindo"), andando = Chave("andando-2");
-        // Explorar a borda (Fase 7; DEC-037, item 9): de perfil, parado, a mão aberta à frente dos olhos, olhando para fora
-        // da lateral; no segundo quadro, a mão sobe um pouco, ajeitando a aba.
+        // Explorando a borda: de perfil, mão aberta na frente dos olhos olhando pra fora; no 2º quadro
+        // a mão sobe um pouco, ajeitando a aba.
         PosePixel espia = andando with
         {
             Nome = "andando-2-espia1",
@@ -360,27 +345,21 @@ public static class PosesPixel
             reagindo with { Nome = "reagindo-2", Estado = "REACTING (2)", QuadrilY = 48, BracoA = new(-118, -146), BracoB = new(118, 146), PernaA = new(-10, -4), PernaB = new(10, 4) },
             espia,
             espia with { Nome = "andando-2-espia2", Estado = "gesto: espiar na borda (2)", BracoB = new(80, 172) },
-            // Olhar a janela (Fase 7; DEC-037, item 5): de perfil, parado, os braços soltos. Um quadro só: parado e sem gesto,
-            // o relógio fica desligado (invariante 29).
+            // Olhar a janela: de perfil, braços soltos. Um quadro só, porque parado e sem gesto o
+            // relógio fica desligado.
             espia with { Nome = "andando-2-olha1", Estado = "curiosidade: olha a janela", BracoB = new(-6, 0), MaoB = Mao.Fechada, BracoA = new(6, 0) },
         ];
     }
 
-    /// <summary>
-    /// A pose pelo nome: uma das poses de estado e gesto (<see cref="Todas"/>), dos gestos da onda
-    /// (<see cref="DosGestos"/>), dos clipes (<see cref="DosClipes"/>) ou de uso (<see cref="UsosPixel.Poses"/>); nula se
-    /// não houver.
-    /// </summary>
+    // Procura em todas as listas, inclusive as de uso.
     public static PosePixel? PorNome(string nome)
         => Todas.FirstOrDefault(p => p.Nome == nome)
            ?? DosGestos.FirstOrDefault(p => p.Nome == nome)
            ?? DosClipes.FirstOrDefault(p => p.Nome == nome)
            ?? UsosPixel.Poses.FirstOrDefault(p => p.Nome == nome);
 
-    /// <summary>
-    /// Pendurado no cipó (DEC-024), de frente: a mão B segura o cipó acima e ao lado do chapéu, a A
-    /// balança solta, a cauda sobe para equilibrar. O tronco e o cipó inclinam juntos no balanço.
-    /// </summary>
+    // De frente: mão B no cipó acima e ao lado do chapéu, A solta, cauda pra cima equilibrando.
+    // Tronco e cipó inclinam juntos.
     private static PosePixel Cipo(string nome, double tronco, double deslocamentoDoCipo, Membro pernaA, Membro pernaB) => new()
     {
         Nome = nome,
@@ -388,10 +367,10 @@ public static class PosesPixel
         QuadrilX = 30 - tronco * 0.25,
         QuadrilY = 50,
         Tronco = tronco,
-        // Ombros encolhidos, como quem se pendura: a cabeça desce e o chapéu sai do caminho da mão.
+        // Ombros encolhidos: a cabeça desce e o chapéu sai do caminho da mão.
         CabecaDescida = 6,
         BracoA = new(-60 + tronco, -40 + tronco),
-        // O braço do cipó segue pouco a inclinação do tronco, para a mão ficar fora da aba do chapéu.
+        // Segue pouco o tronco, pra mão ficar fora da aba.
         BracoB = new(144 + tronco * 0.3, 150 + tronco * 0.3),
         MaoA = Mao.Aberta,
         MaoB = Mao.Fechada,

@@ -2,24 +2,15 @@ using System.Runtime.InteropServices;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// As declarações de chamadas ao Windows do Buzzy, num lugar só (adaptador de plataforma,
-/// DEC-007), menos as do observador de tela cheia, que ficam nele (<see cref="ObservadorDeTelaCheia"/>):
-/// o portão de APIs proibidas (SECURITY.md 3.2 e 8) só as permite naquele tipo, e inspeciona
-/// todas as declarações no binário a cada build.
-///
-/// Limites respeitados de propósito: nenhum hook, nenhuma injeção de input, nenhuma captura
-/// de tela, nenhuma rede, nenhum processo, nenhuma leitura de título, texto ou identidade de
-/// janelas de outros aplicativos. A única geometria de outro aplicativo lida é o retângulo da
-/// janela em primeiro plano, pelo observador de tela cheia, com <c>GetWindowRect</c> daqui (DEC-034). As funções abaixo só agem sobre janelas do
-/// próprio Buzzy, sobre a topologia dos monitores (e a configuração de vídeo deles, lida só
-/// para a chave estável do monitor), sobre o ícone da bandeja e sobre o menu do Buzzy, com os
-/// bitmaps dos ícones dele criados na memória do próprio processo.
-///
-/// DllImport, e não LibraryImport, de propósito: o marshalling gerado do LibraryImport não
-/// trata o campo ByValTStr de MONITORINFOEX nem os campos de texto de NOTIFYICONDATA, e
-/// GetMonitorInfo passa a devolver zeros sem erro (defeito já visto no protótipo P1).
-/// </summary>
+// Todas as chamadas ao Windows num lugar só, menos as do ObservadorDeTelaCheia, que o
+// portão de APIs só libera lá. O portão inspeciona as declarações no binário a cada build.
+//
+// De propósito: nada de hook, injeção de input, captura de tela, rede, processo ou
+// leitura de título/texto de janela alheia. A única geometria alheia é o retângulo da
+// janela em primeiro plano (via observador, com o GetWindowRect daqui).
+//
+// DllImport e não LibraryImport: o marshalling gerado não trata ByValTStr de
+// MONITORINFOEX/NOTIFYICONDATA e o GetMonitorInfo volta zeros sem erro.
 internal static class Win32
 {
     // ---- Estilos -------------------------------------------------------------------
@@ -62,10 +53,8 @@ internal static class Win32
     internal static readonly nint HWND_TOPMOST = -1;
     internal static readonly nint HWND_NOTOPMOST = -2;
 
-    /// <summary>
-    /// Põe a janela acima de todas as janelas comuns, sem ativar e sem deixá-la topmost (DEC-038, item 8): entra no grupo
-    /// topmost e sai dele logo em seguida, ficando no topo da faixa comum. Uma vez, por pedido; nunca por timer.
-    /// </summary>
+    // Truque pra subir acima das janelas comuns sem ativar e sem ficar topmost: entra no
+    // grupo topmost e sai logo em seguida. Só sob pedido, nunca por timer.
     internal static void AoTopoDaFaixaComum(nint hwnd)
     {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
@@ -186,7 +175,7 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ClientToScreen(nint hWnd, ref POINT lpPoint);
 
-    /// <summary>Retângulo de uma janela do próprio Buzzy, em pixels físicos.</summary>
+    // Em px físicos.
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool GetWindowRect(nint hWnd, out RECT lpRect);
@@ -212,13 +201,10 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool WTSUnRegisterSessionNotification(nint hWnd);
 
-    // ---- user32: captura do mouse no gesto começado no personagem (ARCHITECTURE.md 2.7) ----
+    // ---- user32: captura do mouse no gesto começado no personagem ----
 
-    /// <summary>
-    /// Captura o mouse para a janela do personagem durante um gesto que começou nela. Como a janela
-    /// não é a de primeiro plano, o Windows só entrega o mouse a ela enquanto um botão estiver
-    /// pressionado; ela nunca lê input fora desse gesto (SECURITY.md 3.1).
-    /// </summary>
+    // Só durante um gesto que começou no personagem. Como a janela não está em primeiro
+    // plano, o Windows só entrega o mouse com botão pressionado: nada de input fora disso.
     [DllImport("user32.dll")]
     internal static extern nint SetCapture(nint hWnd);
 
@@ -226,7 +212,7 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ReleaseCapture();
 
-    /// <summary>Tempo de clique duplo do sistema, em milissegundos (ARCHITECTURE.md 2.7, regra 4).</summary>
+    // Em ms.
     [DllImport("user32.dll")]
     internal static extern uint GetDoubleClickTime();
 
@@ -242,17 +228,16 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool DestroyMenu(nint hMenu);
 
-    /// <summary>Fecha o menu ativo desta thread, se houver (usado ao encerrar com o menu aberto).</summary>
+    // Usado ao encerrar com o menu aberto.
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool EndMenu();
 
-    // ---- Menu com ícones (DEC-027): submenus e itens com bitmap ------------------------
+    // ---- Menu com ícones: submenus e itens com bitmap ------------------------
     //
-    // Os itens entram por InsertMenuItemW, numa posição explícita. O ícone de um item (hbmpItem) é um bitmap
-    // de 32 bits criado só na memória do próprio Buzzy (CreateDIBSection sem DC, preenchido por Marshal.Copy):
-    // nenhum pixel é lido da tela nem de outra janela. DestroyMenu não apaga hbmpItem; quem cria o bitmap o
-    // apaga com DeleteObject depois do DestroyMenu (BitmapsDoMenu).
+    // hbmpItem é um DIB 32 bits só na nossa memória (CreateDIBSection sem DC +
+    // Marshal.Copy): nenhum pixel vem da tela. DestroyMenu não apaga hbmpItem; quem
+    // apaga é o BitmapsDoMenu, depois.
 
     internal const uint MIIM_STATE = 0x00000001;
     internal const uint MIIM_ID = 0x00000002;
@@ -269,7 +254,7 @@ internal static class Win32
     internal const uint BI_RGB = 0;
     internal const uint DIB_RGB_COLORS = 0;
 
-    /// <summary>MENUITEMINFOW: 80 bytes em x64.</summary>
+    // 80 bytes em x64.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal struct MENUITEMINFO
     {
@@ -287,7 +272,7 @@ internal static class Win32
         public nint hbmpItem;
     }
 
-    /// <summary>BITMAPINFOHEADER: 40 bytes. Com 32 bits por pixel e BI_RGB, o DIB não tem tabela de cores.</summary>
+    // 40 bytes. Com 32 bpp e BI_RGB não tem tabela de cores.
     [StructLayout(LayoutKind.Sequential)]
     internal struct BITMAPINFOHEADER
     {
@@ -308,7 +293,7 @@ internal static class Win32
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool InsertMenuItem(nint hMenu, uint item, [MarshalAs(UnmanagedType.Bool)] bool porPosicao, [In] ref MENUITEMINFO mii);
 
-    /// <summary>Bitmap de 32 bits na memória do próprio processo; com <c>hdc = 0</c> e DIB_RGB_COLORS, nenhum DC é usado.</summary>
+    // Com hdc = 0 e DIB_RGB_COLORS nenhum DC é usado.
     [DllImport("gdi32.dll", SetLastError = true)]
     internal static extern nint CreateDIBSection(nint hdc, [In] ref BITMAPINFOHEADER cabecalho, uint uso, out nint bits, nint secao, uint deslocamento);
 
@@ -332,13 +317,12 @@ internal static class Win32
     [DllImport("user32.dll")]
     internal static extern int GetSystemMetricsForDpi(int nIndex, uint dpi);
 
-    // ---- user32: configuração de vídeo, só para a chave estável do monitor (DEC-030) ----
+    // ---- user32: configuração de vídeo, só pra chave estável do monitor ----
     //
-    // Leitura, nunca mudança: os caminhos ativos (fonte GDI e alvo de cada um) e, de cada alvo, o caminho do
-    // dispositivo, que vira um resumo opaco em ChavesDeMonitor e nunca é gravado nem registrado. O nome amigável
-    // do monitor vem junto no mesmo pacote, mas nunca é lido. Estas funções devolvem o código de erro do Windows
-    // direto (0 = sucesso), sem o último erro da thread. Os tamanhos são conferidos em PlataformaTestes: com um
-    // tamanho errado, o Windows recusa o pedido.
+    // Só leitura. O caminho do dispositivo vira hash opaco em ChavesDeMonitor e nunca é
+    // gravado nem logado; o nome amigável vem no pacote mas nunca é lido. Essas funções
+    // devolvem o erro direto (0 = sucesso), sem GetLastError. Tamanho de struct errado
+    // e o Windows recusa: os tamanhos são conferidos em PlataformaTestes.
 
     internal const uint QDC_ONLY_ACTIVE_PATHS = 0x00000002;
     internal const uint DISPLAYCONFIG_PATH_ACTIVE = 0x00000001;
@@ -348,7 +332,7 @@ internal static class Win32
     internal const int ERROR_ACCESS_DENIED = 5;
     internal const int ERROR_INSUFFICIENT_BUFFER = 122;
 
-    /// <summary>LUID: 8 bytes.</summary>
+    // 8 bytes.
     [StructLayout(LayoutKind.Sequential)]
     internal struct LUID
     {
@@ -356,7 +340,7 @@ internal static class Win32
         public int HighPart;
     }
 
-    /// <summary>DISPLAYCONFIG_RATIONAL: 8 bytes.</summary>
+    // 8 bytes.
     [StructLayout(LayoutKind.Sequential)]
     internal struct DISPLAYCONFIG_RATIONAL
     {
@@ -364,7 +348,7 @@ internal static class Win32
         public uint Denominator;
     }
 
-    /// <summary>DISPLAYCONFIG_PATH_SOURCE_INFO: 20 bytes. A fonte é o dispositivo GDI (<c>\\.\DISPLAYn</c>).</summary>
+    // 20 bytes. A fonte é o dispositivo GDI (\\.\DISPLAYn).
     [StructLayout(LayoutKind.Sequential)]
     internal struct DISPLAYCONFIG_PATH_SOURCE_INFO
     {
@@ -374,7 +358,7 @@ internal static class Win32
         public uint statusFlags;
     }
 
-    /// <summary>DISPLAYCONFIG_PATH_TARGET_INFO: 48 bytes. O alvo é o monitor ligado à fonte.</summary>
+    // 48 bytes. O alvo é o monitor ligado à fonte.
     [StructLayout(LayoutKind.Sequential)]
     internal struct DISPLAYCONFIG_PATH_TARGET_INFO
     {
@@ -390,7 +374,7 @@ internal static class Win32
         public uint statusFlags;
     }
 
-    /// <summary>DISPLAYCONFIG_PATH_INFO: 72 bytes.</summary>
+    // 72 bytes.
     [StructLayout(LayoutKind.Sequential)]
     internal struct DISPLAYCONFIG_PATH_INFO
     {
@@ -399,10 +383,8 @@ internal static class Win32
         public uint flags;
     }
 
-    /// <summary>
-    /// DISPLAYCONFIG_MODE_INFO: 64 bytes (a união dos modos é alinhada a 8 e começa no byte 16). O Buzzy só
-    /// precisa reservar o espaço que o Windows preenche: os modos nunca são lidos.
-    /// </summary>
+    // 64 bytes (a união alinha em 8 e começa no byte 16). Só reserva espaço; os modos
+    // nunca são lidos.
     [StructLayout(LayoutKind.Explicit, Size = 64)]
     internal struct DISPLAYCONFIG_MODE_INFO
     {
@@ -411,7 +393,7 @@ internal static class Win32
         [FieldOffset(8)] public LUID adapterId;
     }
 
-    /// <summary>DISPLAYCONFIG_DEVICE_INFO_HEADER: 20 bytes; <c>size</c> é o tamanho do pacote inteiro.</summary>
+    // 20 bytes; size é o tamanho do pacote inteiro.
     [StructLayout(LayoutKind.Sequential)]
     internal struct DISPLAYCONFIG_DEVICE_INFO_HEADER
     {
@@ -421,7 +403,7 @@ internal static class Win32
         public uint id;
     }
 
-    /// <summary>DISPLAYCONFIG_SOURCE_DEVICE_NAME: 84 bytes; o nome GDI da fonte, o mesmo de MONITORINFOEX.</summary>
+    // 84 bytes. Mesmo nome GDI do MONITORINFOEX.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal struct DISPLAYCONFIG_SOURCE_DEVICE_NAME
     {
@@ -430,11 +412,8 @@ internal static class Win32
         public string viewGdiDeviceName;
     }
 
-    /// <summary>
-    /// DISPLAYCONFIG_TARGET_DEVICE_NAME: 420 bytes. Do alvo, o Buzzy só usa <c>monitorDevicePath</c>, e só para o
-    /// resumo da chave (ConfiguracaoDeVideo). Os códigos do EDID e o nome amigável ocupam o espaço do pacote e
-    /// nunca são lidos (SECURITY.md 6).
-    /// </summary>
+    // 420 bytes. Só monitorDevicePath é usado (pro hash da chave); EDID e nome amigável
+    // só ocupam espaço e nunca são lidos.
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     internal struct DISPLAYCONFIG_TARGET_DEVICE_NAME
     {
@@ -453,7 +432,7 @@ internal static class Win32
     [DllImport("user32.dll", ExactSpelling = true)]
     internal static extern int GetDisplayConfigBufferSizes(uint flags, out uint numPathArrayElements, out uint numModeInfoArrayElements);
 
-    /// <summary>Com <see cref="QDC_ONLY_ACTIVE_PATHS"/>, o último argumento é sempre 0.</summary>
+    // Com QDC_ONLY_ACTIVE_PATHS o último argumento é sempre 0.
     [DllImport("user32.dll", ExactSpelling = true)]
     internal static extern int QueryDisplayConfig(
         uint flags,
@@ -487,10 +466,7 @@ internal static class Win32
 
     // ---- auxiliares ------------------------------------------------------------------
 
-    /// <summary>
-    /// Extrai as coordenadas preservando o sinal (ARCHITECTURE.md 2.13.3): um monitor à
-    /// esquerda do principal produz x negativo.
-    /// </summary>
+    // Com sinal: monitor à esquerda do principal dá x negativo.
     internal static int XComSinal(nint valor) => unchecked((short)(long)valor);
 
     internal static int YComSinal(nint valor) => unchecked((short)((long)valor >> 16));

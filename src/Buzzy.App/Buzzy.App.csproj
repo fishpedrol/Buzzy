@@ -1,9 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Aplicativo Buzzy (Fase 1: shell do desktop). WPF, C#, .NET 10 (DEC-006).
-    Toda chamada ao Windows fica em Plataforma/ (adaptador de plataforma, DEC-007);
-    o comportamento puro fica em Buzzy.Core. Nenhum pacote NuGet.
+    App WPF do Buzzy. Toda chamada ao Windows fica em Plataforma/; o comportamento puro
+    fica em Buzzy.Core. Nenhum pacote NuGet.
   -->
 
   <PropertyGroup>
@@ -15,21 +14,21 @@
     <RootNamespace>Buzzy.App</RootNamespace>
     <Version>0.1.3</Version>
     <Product>Buzzy</Product>
-    <!-- DEC-044, item 3: o aviso de copyright que as licenças da Microsoft pedem no programa. -->
+    <!-- As licenças da Microsoft pedem o aviso de copyright no programa. -->
     <Copyright>Copyright (c) 2026 fishpedrol. Todos os direitos reservados.</Copyright>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
 
-    <!-- A janela e a aplicação são construídas em código, sem XAML, para ficarem auditáveis. -->
+    <!-- Janela e aplicação montadas em código, sem XAML, pra ficar fácil de auditar. -->
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <StartupObject>Buzzy.App.Programa</StartupObject>
 
-    <!-- Per-Monitor V2 e asInvoker declarados no manifesto (ARCHITECTURE.md 2.13.3, SECURITY.md 2). -->
+    <!-- Per-Monitor V2 e asInvoker vêm do manifesto. -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <!--
-    A edição (DEC-044, item 2): -p:BuzzyEdicao=publica gera a edição pública do download, sem as drogas ilícitas
-    (Composicao\EdicaoDoBuild.cs); vazio ou "completa", a de sempre. Outro valor reprova o build.
+    -p:BuzzyEdicao=publica tira as drogas ilícitas (ver Composicao\EdicaoDoBuild.cs).
+    Vazio ou "completa" é a edição normal; qualquer outro valor quebra o build.
   -->
   <PropertyGroup Condition="'$(BuzzyEdicao)' == 'publica'">
     <DefineConstants>$(DefineConstants);BUZZY_PUBLICO</DefineConstants>
@@ -40,19 +39,19 @@
   </Target>
 
   <!--
-    O .exe único autocontido do download pelo site (DEC-042, item 9; F9-P10): só com -p:BuzzyExeUnico=true, no
-    tools\empacotar.ps1 -Formato exe. O identificador de runtime fica no projeto, não na linha de comando, para não virar
-    propriedade global e vazar para as ferramentas referenciadas. O runtime do .NET extrai as 5 DLLs nativas do WPF para
-    %TEMP%\.net\Buzzy na primeira execução (IncludeNativeLibrariesForSelfExtract), a escrita aprovada no item 9.
+    .exe único autocontido do download: só com -p:BuzzyExeUnico=true (tools\empacotar.ps1 -Formato exe).
+    O RuntimeIdentifier fica aqui, não na linha de comando, senão vira propriedade global e vaza pras
+    ferramentas referenciadas. Na primeira execução o .NET extrai as 5 DLLs nativas do WPF em
+    %TEMP%\.net\Buzzy (IncludeNativeLibrariesForSelfExtract); essa escrita é aceita de propósito.
   -->
   <PropertyGroup Condition="'$(BuzzyExeUnico)' == 'true'">
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <!--
-      Lockfile próprio do .exe único: o build comum fica sem o grafo de win-x64 e não baixa pacotes de runtime (revisão
-      adversarial do F9-P10); só o publish do .exe precisa deles, e o restore travado confere este arquivo.
+      Lockfile separado: assim o build comum não ganha o grafo win-x64 nem baixa pacotes de runtime.
+      Só o publish do .exe precisa deles, e o restore travado confere este arquivo.
     -->
     <NuGetLockFilePath>packages.win-x64.lock.json</NuGetLockFilePath>
-    <!-- Só os dois frameworks que o Buzzy usa: sem o pacote de runtime do ASP.NET Core na procedência do portão. -->
+    <!-- Só os dois frameworks usados; evita o runtime do ASP.NET Core na conferência de procedência do portão. -->
     <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
@@ -61,32 +60,31 @@
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
     <!--
-      Sem o analisador de arquivo único, que traria o pacote Microsoft.NET.ILLink.Tasks: a cerca de zero pacotes
-      (DEC-016, item 2) fica. O que ele acusaria (Assembly.Location, GetFile, CodeBase, vazios num arquivo único) é
-      regra do portão, no IL de todos os assemblies do produto (BZP001, categoria Arquivo único).
+      O analisador de arquivo único puxaria o pacote Microsoft.NET.ILLink.Tasks, e aqui é zero pacote.
+      O que ele pegaria (Assembly.Location, GetFile, CodeBase, vazios num arquivo único) o portão
+      confere no IL (BZP001, categoria Arquivo único).
     -->
     <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
-    <!-- O portão e o validador de clipes são executáveis só do build (ReferenceOutputAssembly=false): não entram no pacote. -->
+    <!-- Portão e validador de clipes só rodam no build (ReferenceOutputAssembly=false); não entram no pacote. -->
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Buzzy.Core\Buzzy.Core.csproj" />
-    <!-- Pixel art do Buzzy (DEC-018 e DEC-019): o sprite parado e o ícone da bandeja. -->
+    <!-- Pixel art: o sprite e o ícone da bandeja. -->
     <ProjectReference Include="..\Buzzy.Visual\Buzzy.Visual.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Buzzy.App.Testes" />
-    <!-- O manifesto de clipes da apresentação (DEC-036), embutido; a validação do build o confere. -->
+    <!-- Manifesto de clipes embutido; conferido pela validação depois do build. -->
     <EmbeddedResource Include="Apresentacao\clipes.json" LogicalName="Buzzy.App.Apresentacao.clipes.json" />
   </ItemGroup>
 
   <!--
-    Portão de APIs proibidas (SECURITY.md 3.2 e 8, item 1), executado depois de cada build
-    do aplicativo. A referência ao projeto só garante que o portão esteja compilado antes;
-    o assembly dele não entra no Buzzy. Violação ou erro de leitura reprovam o build.
-    Para diagnosticar sem o portão: dotnet build -p:PularPortaoDeApis=true
+    Portão de APIs proibidas, roda depois de cada build. A referência só garante que ele
+    compile antes; o assembly dele não entra no Buzzy. Violação ou erro de leitura quebra o build.
+    Pra rodar sem o portão: dotnet build -p:PularPortaoDeApis=true
   -->
   <ItemGroup>
     <ProjectReference Include="..\..\tools\Buzzy.PortaoApis\Buzzy.PortaoApis.csproj"
@@ -102,8 +100,8 @@
       <_BuzzyPortao>$(MSBuildThisFileDirectory)..\..\tools\Buzzy.PortaoApis\bin\$(Configuration)\net10.0\Buzzy.PortaoApis.dll</_BuzzyPortao>
     </PropertyGroup>
     <!--
-      Autocontido (F9-P10): o runtime na pasta de saída só passa com o mesmo nome e SHA-256 dos pacotes de runtime do SDK,
-      e só dos dois frameworks que o Buzzy usa.
+      Autocontido: o runtime na pasta de saída só passa se nome e SHA-256 batem com os pacotes
+      de runtime do SDK, e só dos dois frameworks usados.
     -->
     <ItemGroup Condition="'$(SelfContained)' == 'true'">
       <_BuzzyPacoteDeRuntime Include="@(ResolvedRuntimePack)"
@@ -118,12 +116,12 @@
   </Target>
 
   <!--
-    O portão no .exe único (F9-P10, DEC-042), depois do publish: o host contra o singlefilehost.exe do SDK, os
-    assemblies do Buzzy lidos de dentro do pacote, a procedência de todo o resto e o manifesto embutido.
+    Portão no .exe único, depois do publish: compara o host com o singlefilehost.exe do SDK, lê
+    os assemblies de dentro do pacote e confere a procedência do resto e o manifesto embutido.
   -->
   <Target Name="PortaoDoPacoteDeArquivoUnico" AfterTargets="Publish"
           Condition="'$(PularPortaoDeApis)' != 'true' And '$(PublishSingleFile)' == 'true'">
-    <!-- Item próprio: os itens do alvo do build continuam existindo aqui e repetiriam os pacotes. -->
+    <!-- Item com outro nome: os do alvo do build ainda existem aqui e duplicariam os pacotes. -->
     <ItemGroup>
       <_BuzzyPacoteDeRuntimeDoPacote Include="@(ResolvedRuntimePack)"
                                      Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App' Or '%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.WindowsDesktop.App'" />
@@ -140,11 +138,9 @@
   </Target>
 
   <!--
-    Validação do manifesto de clipes (Fase 6, passo F6-P3; DEC-036, item 4), depois de cada build do
-    aplicativo, como o portão: situação sem clipe, pose ou cara ausente na arte, ou quadro com alfa
-    fora de 0 e 255 reprovam o build. A referência ao projeto só garante que a ferramenta esteja
-    compilada antes; o assembly dela não entra no Buzzy.
-    Para diagnosticar sem ela: dotnet build -p:PularValidacaoDeClipes=true
+    Validação do manifesto de clipes, depois de cada build: situação sem clipe, pose ou cara que
+    não existe na arte, ou alfa fora de 0 e 255 quebram o build. Como no portão, a referência só
+    garante a compilação antes. Pra rodar sem ela: dotnet build -p:PularValidacaoDeClipes=true
   -->
   <ItemGroup>
     <ProjectReference Include="..\..\tools\Buzzy.ValidadorDeClipes\Buzzy.ValidadorDeClipes.csproj"

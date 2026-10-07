@@ -1,24 +1,15 @@
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// A chave "Conteúdo adulto" (DEC-033; pedido do usuário de 2026-10-02): desligada por padrão e gravada nas preferências.
-/// Adulto é todo item que não é de alívio (<see cref="TabelaDoTamagotchi.Adulto"/>), as ondas de substância
-/// (<see cref="DadosDaOnda.DeSubstancia"/>), com a paranoia, e o baseado por conta própria. Desligada, um item adulto não
-/// nasce (<see cref="Passo.InvocarItem"/>), ele não fuma sozinho (<see cref="Passo.PodeFumarPorContaPropria"/>) e, na hora de
-/// desligar, tudo o que é adulto sai (<see cref="Passo.TirarOConteudoAdulto"/>). As escolhas individuais são independentes
-/// e configuráveis com a chave geral desligada (DEC-041).
-/// </summary>
+// Chave "Conteúdo adulto", desligada por padrão. Adulto = todo item que não é de alívio, as ondas de
+// substância (com a paranoia) e o baseado por conta própria. Desligada: item adulto não nasce, ele não
+// fuma sozinho e, ao desligar, tudo o que é adulto sai. As escolhas por item valem mesmo com a chave desligada.
 public static partial class Maquina
 {
     private sealed partial class Passo
     {
-        /// <summary>Se o item é adulto pela tabela em uso: todo item que não é de alívio.</summary>
         private bool ItemAdulto(Item item) => !_cfg.TabelaDeItens(item).Alivio;
 
-        /// <summary>
-        /// CMD_SET_ADULT_CONTENT: grava a escolha nas preferências e a registra numa transição para o mesmo estado; desligar
-        /// tira o conteúdo adulto na hora. Antes da carga ou igual à atual, é ignorado.
-        /// </summary>
+        // Desligar tira o conteúdo adulto na hora. Antes da carga, ou sem mudança, ignora.
         private void EscolherConteudoAdulto(bool ligado)
         {
             if (!_s.Carregado || ligado == _s.Preferencias.ConteudoAdulto) return;
@@ -28,10 +19,7 @@ public static partial class Maquina
             if (!ligado) TirarOConteudoAdulto();
         }
 
-        /// <summary>
-        /// CMD_SET_SELF_USE_ITEM (DEC-045): salva a escolha do uso por conta própria de uma das seis drogas ilícitas da edição.
-        /// Só vale para o futuro: um uso em curso continua.
-        /// </summary>
+        // Só vale pro futuro: um uso em curso continua.
         private void EscolherUsoPorContaPropria(Item item, bool ligado)
         {
             if (!_cfg.Tamagotchi || !_s.Carregado || !Enum.IsDefined(item) || !TabelaDoTamagotchi.Ilicitos.Contem(item) || !_cfg.ItensDaEdicao.Contem(item)) return;
@@ -42,7 +30,7 @@ public static partial class Maquina
             _transicoes.Add(new Transicao(_s.Estado, _s.Estado, "CMD_SET_SELF_USE_ITEM: preferência atualizada"));
         }
 
-        /// <summary>CMD_SET_ADULT_ITEM: salva uma escolha individual e, ao desmarcar, remove só a contribuição daquele item.</summary>
+        // Desmarcar remove só a contribuição daquele item.
         private void EscolherItemAdulto(Item item, bool ligado)
         {
             if (!_cfg.Tamagotchi || !_s.Carregado || !Enum.IsDefined(item) || !ItemAdulto(item) || !_cfg.ItensDaEdicao.Contem(item)) return;
@@ -58,7 +46,7 @@ public static partial class Maquina
             if (!ligado) TirarOItemAdulto(item);
         }
 
-        /// <summary>Aplica o desligamento individual a instâncias, uso, onda e carga da mistura do item.</summary>
+        // Tira o item do mundo, do uso, da onda e da carga da mistura.
         private void TirarOItemAdulto(Item item)
         {
             ItensNoMundo itens = _s.Itens;
@@ -93,7 +81,7 @@ public static partial class Maquina
                 if (frente is { } nova)
                 {
                     IniciarFase(nova);
-                    // As fontes acompanham a onda recalculada: sem isso, a parte do item tirado continuaria sustentando a onda.
+                    // Sem isso, a parte do item tirado continuaria sustentando a onda.
                     _s = _s with { FontesDaOnda = fontesDaFrente };
                 }
                 else
@@ -107,7 +95,7 @@ public static partial class Maquina
             ZerarACargaSemSubstancia();
         }
 
-        /// <summary>Retira a fonte e limita nível/pior ao que ainda é sustentado pelos outros itens.</summary>
+        // Limita nível/pior ao que os outros itens ainda sustentam.
         private (EstadoDaOnda? Onda, ContribuicoesDaOnda Fontes) TirarFonteDaOnda(
             EstadoDaOnda? onda, ContribuicoesDaOnda fontes, Item item)
         {
@@ -123,18 +111,9 @@ public static partial class Maquina
             return (onda with { Nivel = nivel, Pior = pior }, restantes);
         }
 
-        /// <summary>
-        /// Desligar tira o que é adulto, com o tamagotchi ligado:
-        /// <list type="bullet">
-        /// <item>os itens adultos saem do mundo, como recolhidos; o da mão do usuário solta a captura antes;</item>
-        /// <item>a onda de substância do fundo some; a da frente acaba como no fim dela (<see cref="FimDaFrente"/>): uma leve
-        /// no fundo volta à frente, e sem ela a cara volta à de base. A carga do episódio zera no fim do evento, sem onda de
-        /// substância (<see cref="ZerarACargaSemSubstancia"/>);</item>
-        /// <item>o uso de um item adulto termina na hora, no mesmo apoio (<see cref="FimDoUso"/>), sem o olhar pro teto: a
-        /// paranoia já saiu.</item>
-        /// </list>
-        /// Um gesto da onda em curso já terminou pelo invariante 15, como em todo comando do usuário.
-        /// </summary>
+        // Itens adultos saem como recolhidos (o da mão solta a captura antes). A onda de substância do fundo
+        // some e a da frente acaba como no fim normal. O uso de item adulto termina na hora, sem olhar pro
+        // teto, já que a paranoia saiu. Gesto da onda em curso já terminou, como em todo comando.
         private void TirarOConteudoAdulto()
         {
             if (!_cfg.Tamagotchi) return;

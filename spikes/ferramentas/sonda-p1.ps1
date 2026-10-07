@@ -1,24 +1,15 @@
 ﻿<#
-    sonda-p1.ps1 — evidência automatizada para o protótipo P1.
-
-    O que faz: posiciona a janela do protótipo sobre a janela do Bloco de Notas e, para
-    cada faixa da figura de teste, pergunta ao Windows qual janela receberia um clique
-    naquele ponto, usando WindowFromPoint. Essa é a mesma decisão de teste de acerto que
-    o sistema toma quando o usuário clica de verdade, e para janelas layered ela leva em
-    conta o alfa de cada pixel.
-
-    O que NÃO faz, de propósito: não injeta clique nem tecla (nada de SendInput), não
-    tira foto da tela, não lê título nem conteúdo de janela de outro processo, não
-    instala nem configura nada. Ver SECURITY.md 3.2.
-
-    Limite honesto: a sonda é evidência forte, mas não substitui o clique físico. P1 só
-    é declarado aprovado depois que uma pessoa clicar em cada faixa e o log do protótipo
-    mostrar quais cliques chegaram à janela do Buzzy.
+    sonda-p1.ps1 — põe o protótipo sobre o Bloco de Notas e pergunta ao Windows
+    (WindowFromPoint) quem receberia o clique em cada faixa. É o mesmo teste de acerto do
+    clique de verdade, e em janela layered ele olha o alfa do pixel.
 
     Uso:
-      .\sonda-p1.ps1                  # abre Bloco de Notas + protótipo, sonda e encerra
-      .\sonda-p1.ps1 -ManterAberto    # deixa tudo aberto para os cliques físicos
+      .\sonda-p1.ps1                  # abre Bloco de Notas + protótipo, sonda e fecha
+      .\sonda-p1.ps1 -ManterAberto    # deixa aberto pros cliques na mão
       .\sonda-p1.ps1 -SemBlocoDeNotas -X 700 -Y 400
+
+    Não injeta input, não tira print e não lê janela alheia. Não substitui o clique físico:
+    falta uma pessoa clicar em cada faixa e conferir no log.
 #>
 
 [CmdletBinding()]
@@ -78,7 +69,7 @@ public static class Sonda
 }
 '@
 
-# A sonda precisa falar em pixels físicos, como o protótipo.
+# Px físicos, como o protótipo.
 $null = [Sonda]::SetProcessDpiAwarenessContext([IntPtr](-4))
 
 # ---------------------------------------------------------------- Bloco de Notas
@@ -105,8 +96,7 @@ if (-not $SemBlocoDeNotas) {
 
     if ($retBloco) {
         Write-Host ("Bloco de Notas: pid $pidBloco, janela ($($retBloco.Left),$($retBloco.Top))-($($retBloco.Right),$($retBloco.Bottom))") -ForegroundColor DarkGray
-        # Centraliza o protótipo dentro da janela do Bloco de Notas, para garantir que
-        # exista mesmo uma janela de outro processo debaixo de cada faixa.
+        # Centraliza no Bloco de Notas pra ter janela de outro processo embaixo de cada faixa.
         $X = [int](($retBloco.Left + $retBloco.Right) / 2 - 100)
         $Y = [int](($retBloco.Top + $retBloco.Bottom) / 2 - 100)
     } else {
@@ -152,7 +142,7 @@ $resultados = foreach ($b in $bandas) {
     $nomeProc = try { (Get-Process -Id $pidAlvo -ErrorAction Stop).ProcessName } catch { '?' }
     $ehNossa = ($h -eq $hwndSpike)
 
-    # Esperado pela arquitetura: só a faixa alfa 0 deixa o clique passar adiante.
+    # Só a faixa alfa 0 deve deixar o clique passar.
     $esperadoNossa = ($b.Alfa -ne 0)
     $veredito = if ($ehNossa -eq $esperadoNossa) { 'COMO ESPERADO' } else { 'DIVERGENTE' }
 
@@ -178,7 +168,7 @@ if ($divergentes.Count -eq 0) {
     Write-Host "Sonda: $($divergentes.Count) faixa(s) divergiram do previsto. Ver a tabela acima." -ForegroundColor Red
 }
 
-# Registrar a sondagem no próprio log do protótipo, como evidência durável.
+# Grava a sondagem no log do protótipo.
 $relatorio = @()
 $relatorio += "---- Sonda automatizada (WindowFromPoint), $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ----"
 $relatorio += "     Sem injecao de input e sem captura de tela. HWND do prototipo: $hwndSpike"

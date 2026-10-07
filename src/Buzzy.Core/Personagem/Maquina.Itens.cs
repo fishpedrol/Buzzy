@@ -1,34 +1,19 @@
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// Os itens do tamagotchi adulto (DEC-028; desenho do núcleo, 4.6 e 4.8, com a crítica de integração), atrás da chave
-/// <see cref="ConfiguracaoDoNucleo.Tamagotchi"/>: com ela desligada, os eventos dos itens são descartados antes de tudo e
-/// nenhum efeito novo sai do núcleo. O item é uma entidade do núcleo: nasce pelo menu ao lado do personagem, cai com a
-/// gravidade dele e quica uma vez, é segurado e arrastado pelo usuário e, solto sobre o personagem num estado que aceita,
-/// é usado (<see cref="Estado.Using"/>). O app só desenha as janelas dos itens a partir dos efeitos. O outro uso é o do
-/// baseado por conta própria (pedido do usuário de 2026-10-01, 19:10; <see cref="AcoesAutonomas.UsarPorContaPropria"/>): a agenda,
-/// em IDLE no chão, às vezes o faz fumar um baseado sozinho, sem item no mundo, pelo mesmo caminho do uso.
-/// </summary>
+// Itens do tamagotchi. Com o tamagotchi desligado, os eventos de item são descartados logo de cara.
+// O item vive no núcleo: nasce pelo menu ao lado do personagem, cai, quica uma vez, pode ser arrastado
+// e, solto sobre ele num estado que aceita, é usado. O app só desenha as janelas a partir dos efeitos.
+// A agenda também pode fazê-lo usar uma droga por conta própria, sem item no mundo.
 public static partial class Maquina
 {
-    /// <summary>
-    /// Os estados em que o personagem aceita um item solto sobre ele (tabela 4.6): parado, andando, na parede, no cipó,
-    /// descansando, reagindo, pousando e escondido na borda. Pulando, caindo, usando outro item, pressionado ou
-    /// arrastado, o soltar é recusado e o item cai de onde foi solto; acomodando, escondido, na partida e saindo, também.
-    /// </summary>
+    // Nos outros estados (pulando, caindo, usando, arrastado...) o item cai de onde foi solto.
     public static bool AceitaItem(Estado estado)
         => estado is Estado.Idle or Estado.Walking or Estado.Climbing or Estado.Hanging or Estado.Resting
             or Estado.Reacting or Estado.Landing or Estado.Peeking;
 
-    /// <summary>
-    /// Se um item solto está "sobre o personagem" (C14 da crítica): o retângulo do item, já preso na área útil, cruza o
-    /// retângulo do sprite do personagem encolhido <paramref name="margemPercentual"/>% de cada lado. O encolhimento de
-    /// cada lado é a margem da largura (nas laterais) e da altura (em cima e embaixo), arredondada ao pixel com a metade
-    /// para cima: com 20% num sprite de 128 × 128 px, 26 px de cada lado, um miolo de 76 × 76 px. Cruzar é ter ao menos um
-    /// pixel em comum, com os retângulos semiabertos, como o RECT do Windows. O núcleo não conhece a transparência dos
-    /// quadros: o miolo do sprite cobre o corpo em todas as poses, e um item solto só no canto transparente não conta. A
-    /// margem vai de 0 a 50%; com 50%, o miolo fica vazio e nada está sobre ele.
-    /// </summary>
+    // O sprite é encolhido margem% de cada lado (20% em 128 px = 26 px, miolo de 76 px), porque o núcleo não
+    // conhece a transparência: o miolo cobre o corpo em todas as poses. Retângulos semiabertos, como RECT.
+    // Com 50% o miolo fica vazio.
     public static bool SobreOPersonagem(RetanguloPx item, RetanguloPx personagem, int margemPercentual)
     {
         if (margemPercentual is < 0 or > 50)
@@ -39,11 +24,8 @@ public static partial class Maquina
         return miolo.Intersecta(item);
     }
 
-    /// <summary>
-    /// Se a janela do item aparece (L4 da crítica e D18): o item na mão do usuário sempre aparece, para o gesto nunca
-    /// sumir no meio; fora da mão, só com o personagem à vista e fora de um monitor ocupado pela tela cheia (com o modo
-    /// ligado), para não cobrir um aplicativo em tela cheia (Q-09).
-    /// </summary>
+    // Na mão sempre aparece, pro item não sumir no meio do arraste. Fora da mão, só com o personagem à vista
+    // e fora de monitor em tela cheia, pra não cobrir o app.
     public static bool ItemVisivel(EstadoDoNucleo s, ItemNoMundo item)
     {
         ArgumentNullException.ThrowIfNull(s);
@@ -51,31 +33,27 @@ public static partial class Maquina
         return item.NaMao || (s.Estado.Visivel() && !(s.Preferencias.ModoTelaCheia && s.Ocupados.Contem(item.Lugar.Monitor.Chave)));
     }
 
-    /// <summary>Os eventos do tamagotchi: com a chave desligada, a máquina os descarta antes de tudo (L15).</summary>
+    // Descartados antes de tudo com o tamagotchi desligado.
     private static bool EhDoTamagotchi(Evento evento)
         => evento is CmdSummonItem or CmdClearItems or ItemPress or ItemDragStart or ItemDragMove or ItemDragEnd or ItemRelease or ItemEffectTimer;
 
     private sealed partial class Passo
     {
-        /// <summary>Se o usuário segura um item e isso vale: com o tamagotchi desligado, não há itens.</summary>
         private bool AtentoAoItem => _cfg.Tamagotchi && _s.Atento;
 
-        /// <summary>Se algum item visível está caindo: o relógio corre por ele (invariante 29).</summary>
+        // Item visível caindo mantém o relógio rodando.
         private bool ItemVisivelCaindo => _cfg.Tamagotchi && _s.Itens.Todos.Any(i => i.Situacao == SituacaoDoItem.Caindo && ItemVisivel(_s, i));
 
         // ---------------------------------------------------------------- menu
 
-        /// <summary>
-        /// CMD_SUMMON_ITEM (4.8): o item nasce ao lado do personagem, primeiro do lado para onde ele olha, acima do chão, e
-        /// cai. Com <see cref="ConfiguracaoDoNucleo.MaximoDeItens"/> itens, antes sai o de menor Id que não está na mão
-        /// (D17). Parado e sem onda, ele fica empolgado. Antes da carga, escondido ou com um item fora do enum, nada.
-        /// </summary>
+        // Nasce ao lado dele, primeiro do lado pra onde olha, e cai. No limite de itens, sai antes o de menor
+        // Id que não está na mão. Parado e sem onda, ele fica empolgado.
         private void InvocarItem(Item item)
         {
             if (!Enum.IsDefined(item) || !_s.Carregado || !_s.Estado.Visivel() || _s.Topologia is null || _s.Lugar is null || _cfg.MaximoDeItens < 1) return;
-            // Um item fora da edição (DEC-044, item 2) não existe aqui.
+            // Item fora da edição compilada não existe.
             if (!_cfg.ItensDaEdicao.Contem(item)) return;
-            // A chave geral e a seleção individual (DEC-033/041) são ambas exigidas para invocar um item adulto.
+            // Item adulto exige a chave geral e a marcação individual.
             if (ItemAdulto(item) && (!_s.Preferencias.ConteudoAdulto || !_s.Preferencias.ItensAdultosHabilitados.Contem(item))) return;
             while (_s.Itens.Quantidade >= _cfg.MaximoDeItens)
             {
@@ -90,7 +68,7 @@ public static partial class Maquina
             if (_s.Estado == Estado.Idle && !ComOnda) _s = _s with { Expressao = Expressao.Empolgado };
         }
 
-        /// <summary>CMD_CLEAR_ITEMS: todos os itens saem; o da mão do usuário solta a captura antes (L6).</summary>
+        // O da mão solta a captura antes.
         private void RecolherItens()
         {
             if (_s.Itens.Quantidade == 0) return;
@@ -101,10 +79,7 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- gestos sobre um item
 
-        /// <summary>
-        /// ITEM_PRESS: o item visível fica na mão do usuário, com a pegada (cursor menos âncora), e o personagem fica atento
-        /// (<see cref="FicarAtento"/>). Outro item que estivesse na mão é largado antes, de onde estava.
-        /// </summary>
+        // Pegada = cursor - âncora. Outro item que estivesse na mão é largado antes.
         private void PegarItem(int id, PontoPx cursor)
         {
             if (_s.Topologia is null || _s.Itens.PorId(id) is not { } item || !ItemVisivel(_s, item)) return;
@@ -118,14 +93,13 @@ public static partial class Maquina
             FicarAtento();
         }
 
-        /// <summary>ITEM_DRAG_START: o item segurado passa a ser arrastado.</summary>
         private void IniciarArrasteDoItem(int id)
         {
             if (_s.Itens.NaMao is { Situacao: SituacaoDoItem.Segurado } item && item.Id == id)
                 _s = _s with { Itens = _s.Itens.Com(item with { Situacao = SituacaoDoItem.Arrastado }) };
         }
 
-        /// <summary>ITEM_DRAG_MOVE: a âncora do item é o cursor menos a pegada, sem prender, como o personagem (invariante 2).</summary>
+        // Não prende na área útil durante o arraste, igual ao personagem.
         private void ArrastarItem(int id, PontoPx cursor)
         {
             if (_s.Itens.NaMao is not { Situacao: SituacaoDoItem.Arrastado } item || item.Id != id || _s.Topologia is not { } topologia) return;
@@ -134,12 +108,8 @@ public static partial class Maquina
             _s = _s with { Itens = _s.Itens.Com(item with { Lugar = LugarDoItem(m, ancora), Y = ancora.Y }) };
         }
 
-        /// <summary>
-        /// ITEM_DRAG_END: a âncora é presa na área útil. Sobre o personagem (<see cref="SobreOPersonagem"/>), num estado que
-        /// aceita (<see cref="AceitaItem"/>), ele usa o item; senão, o item cai de onde foi solto, ou fica, se já está no chão.
-        /// Sem o ITEM_DRAG_START antes (o árbitro sempre o manda; é robustez), o fim do gesto larga o item segurado de onde
-        /// ele está, como o ITEM_RELEASE: ele sai da mão, o personagem deixa de estar atento e o item nunca é usado.
-        /// </summary>
+        // Sobre o personagem num estado que aceita: ele usa. Senão o item cai de onde foi solto.
+        // Sem DRAG_START antes (não deveria acontecer), age como RELEASE e nunca usa.
         private void SoltarItem(int id, PontoPx cursor)
         {
             if (_s.Itens.NaMao is { Situacao: SituacaoDoItem.Segurado } segurado && segurado.Id == id)
@@ -157,17 +127,14 @@ public static partial class Maquina
             _s = _s with { Itens = _s.Itens.Com(solto) };
         }
 
-        /// <summary>ITEM_RELEASE (clique, clique duplo ou captura perdida): o item cai de onde está e nunca é usado.</summary>
+        // Clique, clique duplo ou captura perdida: cai de onde está, nunca é usado.
         private void LargarItem(int id)
         {
             if (_s.Itens.NaMao is not { } item || item.Id != id || _s.Topologia is null) return;
             _s = _s with { Itens = _s.Itens.Com(Solto(item, item.Lugar.Ancora)) };
         }
 
-        /// <summary>
-        /// O item sai da mão em <paramref name="desejada"/>, presa na área útil do monitor dela: no chão, fica; no ar, cai
-        /// do zero, podendo quicar de novo.
-        /// </summary>
+        // Preso na área útil. No ar, cai do zero e pode quicar de novo.
         private ItemNoMundo Solto(ItemNoMundo item, PontoPx desejada)
         {
             MonitorDoDesktop m = MonitorDaAncora(_s.Topologia!, desejada);
@@ -177,17 +144,14 @@ public static partial class Maquina
             return item with { Situacao = situacao, Lugar = lugar, Posicao = Posicionador.Descrever(lugar), Y = presa.Y, VY = 0, Quiques = 0, Pegada = default };
         }
 
-        /// <summary>
-        /// Atento (C18 da crítica): enquanto o usuário segura um item, a agenda pausa (<see cref="Concluir"/>) e ele para
-        /// onde está, para o item poder ser solto nele. Andando, para; descansando, acorda; na parede e no cipó, fica
-        /// agarrado, e o foguete apaga (L7); pulo e queda seguem até o chão. Sem onda, olha curioso.
-        /// </summary>
+        // Com um item na mão, a agenda pausa e ele para onde está pra receber o item. Andando para,
+        // descansando acorda, na parede/cipó fica agarrado sem foguete; pulo e queda seguem até o chão.
         private void FicarAtento()
         {
             bool acordou = false;
             switch (_s.Estado)
             {
-                // Atravessando (passo P13), espera a travessia acabar, como a pausa: o fim dela o para.
+                // Atravessando monitor, espera a travessia acabar; o fim dela o para.
                 case Estado.Walking when _s.Movimento.Travessia is not { Tipo: TipoDeTravessia.Andando }:
                     IrPara(Estado.Idle, "ITEM_PRESS: para e olha o item");
                     break;
@@ -208,11 +172,7 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- uso (USING)
 
-        /// <summary>
-        /// Ele usa o item solto sobre ele (4.6): o item sai (<see cref="MotivoDaRemocao.Usado"/>) e o uso começa no apoio em
-        /// que ele está (<see cref="ComecarOUso"/>). Descansando, acorda antes; andando, reagindo ou pousando, o que fazia é
-        /// cortado.
-        /// </summary>
+        // O uso começa no apoio atual; o que ele fazia é cortado (descansando, acorda antes).
         private void UsarItem(ItemNoMundo item)
         {
             DadosDoItem dados = _cfg.TabelaDeItens(item.Item);
@@ -223,14 +183,8 @@ public static partial class Maquina
             ComecarOUso(item.Item, dados, apoio, $"ITEM_DRAG_END sobre o personagem: {dados.Verbo} {item.Item}");
         }
 
-        /// <summary>
-        /// As drogas que ele pode usar por conta própria agora (<see cref="AcoesAutonomas.UsarPorContaPropria"/>; DEC-028, item
-        /// 41; DEC-045), na ordem do menu: só com a chave do tamagotchi e a adulta ligadas, em IDLE, no chão (a âncora na borda
-        /// de baixo da área útil do monitor dele), sem estar escondido, com a autonomia livre, sem item na mão do usuário e sem a
-        /// paranoia na frente; e, de cada droga, marcada por conta própria, marcada nos itens adultos, na edição e sem a onda
-        /// dela na frente, para ele não emendar (para o baseado, a onda Chapado, como antes). A agenda só decide visível, com a
-        /// autonomia livre e sem item na mão; a regra repete as três condições para valer sozinha.
-        /// </summary>
+        // Na ordem do menu. Exclui a droga cuja onda já está na frente, pra ele não emendar. Repete condições
+        // que a agenda já garante, pra regra valer sozinha.
         private List<Item> CandidatasPorContaPropria()
         {
             var candidatas = new List<Item>();
@@ -248,12 +202,8 @@ public static partial class Maquina
             return candidatas;
         }
 
-        /// <summary>
-        /// A agenda escolheu o uso por conta própria (<see cref="CandidatasPorContaPropria"/>): com uma droga só, ela; com
-        /// várias, uma sorteada no gerador principal. Ele a "tira do chapéu", sem item no mundo (nada nasce, nada sai e nenhum Id
-        /// é gasto), e a usa no chão, com o uso da tabela (<see cref="ConfiguracaoDoNucleo.TabelaDeItens"/>), pelo mesmo caminho
-        /// do item que o usuário solta nele (<see cref="ComecarOUso"/>): a combinação, o alívio, a carga e o sorteio da paranoia.
-        /// </summary>
+        // Tira a droga "do chapéu": nenhum item nasce nem gasta Id. Usa o mesmo caminho do item solto nele
+        // (combinação, alívio, carga, paranoia). Com várias candidatas, sorteia no gerador principal.
         private void UsarPorContaPropria(List<Item> candidatas)
         {
             Item item = candidatas[0];
@@ -267,13 +217,8 @@ public static partial class Maquina
             ComecarOUso(item, dados, ApoioDoUso.Chao, $"IDLE + AUTONOMY_TIMER: {dados.Verbo} {item} por conta própria");
         }
 
-        /// <summary>
-        /// O uso começa (4.6), no ponto do soltar do item arrastado, venha o item do usuário ou da agenda (o baseado por conta
-        /// própria): com a cara de quem usa, e a onda vale desde já (C16): interromper o uso não a desfaz. A regra da transição
-        /// diz também o que ele fez na onda da frente, com o alívio (<see cref="DescreverOAlivio"/>), e na paranoia
-        /// (<see cref="Paranoia"/>). As ondas mudam antes de ele entrar em USING, mas a cara de quem usa vale por cima de
-        /// qualquer cara de fase.
-        /// </summary>
+        // A onda vale desde já: interromper o uso não a desfaz. As ondas mudam antes de entrar em USING, mas a
+        // cara de quem usa fica por cima da cara da fase.
         private void ComecarOUso(Item item, DadosDoItem dados, ApoioDoUso apoio, string regra)
         {
             string alivio = DescreverOAlivio(dados);
@@ -287,12 +232,8 @@ public static partial class Maquina
             IrPara(Estado.Using, $"{regra}{alivio}{paranoia}");
         }
 
-        /// <summary>
-        /// O apoio do uso (4.6), primeiro pelo estado e depois pela geometria: escondido na borda, o esconderijo; na
-        /// parede, fora do chão, a parede, mesmo na quina; no cipó, o cipó; senão, pela âncora: no chão, o chão; na borda de
-        /// cima, o cipó; numa lateral, a parede; no ar (toon force), o chão, e a acomodação decide no fim. Sem a física, ele
-        /// nunca agarra a parede nem o cipó: o apoio é o chão (ou o esconderijo).
-        /// </summary>
+        // Primeiro pelo estado, depois pela âncora. No ar (toon force) conta como chão e a acomodação decide no
+        // fim. Sem física ele nunca agarra parede nem cipó.
         private ApoioDoUso ApoioAtual()
         {
             if (_s.Esconderijo != LadoDoEsconderijo.Nenhum) return ApoioDoUso.Esconderijo;
@@ -305,11 +246,8 @@ public static partial class Maquina
             return sup.NaLateral(a.X, out _) ? ApoioDoUso.Parede : ApoioDoUso.Chao;
         }
 
-        /// <summary>
-        /// Fim do uso: a cara volta à de base e a acomodação o devolve ao mesmo apoio (4.6): no chão, IDLE; na parede e no
-        /// cipó, agarrado, preso se já estava (DEC-024); no esconderijo, espiando na mesma borda (DEC-025). Se o uso começou
-        /// a paranoia, ele olha pro teto, se ficou livre para isso (<see cref="OlharProTetoNoComecoDaParanoia"/>).
-        /// </summary>
+        // Volta ao mesmo apoio: chão vira IDLE, parede/cipó agarrado (preso se já estava), esconderijo espiando
+        // na mesma borda. Se o uso começou a paranoia, olha pro teto.
         private void FimDoUso(string? regra = null)
         {
             Uso? uso = _s.Uso;
@@ -321,10 +259,7 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- física dos itens
 
-        /// <summary>
-        /// Um passo do relógio para cada item caindo (4.8): a mesma gravidade e a mesma queda máxima do personagem, com um
-        /// quique leve no máximo (<see cref="ParametrosDeMovimento.QuiquesDoItem"/>), sem achatar ao pousar (C27).
-        /// </summary>
+        // Mesma gravidade do personagem, no máximo um quique leve e sem achatar ao pousar.
         private void PassoDosItens()
         {
             if (!_cfg.Tamagotchi || !_s.Itens.AlgumCaindo || _s.Topologia is not { } topologia) return;
@@ -370,15 +305,9 @@ public static partial class Maquina
             return item with { Situacao = situacao, Lugar = lugar, Posicao = Posicionador.Descrever(lugar), Y = y, VY = vy, Quiques = quiques };
         }
 
-        /// <summary>
-        /// Depois de uma mudança de topologia (4.8), cada item fora da mão segue a mesma regra do personagem (DEC-030): no
-        /// monitor que não mudou de geometria, no máximo transladado, ele continua como estava, caindo ou no chão, e anda junto;
-        /// senão, a posição dele acompanha a topologia (<see cref="Posicionador.Rebasear"/>, com o sobrevivente medido nas
-        /// coordenadas antigas) e é reacomodada pela posição relativa; fora do chão, volta a cair. O da mão segue o cursor, e o
-        /// Windows leva a janela e o cursor com o monitor físico: o lugar dele anda com o monitor em que está, sem validar, como
-        /// o arraste do personagem (<see cref="Posicionador.AcompanharPonto"/>; revisão do bloco P6-P9, achado 6). Largado antes
-        /// do próximo movimento, ele fica no mesmo monitor físico.
-        /// </summary>
+        // Mesma regra do personagem: monitor só transladado, o item anda junto e segue como estava. Senão,
+        // rebaseia na topologia nova e reacomoda pela posição relativa. O da mão acompanha o monitor físico
+        // sem validar, porque o Windows leva a janela e o cursor junto.
         private void ReacomodarItens(Topologia antiga, Topologia nova)
         {
             if (_s.Itens.Quantidade == 0) return;
@@ -407,7 +336,7 @@ public static partial class Maquina
             _s = _s with { Itens = itens };
         }
 
-        /// <summary>Os itens que caem vão direto ao chão, cada um na coluna em que estava (D18: ao esconder ou sair).</summary>
+        // Ao esconder ou sair: quem está caindo vai direto pro chão, na mesma coluna.
         private void AssentarItens()
         {
             if (!_s.Itens.AlgumCaindo || _s.Topologia is null) return;
@@ -419,10 +348,7 @@ public static partial class Maquina
             _s = _s with { Itens = itens };
         }
 
-        /// <summary>
-        /// Um item que cai e deixa de aparecer (o personagem se escondeu, ou o monitor ficou ocupado pela tela cheia) vai
-        /// direto ao chão (L5): o relógio nunca corre por um item que não se vê.
-        /// </summary>
+        // O relógio nunca roda por item que não se vê: invisível caindo vai direto pro chão.
         private void AssentarOsInvisiveis()
         {
             if (!_cfg.Tamagotchi || !_s.Itens.AlgumCaindo || _s.Topologia is null) return;
@@ -434,10 +360,7 @@ public static partial class Maquina
             _s = _s with { Itens = itens };
         }
 
-        /// <summary>
-        /// Esconder ou sair no meio do gesto sobre um item solta a captura dele, e o item fica no chão, na coluna em que
-        /// estava (4.8).
-        /// </summary>
+        // Esconder ou sair no meio do arraste solta a captura e deixa o item no chão.
         private void LiberarItemNaMao()
         {
             if (_s.Itens.NaMao is not { } item || _s.Topologia is null) return;
@@ -445,7 +368,6 @@ public static partial class Maquina
             _s = _s with { Itens = _s.Itens.Com(NoChao(item)) };
         }
 
-        /// <summary>O item no chão do monitor dele, na mesma coluna (presa entre as laterais).</summary>
         private ItemNoMundo NoChao(ItemNoMundo item)
         {
             MonitorDoDesktop m = MonitorDoItem(_s.Topologia!, item);
@@ -454,13 +376,8 @@ public static partial class Maquina
             return item with { Situacao = SituacaoDoItem.NoChao, Lugar = lugar, Posicao = Posicionador.Descrever(lugar), Y = presa.Y, VY = 0, Quiques = 0, Pegada = default };
         }
 
-        /// <summary>
-        /// Onde o item invocado nasce (4.8), no monitor do personagem: ao lado dele, com uma folga, primeiro do lado para
-        /// onde ele olha e depois do outro, e mais longe (até duas larguras de item) se o lugar está fora da área útil ou
-        /// cruza outro item fora da mão; se nenhum servir, o primeiro, preso entre as laterais. A altura é
-        /// <see cref="ParametrosDeMovimento.AlturaDaQuedaDoItem"/> acima dos pés dele (no chão, acima do chão), sem passar
-        /// da borda de cima. Devolve também a âncora fina vertical.
-        /// </summary>
+        // Ao lado dele, primeiro do lado pra onde olha; se cair fora da área ou em cima de outro item, tenta
+        // mais longe (até 2 larguras). Se nada servir, o primeiro preso nas laterais. Nasce acima dos pés.
         private (Posicionamento Lugar, double Y) LugarDeNascimento()
         {
             Topologia topologia = _s.Topologia!;
@@ -489,14 +406,14 @@ public static partial class Maquina
             return (LugarDoItem(m, ancora), y);
         }
 
-        /// <summary>Se um item com a âncora na coluna <paramref name="x"/> cruzaria, na horizontal, outro item fora da mão no mesmo monitor.</summary>
+        // Só na horizontal, ignorando o item na mão.
         private bool CruzaOutroItem(MonitorDoDesktop m, int x, TamanhoPx tamanho)
         {
             int esquerda = x - tamanho.Largura / 2, direita = esquerda + tamanho.Largura;
             return _s.Itens.Todos.Any(i => !i.NaMao && i.Lugar.Monitor.Chave == m.Chave && i.Lugar.Retangulo.Esquerda < direita && esquerda < i.Lugar.Retangulo.Direita);
         }
 
-        /// <summary>O monitor do item na topologia em cache: o da chave dele, ou o da âncora, se ele sumiu.</summary>
+        // Se o monitor da chave sumiu, usa o da âncora.
         private static MonitorDoDesktop MonitorDoItem(Topologia topologia, ItemNoMundo item)
             => topologia.PorChave(item.Lugar.Monitor.Chave) ?? MonitorDaAncora(topologia, item.Lugar.Ancora);
 
@@ -510,14 +427,10 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- efeitos das janelas dos itens
 
-        /// <summary>Por que cada item saiu neste evento.</summary>
+        // Por que cada item saiu neste evento.
         private readonly SortedDictionary<int, MotivoDaRemocao> _removidos = [];
 
-        /// <summary>
-        /// As janelas dos itens (4.8), comparando o começo e o fim do evento: primeiro os que saíram (<see cref="RemoverItem"/>),
-        /// depois, por Id, os que deixaram de aparecer (<see cref="EsconderItem"/>), os que passaram a aparecer ou nasceram
-        /// à vista (<see cref="MostrarItem"/>) e os que mudaram de lugar à vista (<see cref="MoverItem"/>).
-        /// </summary>
+        // Compara começo e fim do evento: primeiro os removidos, depois, por Id, esconder/mostrar/mover.
         private void EfeitosDosItens(List<Efeito> janela)
         {
             if (!_cfg.Tamagotchi) return;

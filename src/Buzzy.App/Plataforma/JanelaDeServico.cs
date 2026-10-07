@@ -6,35 +6,29 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>O que o usuário fez no ícone da bandeja.</summary>
 internal enum AcaoNaBandeja
 {
-    /// <summary>Clique com o botão esquerdo ou Enter/espaço no ícone: mostrar o Buzzy.</summary>
+    // Clique esquerdo ou Enter/espaço: mostrar o Buzzy.
     Selecionar,
 
-    /// <summary>Botão direito do mouse no ícone: abrir o menu.</summary>
+    // Botão direito.
     Menu,
 
-    /// <summary>Shift+F10 ou tecla de menu no ícone selecionado pelo teclado: abrir o menu.</summary>
+    // Shift+F10 ou tecla de menu.
     MenuPeloTeclado,
 }
 
-/// <summary>
-/// Janela de nível superior OCULTA, nunca mostrada, que recebe o que o Buzzy precisa mesmo
-/// com o personagem escondido: as notificações do ícone da bandeja, a mensagem de recriação
-/// da barra de tarefas, as mensagens de mudança de vídeo e de área útil (ARCHITECTURE.md 2.4),
-/// os eventos da sessão atual e as notificações de suspensão e retomada. Não pode ser uma janela
-/// só de mensagens, porque essas não recebem difusões como "TaskbarCreated" e WM_SETTINGCHANGE.
-/// </summary>
+// Janela top-level oculta, nunca mostrada, que recebe bandeja, TaskbarCreated, mudança
+// de vídeo/área útil, sessão e suspensão mesmo com o personagem escondido. Não pode
+// ser message-only: essas não recebem broadcast (TaskbarCreated, WM_SETTINGCHANGE).
 internal sealed class JanelaDeServico : IDisposable
 {
     private readonly HwndSource _fonte;
     private readonly int _mensagemBarraCriada;
     private bool _notificacoesDaSessaoRegistradas;
 
-    // Na versão 4, o botão direito do mouse chega como WM_RBUTTONUP seguido de WM_CONTEXTMENU;
-    // a tecla de menu manda só WM_CONTEXTMENU. É assim que o Buzzy sabe se o menu foi aberto
-    // pelo teclado, sem ler o estado do teclado.
+    // Na versão 4 o botão direito chega como WM_RBUTTONUP + WM_CONTEXTMENU, e a tecla de
+    // menu só como WM_CONTEXTMENU. Assim dá pra saber se foi teclado sem ler o teclado.
     private bool _botaoDireitoAcabouDeSoltar;
 
     internal JanelaDeServico()
@@ -63,13 +57,10 @@ internal sealed class JanelaDeServico : IDisposable
 
     internal nint Hwnd => _fonte.Handle;
 
-    /// <summary>
-    /// Se as notificações da bandeja chegam na versão 4. Sem ela (a Shell recusou
-    /// NIM_SETVERSION), vale o formato antigo, que não traz a posição da âncora.
-    /// </summary>
+    // Falso se a Shell recusou NIM_SETVERSION: formato antigo, sem a posição da âncora.
     internal bool NotificacoesVersao4 { get; set; } = true;
 
-    /// <summary>Ação no ícone da bandeja; a âncora vem nula no formato antigo.</summary>
+    // Âncora nula no formato antigo.
     internal event Action<AcaoNaBandeja, PontoPx?>? BandejaAcionada;
 
     internal event Action? BarraDeTarefasRecriada;
@@ -121,8 +112,8 @@ internal sealed class JanelaDeServico : IDisposable
                     tratado = true;
                     return 1;
                 case Win32.PBT_APMRESUMESUSPEND:
-                    // O Windows pode enviar este segundo sinal depois do RESUMEAUTOMATIC quando
-                    // houve atividade do usuário. O evento de retomada já foi arbitrado acima.
+                    // Pode vir depois do RESUMEAUTOMATIC se houve atividade do usuário;
+                    // a retomada já foi tratada lá.
                     tratado = true;
                     return 1;
             }
@@ -144,8 +135,7 @@ internal sealed class JanelaDeServico : IDisposable
     {
         if (NotificacoesVersao4)
         {
-            // Versão 4: LOWORD(lParam) = evento, HIWORD(lParam) = id do ícone,
-            // wParam = coordenadas da âncora, com sinal.
+            // V4: LOWORD(lParam) = evento, HIWORD(lParam) = id, wParam = âncora com sinal.
             int evento = Win32.LoWord(lParam);
             var ancora = new PontoPx(Win32.XComSinal(wParam), Win32.YComSinal(wParam));
             switch (evento)

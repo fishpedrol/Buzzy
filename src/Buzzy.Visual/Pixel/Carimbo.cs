@@ -1,14 +1,10 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>
-/// Pequena imagem desenhada pixel a pixel em texto: cada caractere é uma cor da legenda e
-/// <c>.</c> deixa o pixel de baixo como está. Usada para os detalhes que a geometria não resolve
-/// bem em poucos pixels: olhos, sobrancelhas, nariz, bocas, dedos e os itens do tamagotchi.
-/// </summary>
+// Imagem pixel a pixel em texto: cada caractere é uma cor da legenda e '.' deixa o pixel de baixo.
+// Pros detalhes que a geometria não resolve em poucos pixels (olhos, boca, dedos, itens).
 public sealed class Carimbo
 {
-    // Pares da legenda padrão, na ordem em que entraram. Vem antes de Legenda: os campos estáticos
-    // são iniciados na ordem do texto.
+    // Tem que vir antes de Legenda: campos estáticos iniciam na ordem do texto.
     private static readonly (char Letra, Cor Cor)[] ParesDaLegenda =
     [
         ('K', Cor.Contorno),
@@ -32,7 +28,7 @@ public sealed class Carimbo
         ('j', Cor.PalhaEscura),
         ('f', Cor.Faixa),
         ('F', Cor.FaixaEscura),
-        // Tamagotchi (DEC-028).
+        // Tamagotchi.
         ('J', Cor.Cipo),
         ('L', Cor.CipoEscuro),
         ('y', Cor.Banana),
@@ -72,7 +68,6 @@ public sealed class Carimbo
         ('z', Cor.Cinza),
     ];
 
-    /// <summary>Legenda padrão dos carimbos.</summary>
     public static readonly IReadOnlyDictionary<char, Cor> Legenda = MontarLegenda(ParesDaLegenda);
 
     private readonly Cor?[] _pixels;
@@ -110,10 +105,7 @@ public sealed class Carimbo
 
     public Cor? this[int x, int y] => x >= 0 && y >= 0 && x < Largura && y < Altura ? _pixels[y * Largura + x] : null;
 
-    /// <summary>
-    /// Monta uma legenda com <c>Add</c>: uma letra repetida lança <see cref="ArgumentException"/>
-    /// em vez de trocar a cor em silêncio, como faria um inicializador por indexador.
-    /// </summary>
+    // Usa Add de propósito: letra repetida lança em vez de trocar a cor calada, como faria o indexador.
     public static IReadOnlyDictionary<char, Cor> MontarLegenda(IEnumerable<(char Letra, Cor Cor)> pares)
     {
         ArgumentNullException.ThrowIfNull(pares);
@@ -122,12 +114,8 @@ public sealed class Carimbo
         return legenda;
     }
 
-    /// <summary>
-    /// O carimbo girado 90°, sem perda, com a regra de <see cref="Tela.Girada"/>:
-    /// <paramref name="horario"/> leva a linha de baixo para a coluna da esquerda; anti-horário,
-    /// a linha de cima para a coluna da esquerda, isto é, (x, y) vai para (y, Largura − 1 − x).
-    /// Largura e altura trocam de lugar.
-    /// </summary>
+    // 90° sem perda, mesma regra de Tela.Girada. Horário: linha de baixo vira a coluna da esquerda.
+    // Anti-horário: (x, y) vai pra (y, Largura - 1 - x).
     public Carimbo Girado(bool horario)
     {
         int largura = Altura, altura = Largura;

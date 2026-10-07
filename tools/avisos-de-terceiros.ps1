@@ -1,16 +1,15 @@
 ﻿<#
 .SYNOPSIS
-    Gera o THIRD-PARTY-NOTICES.txt do .exe único do Buzzy (DEC-044, item 4), a partir dos pacotes que o build usou.
+    Gera o THIRD-PARTY-NOTICES.txt do .exe único do Buzzy a partir dos pacotes que o build usou.
 
 .DESCRIPTION
-    O .exe autocontido redistribui o runtime do .NET e o WPF. Pela documentação da Microsoft (dotnet/core,
-    license-information-windows.md), o host de arquivo único, o CoreCLR, Microsoft.DiaSymReader.Native,
-    PresentationNative_cor3, vcruntime140_cor3 e wpfgfx_cor3 ficam sob a .NET Library License; o D3DCompiler_47_cor3, sob a
-    Windows SDK License; o resto, sob MIT. Cada distribuição tem de levar a licença e os avisos de terceiros
-    (dotnet/runtime, docs/project/licensing-assets.md). Este script junta, sem resumir: a licença e os avisos dos dois
-    pacotes de runtime (no cache do NuGet), a licença e os avisos da instalação do .NET (de onde vem o pacote Host) e os
-    avisos do WPF (tools\avisos\wpf-THIRD-PARTY-NOTICES.txt, do commit do runtime). Falha se faltar alguma fonte.
-    Só lê arquivos e grava o destino; não abre o Buzzy nem acessa a rede.
+    O .exe autocontido leva o runtime do .NET e o WPF, e toda distribuição tem de levar
+    as licenças e avisos deles (dotnet/core license-information-windows.md). Junta, sem
+    resumir: licença e avisos dos dois pacotes de runtime (cache do NuGet), da instalação
+    do .NET (origem do Host) e os avisos do WPF (tools\avisos\wpf-THIRD-PARTY-NOTICES.txt).
+    Falha se faltar alguma fonte. Só lê e grava arquivo; sem rede.
+
+    Uso: .\tools\avisos-de-terceiros.ps1 -VersaoDoRuntime 10.0.0 -Destino <arquivo>
 #>
 [CmdletBinding()]
 param(

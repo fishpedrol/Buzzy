@@ -11,25 +11,18 @@ using Buzzy.Core.Entrada;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// Janela de um item do tamagotchi (DEC-028; D8 do desenho do app; crítica, C11 e L18), uma por item, com a receita da
-/// <see cref="JanelaPersonagem"/> (ARCHITECTURE.md 2.13.1): sem borda, do tamanho do item (48 × 48 DIP), com transparência
-/// por pixel (janela layered do WPF), sempre no topo, fora da barra de tarefas e do Alt+Tab, e que NUNCA é ativada nem tira
-/// o foco do aplicativo em uso (WS_EX_NOACTIVATE, MA_NOACTIVATE, ShowActivated falso). O Windows só entrega a ela cliques
-/// em pixels com alfa diferente de 0: só o desenho do item recebe clique, como no personagem.
-///
-/// Adaptador do ponteiro: as mensagens de mouse que o Windows entrega a esta janela viram eventos de ponteiro em pixels
-/// físicos do desktop virtual, e a captura do mouse só existe enquanto a raiz pede (um gesto começado no item). Fora de um
-/// gesto, nada do mouse de outros aplicativos chega (SECURITY.md 3.1).
-///
-/// O tratamento do DPI é o da janela do personagem, em <see cref="EncaixeDeDpi"/> (passo P14), com o tamanho do item.
-/// </summary>
+// Uma janela por item do tamagotchi, com a mesma receita da JanelaPersonagem: sem
+// borda, 48 × 48 DIP, transparência por pixel, sempre no topo, fora da barra e do
+// Alt+Tab, e NUNCA ativada (WS_EX_NOACTIVATE, MA_NOACTIVATE, ShowActivated falso).
+// O Windows só entrega clique em pixel com alfa > 0, então só o desenho é clicável.
+// O mouse vira eventos de ponteiro em pixels físicos do desktop virtual; a captura
+// só existe durante um gesto começado no item, então fora disso nada de outros apps chega.
 internal sealed class JanelaDoItem : Window, IJanelaDoItem
 {
-    /// <summary>Um peer vazio, como o do personagem (DEC-038, item 7).</summary>
+    // Peer vazio, como o do personagem.
     protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new PeerVazio(this);
 
-    // Pixel a pixel pelo DPI atual da janela (EncaixeDeDpi, passo P14).
+    // Pixel a pixel pelo DPI atual da janela (ver EncaixeDeDpi).
     private readonly Image _imagem = new()
     {
         Stretch = Stretch.Fill,
@@ -41,15 +34,14 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
     private readonly TamanhoDip _tamanho;
     private bool _capturando;
 
-    // Verdadeiro só durante o ReleaseCapture pedido pela raiz: o WM_CAPTURECHANGED síncrono do fim normal do gesto não
-    // é uma captura perdida (a mesma lição do protótipo P3).
+    // Ligado só durante o nosso ReleaseCapture: o WM_CAPTURECHANGED síncrono do fim
+    // normal do gesto não é captura perdida.
     private bool _soltandoPorNos;
 
-    // Só a raiz fecha a janela de um item (remover ou sair); outro pedido de fechamento é recusado.
+    // Só a raiz fecha (remover ou sair); qualquer outro fechamento é recusado.
     private bool _fechandoPorNos;
 
-    /// <param name="id">O Id do item no núcleo.</param>
-    /// <param name="tamanho">O tamanho lógico do item (o de <c>ConfiguracaoDoNucleo.TamanhoDoItem</c>).</param>
+    // tamanho é o lógico, o de ConfiguracaoDoNucleo.TamanhoDoItem.
     internal JanelaDoItem(int id, TamanhoDip tamanho)
     {
         Id = id;
@@ -77,20 +69,18 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
         DpiChanged += (_, e) => EncaixeDeDpi.AjustarPixelAPixel(_imagem, e.NewDpi.PixelsPerInchX);
     }
 
-    /// <summary>O Id do item no núcleo.</summary>
     internal int Id { get; }
 
     public nint Hwnd { get; private set; }
 
-    /// <summary>Evento de ponteiro já normalizado (pixels físicos, relógio monotônico em ms).</summary>
+    // Pixels físicos, relógio monotônico em ms.
     public event Action<EventoDePonteiro>? Ponteiro;
 
-    /// <summary>Se a janela está com a captura do mouse de um gesto em curso sobre o item.</summary>
     public bool Capturando => _capturando;
 
     internal BitmapSource? Sprite => _imagem.Source as BitmapSource;
 
-    /// <summary>Cria a janela, ainda escondida, para ter o HWND antes de mostrar.</summary>
+    // Pra ter o HWND antes de mostrar.
     internal void CriarSemMostrar() => new WindowInteropHelper(this).EnsureHandle();
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -117,37 +107,34 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
         EncaixeDeDpi.AjustarPixelAPixel(_imagem, VisualTreeHelper.GetDpi(this).PixelsPerInchX);
     }
 
-    /// <summary>Posiciona e dimensiona a janela em pixels físicos, sem ativar nem mudar a ordem Z.</summary>
+    // Pixels físicos, sem ativar nem mudar a ordem Z.
     public void AplicarRetangulo(RetanguloPx r)
         => Win32.SetWindowPos(Hwnd, 0, r.Esquerda, r.Topo, r.Largura, r.Altura, Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
 
-    /// <summary>Mostra sem ativar (ShowActivated é falso).</summary>
+    // Não ativa: ShowActivated é falso.
     public void Mostrar() => Show();
 
     public void Esconder() => Hide();
 
-    /// <summary>Logo abaixo de <paramref name="hwnd"/> (o personagem) na ordem Z, sem mover, redimensionar nem ativar.</summary>
+    // Logo abaixo do personagem na ordem Z.
     public void ColocarAbaixoDe(nint hwnd)
         => Win32.SetWindowPos(Hwnd, hwnd, 0, 0, 0, 0, Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
 
-    /// <summary>
-    /// No topo, sem ativar: só no gesto sobre o item, por evento (L17). Com o "sempre no topo" desligado (DEC-038, item 8),
-    /// acima das janelas comuns, sem ficar topmost.
-    /// </summary>
+    // Só no gesto sobre o item, nunca periódico. Com "sempre no topo" desligado,
+    // sobe acima das janelas comuns sem virar topmost.
     public void TrazerParaFrente()
     {
         if (Topmost) Win32.SetWindowPos(Hwnd, Win32.HWND_TOPMOST, 0, 0, 0, 0, Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
         else Win32.AoTopoDaFaixaComum(Hwnd);
     }
 
-    /// <summary>Liga ou desliga o "sempre no topo" do item, junto com o do personagem (DEC-038, item 8).</summary>
+    // Acompanha o do personagem.
     public void AplicarSempreNoTopo(bool ligado) => Topmost = ligado;
 
-    /// <summary>Onde a janela está de fato, em pixels físicos; nulo se o Windows não informar.</summary>
+    // Pixels físicos; nulo se o Windows não informar.
     public RetanguloPx? RetanguloReal()
         => Hwnd != 0 && Win32.GetWindowRect(Hwnd, out Win32.RECT r) ? new RetanguloPx(r.Left, r.Top, r.Right, r.Bottom) : null;
 
-    /// <summary>Captura o mouse para o gesto em curso sobre o item.</summary>
     public void Capturar()
     {
         if (_capturando || Hwnd == 0) return;
@@ -155,7 +142,7 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
         _capturando = true;
     }
 
-    /// <summary>Solta a captura do gesto, sem que isso conte como captura perdida.</summary>
+    // Não conta como captura perdida.
     public void SoltarCaptura()
     {
         if (!_capturando) return;
@@ -171,7 +158,7 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
         }
     }
 
-    /// <summary>Fecha de vez (o item saiu, ou o Buzzy está saindo).</summary>
+    // O item saiu ou o Buzzy está saindo.
     public void Fechar()
     {
         _fechandoPorNos = true;
@@ -188,7 +175,7 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
                 return Win32.MA_NOACTIVATE;
 
             case Win32.WM_GETDPISCALEDSIZE:
-                // A janela vai mudar de DPI: o tamanho do item no DPI novo (EncaixeDeDpi, o mesmo da janela do personagem).
+                // Vai mudar de DPI: responde o tamanho do item no DPI novo.
                 if (!EncaixeDeDpi.ResponderTamanhoEscalado(wParam, lParam, _tamanho)) break;
                 tratado = true;
                 return 1;
@@ -219,7 +206,7 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
                 return 0;
 
             case Win32.WM_RBUTTONUP:
-                // O botão direito solto no item abre o menu do Buzzy, pela arbitragem (crítica, C15).
+                // Direito solto no item abre o menu do Buzzy, pela arbitragem.
                 Diagnostico.Evento("ITEM", ("clique", Id), ("botao", "direito"), ("cliente", Cliente(lParam)));
                 Ponteiro?.Invoke(new PonteiroSolto(NaTela(hwnd, lParam), BotaoDoPonteiro.Direito, Environment.TickCount64));
                 tratado = true;
@@ -231,13 +218,13 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
                 return 0;
 
             case Win32.WM_CANCELMODE:
-                // "Cancelar modos, como a captura do mouse": o WM_CAPTURECHANGED que vem em seguida encerra o gesto.
+                // Solta a captura; o WM_CAPTURECHANGED que vem em seguida encerra o gesto.
                 if (_capturando) Win32.ReleaseCapture();
                 break;
 
             case Win32.WM_CAPTURECHANGED:
-                // Gesto interrompido (Alt+Tab, tecla Windows, UAC, ou outra janela ficou com o mouse). Só o fato vale,
-                // nunca qual janela é a nova dona (SECURITY.md 6).
+                // Gesto interrompido (Alt+Tab, tecla Windows, UAC, outra janela pegou o mouse).
+                // Por privacidade, não olha qual janela é a nova dona.
                 if (_capturando && !_soltandoPorNos && lParam != hwnd)
                 {
                     _capturando = false;
@@ -251,7 +238,7 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
 
     private static string Cliente(nint lParam) => $"{Win32.XComSinal(lParam)},{Win32.YComSinal(lParam)}";
 
-    /// <summary>Métricas de gesto no DPI atual da janela, que é o do monitor em que o item foi pressionado.</summary>
+    // No DPI atual da janela, que é o do monitor onde o item foi pressionado.
     private MetricasDeGesto Metricas()
     {
         uint dpi = (uint)Math.Max(1, Math.Round(VisualTreeHelper.GetDpi(this).PixelsPerInchX));
@@ -263,7 +250,7 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
             (int)Math.Min(Win32.GetDoubleClickTime(), int.MaxValue));
     }
 
-    /// <summary>Coordenadas da mensagem (cliente, com sinal) em pixels físicos do desktop virtual.</summary>
+    // Cliente com sinal -> pixels físicos do desktop virtual.
     private static PontoPx NaTela(nint hwnd, nint lParam)
     {
         var p = new Win32.POINT { X = Win32.XComSinal(lParam), Y = Win32.YComSinal(lParam) };
@@ -273,8 +260,8 @@ internal sealed class JanelaDoItem : Window, IJanelaDoItem
 
     private void AoMudarEstado(object? remetente, EventArgs e)
     {
-        // O Windows pode minimizar uma janela ao desconectar um monitor (crítica, L18; Fase 5, P12): o item volta ao
-        // normal na hora, sem esconder o personagem.
+        // O Windows pode minimizar a janela ao desconectar um monitor: volta ao normal
+        // na hora, sem esconder o personagem.
         if (WindowState != WindowState.Minimized) return;
         WindowState = WindowState.Normal;
         Diagnostico.Evento("ITEM", ("minimizado", Id), ("restaurado", "sim"));

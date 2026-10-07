@@ -5,11 +5,8 @@ using Buzzy.Visual.Animacao;
 
 namespace Buzzy.ValidadorDeClipes;
 
-/// <summary>
-/// A validação do manifesto de clipes no build (DEC-036, item 4). Uso: <c>Buzzy.ValidadorDeClipes --manifesto CAMINHO</c>.
-/// Os problemas saem no formato de erro do MSBuild (<c>ARQUIVO: error BUZZY6: ...</c>), para aparecerem na lista de erros
-/// do build. Código de saída: 0 sem problemas; 1 com problemas; 2 erro de uso ou de leitura do arquivo.
-/// </summary>
+// Problemas saem no formato de erro do MSBuild (ARQUIVO: error BUZZY6: ...) pra cair na lista de erros.
+// Saída: 0 ok, 1 com problemas, 2 erro de uso ou leitura.
 internal static class Programa
 {
     private const string Uso = "Uso: Buzzy.ValidadorDeClipes --manifesto CAMINHO";

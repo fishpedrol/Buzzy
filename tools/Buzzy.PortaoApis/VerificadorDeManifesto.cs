@@ -3,19 +3,14 @@ using System.Xml.Linq;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Confere o manifesto do aplicativo: requestedExecutionLevel com level="asInvoker" e
-/// uiAccess="false" (SECURITY.md 8, item 5), dpiAwareness PerMonitorV2 (ARCHITECTURE.md 2.4 e
-/// 2.13.3) e o supportedOS do Windows 10 e 11 em compatibility/application (DEC-043). Ausência,
-/// posição que o Windows ignora ou valor diferente é violação. XML malformado lança
-/// <see cref="XmlException"/>, que o portão trata como erro de leitura.
-/// </summary>
+// Exige asInvoker com uiAccess="false", dpiAwareness PerMonitorV2 e o supportedOS do Windows 10/11.
+// Faltar, estar num lugar que o Windows ignora ou ter outro valor é violação. XML ruim lança XmlException.
 internal static class VerificadorDeManifesto
 {
     public const string NamespaceDpiAwareness = "http://schemas.microsoft.com/SMI/2016/WindowsSettings";
     public const string NamespaceCompatibilidade = "urn:schemas-microsoft-com:compatibility.v1";
 
-    /// <summary>O GUID de supportedOS do Windows 10, que o Windows 11 compartilha (DEC-043).</summary>
+    // O Windows 11 usa o mesmo GUID do 10.
     public const string SupportedOsWindows10E11 = "{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}";
 
     // Valores que o Windows reconhece em dpiAwareness; ele usa o primeiro reconhecido da lista.
@@ -117,11 +112,8 @@ internal static class VerificadorDeManifesto
         }
     }
 
-    /// <summary>
-    /// DEC-043: o manifesto declara o Windows 10 e 11 (um só GUID para os dois). Sem a declaração, ou com ela onde o Windows
-    /// não a lê, ele informa ao aplicativo a versão do Windows 8 e aplica o comportamento de compatibilidade dela. Outros
-    /// GUIDs ao lado (Windows 7, 8, 8.1) não reprovam: o que importa é o do Windows 10 e 11 estar lá.
-    /// </summary>
+    // Sem o GUID do 10/11 num lugar que o Windows lê, ele finge ser Windows 8 pro app e liga a
+    // compatibilidade dele. GUIDs de outras versões ao lado não reprovam.
     private static void VerificarCompatibilidade(XDocument documento, Action<XObject?, string, string> acusar)
     {
         List<XElement> todos = [.. documento.Descendants().Where(e => e.Name.LocalName == "supportedOS")];
@@ -139,7 +131,7 @@ internal static class VerificadorDeManifesto
                 $"supportedOS do Windows 10 e 11 ausente: o manifesto precisa declarar <supportedOS Id=\"{SupportedOsWindows10E11}\" /> em assembly/compatibility/application, no namespace {NamespaceCompatibilidade}; sem ele, o Windows informa ao aplicativo a versão do Windows 8 (DEC-043)");
     }
 
-    /// <summary>Se os ancestrais do elemento, do pai até a raiz, têm estes nomes locais.</summary>
+    // Os ancestrais têm que ser exatamente esses, da raiz até o pai.
     private static bool NoCaminho(XElement elemento, params string[] ancestraisDaRaizAoPai)
     {
         XElement? atual = elemento.Parent;

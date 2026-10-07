@@ -5,28 +5,17 @@ namespace SondaP3;
 
 internal sealed class FalhaDeTeste(string mensagem) : Exception(mensagem);
 
-/// <summary>
-/// Alguém usou o mouse ou o teclado durante o teste: os resultados deixam de valer e, na
-/// limpeza, a sonda não devolve o cursor à posição original (o usuário assumiu o mouse).
-/// </summary>
+// Alguém mexeu no mouse ou teclado: o resultado não vale e a limpeza não devolve o cursor,
+// porque o mouse agora é do usuário.
 internal sealed class Interferencia(string mensagem) : Exception(mensagem);
 
-/// <summary>
-/// Injeção de input SINTÉTICO por SendInput. Todo evento sai com a marca de injetado do
-/// Windows e é rotulado como sintético nos resultados; não é gesto humano.
-///
-/// Salvaguardas:
-/// - antes de cada injeção, de mouse ou de teclado, confere por GetLastInputInfo que não houve
-///   input depois do último evento injetado pela sonda (tolerância de <see cref="ToleranciaInputMs"/>
-///   ms para o Windows registrar o próprio evento injetado). GetLastInputInfo diz só QUANDO
-///   houve o último input, de qualquer dispositivo; nenhuma tecla é lida. Se houve, alguém
-///   usou o mouse ou o teclado e o teste aborta com <see cref="Interferencia"/>;
-/// - confere o retorno de SendInput e falha se o Windows recusar qualquer evento;
-/// - depois de cada movimento, confere que o cursor está onde o harness o pôs; se não
-///   estiver, alguém mexeu no mouse e o teste aborta;
-/// - acompanha, pelos eventos que o SendInput de fato aceitou (inclusive num lote aceito pela
-///   metade), o botão esquerdo e cada tecla que ficaram abaixados, para a limpeza soltá-los.
-/// </summary>
+// SendInput com salvaguardas:
+// - antes de cada injeção, GetLastInputInfo não pode mostrar input depois do nosso último evento
+//   (com ToleranciaInputMs de folga). Ele só diz QUANDO houve input, não lê tecla nenhuma;
+// - falha se o SendInput recusar qualquer evento;
+// - depois de mover, o cursor tem que estar onde pusemos, senão alguém mexeu;
+// - guarda botão e teclas abaixados pelos eventos realmente aceitos (mesmo lote pela metade)
+//   pra limpeza soltar.
 internal sealed class Injetor
 {
     private const uint INPUT_MOUSE = 0;
@@ -43,10 +32,8 @@ internal sealed class Injetor
     private const ushort SCAN_TAB = 0x0F;
     private const ushort SCAN_ALT = 0x38;
 
-    /// <summary>
-    /// Folga, em ms, entre o fim do SendInput e o instante que o Windows registra como último
-    /// input para o evento injetado (o relógio de GetTickCount anda em passos de ~16 ms).
-    /// </summary>
+    // Folga entre o SendInput e o horário que o Windows grava pro evento (GetTickCount anda
+    // de ~16 em ~16 ms).
     internal const int ToleranciaInputMs = 50;
 
     private Nativo.POINT _esperado;
@@ -54,26 +41,20 @@ internal sealed class Injetor
     private long _ultimoSoltar;
     private readonly Func<bool> _cancelado;
 
-    /// <summary>
-    /// Instante (relógio de GetTickCount) do último evento injetado pela sonda; antes da
-    /// primeira injeção, o do último input do sistema quando a espera de ociosidade terminou.
-    /// Input posterior a ele, além da tolerância, não é da sonda.
-    /// </summary>
+    // Relógio do GetTickCount. Antes da primeira injeção, é o último input do sistema no fim da
+    // espera de ociosidade. Input depois disso (além da tolerância) não é nosso.
     private uint _ultimoEventoDaSonda;
 
-    /// <summary>Teclas que a sonda abaixou e ainda não soltou, na ordem em que foram abaixadas.</summary>
+    // Na ordem em que foram abaixadas.
     private readonly List<Nativo.KEYBDINPUT> _teclasAbaixadas = [];
 
-    /// <param name="cancelado">consultado antes de cada injeção (Ctrl+C no console).</param>
-    /// <param name="ultimoInputAntes">instante do último input do sistema quando a espera de
-    /// ociosidade terminou; até a primeira injeção, qualquer input depois dele é interferência.</param>
+    // cancelado é consultado antes de cada injeção (Ctrl+C).
     internal Injetor(Func<bool> cancelado, uint ultimoInputAntes)
     {
         _cancelado = cancelado;
         _ultimoEventoDaSonda = ultimoInputAntes;
     }
 
-    /// <summary>O botão esquerdo ficou abaixado por um evento que o SendInput aceitou.</summary>
     internal bool BotaoAbaixado { get; private set; }
 
     internal static int TamanhoInput => Marshal.SizeOf<Nativo.INPUT>();
@@ -101,18 +82,11 @@ internal sealed class Injetor
         return i;
     }
 
-    /// <summary>
-    /// Quantos ms depois do último evento da sonda aconteceu o último input do sistema. Até a
-    /// tolerância (ou negativo), ninguém mais usou o mouse nem o teclado. null se
-    /// GetLastInputInfo falhar.
-    /// </summary>
+    // Até a tolerância (ou negativo), ninguém mais mexeu. Null se GetLastInputInfo falhar.
     internal int? InputDepoisDaSondaMs()
         => Nativo.UltimoInput() is uint ultimo ? Nativo.MsDepoisDe(ultimo, _ultimoEventoDaSonda) : null;
 
-    /// <summary>
-    /// Antes de cada injeção: falha com <see cref="Interferencia"/> se houve input do mouse ou
-    /// do teclado depois do último evento da sonda. Sem como conferir, não injeta.
-    /// </summary>
+    // Sem como conferir, não injeta.
     private void ConferirInputAlheio(string oque)
     {
         int? depois = InputDepoisDaSondaMs();
@@ -128,8 +102,7 @@ internal sealed class Injetor
 
     private void Enviar(Nativo.INPUT[] lote, string oque, bool limpeza = false)
     {
-        // A limpeza só solta o que a sonda deixou abaixado; roda mesmo depois de cancelamento
-        // ou de interferência, por isso não passa pelas conferências.
+        // A limpeza roda mesmo depois de cancelamento ou interferência, então pula as conferências.
         if (!limpeza)
         {
             if (_cancelado()) throw new FalhaDeTeste("Execução cancelada.");
@@ -146,11 +119,7 @@ internal sealed class Injetor
         }
     }
 
-    /// <summary>
-    /// Atualiza o que ficou abaixado a partir só dos eventos aceitos. SendInput insere os
-    /// eventos em ordem e devolve quantos inseriu; num lote aceito pela metade, valem
-    /// exatamente os primeiros <paramref name="aceitos"/>.
-    /// </summary>
+    // SendInput insere em ordem e devolve quantos entraram, então valem os primeiros "aceitos".
     private void RegistrarAceitos(Nativo.INPUT[] lote, int aceitos)
     {
         for (int i = 0; i < aceitos; i++)
@@ -191,15 +160,11 @@ internal sealed class Injetor
                 _ => $"a tecla VK 0x{t.wVk:X2}",
             };
 
-    /// <summary>Maior distância, em px, entre o cursor e a posição injetada, sem contar interferência.</summary>
+    // Em px, sem contar interferência.
     internal int MaiorDeriva { get; private set; }
 
-    /// <summary>
-    /// Falha se o cursor estiver a mais de 3 px de onde o harness o deixou por último.
-    /// Até 3 px é deriva do sensor do mouse parado; não se acumula, porque cada evento
-    /// injetado usa coordenadas absolutas. Tolera até 150 ms para o Windows aplicar o
-    /// movimento injetado antes de concluir que houve interferência.
-    /// </summary>
+    // Até 3 px é deriva do sensor com o mouse parado, e não acumula porque cada evento é
+    // absoluto. Espera até 150 ms o Windows aplicar o movimento antes de acusar interferência.
     internal void ConferirCursor()
     {
         if (!_temEsperado) return;
@@ -243,11 +208,8 @@ internal sealed class Injetor
         Posto(x, y);
     }
 
-    /// <summary>
-    /// Move até (x, y) e solta no MESMO lote atômico de SendInput. Com um salto grande, o
-    /// botão é solto antes de a janela alcançar o cursor, ou seja, fora do retângulo que
-    /// ela ocupava: é o cenário "arrastar rápido e soltar fora".
-    /// </summary>
+    // Move e solta no MESMO lote. Num salto grande o botão sobe antes da janela alcançar o
+    // cursor, fora do retângulo dela: o caso "arrastar rápido e soltar fora".
     internal void Subir(int x, int y)
     {
         ConferirCursor();
@@ -256,10 +218,7 @@ internal sealed class Injetor
         Posto(x, y);
     }
 
-    /// <summary>
-    /// Espera o intervalo de clique duplo do sistema desde o último soltar. Sem isso, um
-    /// pressionar logo depois de um clique no mesmo ponto viraria WM_LBUTTONDBLCLK.
-    /// </summary>
+    // Senão um pressionar logo depois de um clique no mesmo ponto vira WM_LBUTTONDBLCLK.
     internal void EsperarIntervaloDeCliqueDuplo()
     {
         if (_ultimoSoltar == 0) return;
@@ -279,7 +238,7 @@ internal sealed class Injetor
         Enviar([.. lote], "digitar");
     }
 
-    /// <summary>Alt+Tab rápido: as quatro teclas num lote só, sem o seletor aparecer.</summary>
+    // As quatro teclas num lote só, rápido demais pro seletor aparecer.
     internal void AltTabRapido()
     {
         Enviar([
@@ -290,11 +249,8 @@ internal sealed class Injetor
         ], "alt+tab rápido");
     }
 
-    /// <summary>
-    /// Alt+Tab como uma pessoa faz: Alt segurado, o seletor aparece, depois solta. O Alt fica
-    /// abaixado entre os dois lotes; se o segundo não sair (interferência, cancelamento ou
-    /// recusa do SendInput), a limpeza o solta.
-    /// </summary>
+    // Como gente faz: segura Alt, o seletor aparece, solta. Se o segundo lote não sair, a
+    // limpeza solta o Alt.
     internal void AltTabSegurado(int segurarMs)
     {
         Enviar([
@@ -306,16 +262,13 @@ internal sealed class Injetor
         Enviar([Tecla(VK_MENU, SCAN_ALT, KEYEVENTF_KEYUP)], "alt+tab segurado (fim)");
     }
 
-    /// <summary>
-    /// Limpeza: solta cada tecla e o botão esquerdo que a sonda deixou abaixados por causa de
-    /// um erro, de cancelamento ou de interferência no meio do gesto. Nunca move o cursor: o
-    /// botão é solto onde o cursor estiver, porque depois de interferência o mouse é do usuário.
-    /// </summary>
+    // Solta o que ficou abaixado depois de erro, cancelamento ou interferência. Nunca move o
+    // cursor: depois de interferência o mouse é do usuário.
     internal List<string> SoltarPendencias()
     {
         var feito = new List<string>();
 
-        // Na ordem inversa à de abaixar, como uma pessoa soltando um atalho (o Alt por último).
+        // Ordem inversa, como quem solta um atalho (Alt por último).
         Nativo.KEYBDINPUT[] pendentes = [.. _teclasAbaixadas];
         for (int i = pendentes.Length - 1; i >= 0; i--)
         {
@@ -335,8 +288,7 @@ internal sealed class Injetor
 
         if (BotaoAbaixado)
         {
-            // Só MOUSEEVENTF_LEFTUP: sem MOUSEEVENTF_MOVE, sem coordenadas absolutas e com
-            // dx = dy = 0, o botão é solto onde o cursor estiver e o cursor não sai do lugar.
+            // Só LEFTUP, sem MOVE nem ABSOLUTE e dx = dy = 0: solta onde o cursor está, sem movê-lo.
             var soltar = new Nativo.INPUT { type = INPUT_MOUSE };
             soltar.mi.dwFlags = MOUSEEVENTF_LEFTUP;
             Nativo.POINT p = Nativo.Cursor();

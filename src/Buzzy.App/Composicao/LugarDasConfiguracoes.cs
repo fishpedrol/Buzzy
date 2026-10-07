@@ -2,22 +2,17 @@ using Buzzy.Core;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// Onde a janela de configurações abre (Fase 8; DEC-038, item 5): centrada na área útil do último monitor do personagem (com ele
-/// escondido, sem o sprite na conta); se o centro cobrir o sprite, na metade oposta a ele; sempre presa na área útil. A janela
-/// nunca é topmost, então ficar longe do sprite é o que evita que ele cubra os controles. Função pura, em pixels físicos.
-/// </summary>
+// Posição da janela de configurações, em px físicos: centrada na área útil do
+// monitor do personagem; se cobrir o sprite, vai pra metade oposta. A janela não é
+// topmost, então o sprite cobriria os controles se ela abrisse em cima dele.
 internal static class LugarDasConfiguracoes
 {
-    /// <summary>
-    /// O monitor onde as janelas do Buzzy (painel e configurações) abrem, pela topologia ATUAL: o último monitor do personagem,
-    /// pela chave, com a área útil de agora; se ele saiu (desconectado com o Buzzy escondido), o mais próximo dos pés guardados.
-    /// Nunca uma área de um monitor que não existe mais.
-    /// </summary>
+    // Usa a topologia atual: o último monitor do personagem pela chave ou, se ele
+    // foi desconectado com o Buzzy escondido, o mais perto dos pés guardados.
     internal static MonitorDoDesktop Monitor(Topologia atual, MonitorDoDesktop ultimo, RetanguloPx personagem)
         => atual.PorChave(ultimo.Chave) ?? atual.MonitorMaisProximo(new PontoPx(personagem.Esquerda + (personagem.Largura / 2), personagem.Base - 1));
 
-    /// <summary>A altura máxima da janela, em DIP do monitor: a área útil inteira (o resto rola).</summary>
+    // Em DIP: a área útil inteira; o resto rola.
     internal static double AlturaMaximaDip(MonitorDoDesktop monitor) => monitor.AreaUtil.Altura * 96.0 / monitor.Dpi;
 
     internal static RetanguloPx Calcular(RetanguloPx area, RetanguloPx? personagem, TamanhoPx janela)

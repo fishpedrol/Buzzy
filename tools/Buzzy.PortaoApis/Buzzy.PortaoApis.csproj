@@ -1,16 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Portão de APIs proibidas do build (SECURITY.md 3.2 e 8, item 1; TODO.md, Fase 1).
-
-    Lê os assemblies do produto, a tabela de importação nativa do Buzzy.exe, o código-fonte
-    e o manifesto, e reprova o build se encontrar uma capacidade proibida. Só lê arquivos:
-    não carrega nem executa nada do que inspeciona. Usa System.Reflection.Metadata e
-    System.Reflection.PortableExecutable, que já vêm no runtime; nenhum pacote NuGet.
-
-    A linha de comando, chamada pelo csproj do aplicativo depois de cada build, está em
-    Opcoes.Uso (Portao.cs). Código de saída: 0 sem violações; 1 com violações; 2 erro de uso
-    ou de leitura.
+    Portão de APIs proibidas: roda depois de cada build do app e reprova se achar uma
+    capacidade proibida nos assemblies, nas importações nativas, no fonte ou no manifesto.
+    Só lê os arquivos, nunca carrega nem executa. Sem pacote NuGet.
+    Uso em Opcoes.Uso (Portao.cs). Saída: 0 ok, 1 violações, 2 erro de uso ou leitura.
   -->
 
   <PropertyGroup>

@@ -1,28 +1,23 @@
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// A curiosidade da Fase 7 (DEC-026 e DEC-037), com a capacidade <see cref="ConfiguracaoDoNucleo.Curiosidade"/>. O núcleo
-/// recebe só a chave opaca do monitor do primeiro plano (<see cref="ForegroundMonitorChanged"/>, depois da carência do
-/// adaptador) e, a pedido, o vão horizontal da janela em dezesseis avos (<see cref="ActiveWindowSpan"/>); o tempo é dele, num
-/// disparo único com geração (<see cref="CuriosityTimer"/>). Com o foco há 30 s noutro monitor, vai ver (uma ida por foco);
-/// com o foco no monitor dele por bastante tempo, chega perto do trecho da janela e fica olhando. Só age com
-/// <see cref="Passo.PodeSerCurioso"/>, na próxima decisão da agenda em IDLE ou no próprio disparo: nada é periódico. Soltar,
-/// mostrar pelo comando e redefinir a posição ligam a dispensa, que nada apaga antes do disparo dela.
-/// </summary>
+// Curiosidade. O núcleo só recebe a chave opaca do monitor em foco e, quando pede, o vão horizontal da
+// janela em 16 avos. Foco 30 s noutro monitor: vai ver (uma ida por foco). Foco no monitor dele por muito
+// tempo: chega perto da janela e fica olhando. Nada é periódico: age na próxima decisão em IDLE ou no
+// disparo do timer. Soltar, mostrar pelo comando e redefinir a posição ligam a dispensa.
 public static partial class Maquina
 {
     private sealed partial class Passo
     {
-        // O disparo da curiosidade pedido neste passo: armar com a espera (substitui o pendente) ou cancelar.
+        // Pedido deste passo: armar (substitui o pendente) ou cancelar.
         private TimeSpan? _armarCuriosidade;
         private bool _cancelarCuriosidade;
 
         private static bool EhDaCuriosidade(Evento evento) => evento is ForegroundMonitorChanged or CuriosityTimer or ActiveWindowSpan;
 
-        /// <summary>Quanto falta da contagem do foco depois da carência do adaptador: 30 s menos 2 s.</summary>
+        // 30 s menos os 2 s que o adaptador já esperou.
         private TimeSpan RestanteDoLimiar => Maior(_cfg.LimiarDeOutroMonitor - CarenciaDoFocoNoAdaptador, TimeSpan.FromSeconds(1));
 
-        /// <summary>A carência que o adaptador já esperou antes de publicar o foco (DEC-037, item 2).</summary>
+        // O adaptador espera isso antes de publicar o foco.
         private static readonly TimeSpan CarenciaDoFocoNoAdaptador = TimeSpan.FromSeconds(2);
 
         private static TimeSpan Maior(TimeSpan a, TimeSpan b) => a > b ? a : b;
@@ -33,15 +28,11 @@ public static partial class Maquina
 
         private bool ParanoiaNaFrente => ComOnda && _s.Onda?.Tipo == Onda.Paranoico;
 
-        /// <summary>Um episódio em curso: indo ver, esperando o vão, chegando perto ou olhando. A troca de foco não o interrompe.</summary>
+        // Troca de foco não interrompe um episódio em curso.
         private bool EpisodioEmCurso => _s.Curiosidade is EstagioDaCuriosidade.IndoVer or EstagioDaCuriosidade.PedindoVao
             or EstagioDaCuriosidade.Aproximando or EstagioDaCuriosidade.Olhando;
 
-        /// <summary>
-        /// O predicado único da curiosidade (DEC-037, item 6): ela só age com ele em IDLE no chão, sem gesto, visível, sem o
-        /// usuário no controle (IDLE já é visível), sem pausa, sem painel, sem esconderijo, sem estar preso, sem item na mão, sem a paranoia na
-        /// frente, sem retorno de tela cheia guardado, sem dispensa e com o monitor dele fora dos ocupados.
-        /// </summary>
+        // Única condição pra curiosidade agir. IDLE já implica visível e sem ninguém arrastando.
         private bool PodeSerCurioso
             => _cfg.Curiosidade && _cfg.Movimento && _s.Estado == Estado.Idle && _s.Gesto == Gesto.Nenhum
                && !_s.AutonomiaPausada && !_s.PainelAberto && _s.Esconderijo == LadoDoEsconderijo.Nenhum && !_s.PresoPeloUsuario
@@ -69,29 +60,26 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- eventos
 
-        /// <summary>
-        /// FOREGROUND_MONITOR_CHANGED (DEC-037, item 2): um foco novo recomeça a contagem (os 28 s que faltam dos 30) e a ida
-        /// daquele foco. Com a dispensa ou um episódio em curso, só o foco muda: a dispensa continua, e o episódio termina e
-        /// revê a decisão (<see cref="Satisfazer"/>).
-        /// </summary>
+        // Foco novo recomeça a contagem (28 s que faltam dos 30). Com dispensa ou episódio em curso, só o
+        // foco muda; o episódio revê a decisão quando terminar.
         private void MudarFoco(string chave)
         {
             if (chave == _s.FocoDoPrimeiroPlano) return;
             _s = _s with { FocoDoPrimeiroPlano = chave, IdaFeitaNesteFoco = false };
             if (_s.DispensaAtiva || EpisodioEmCurso) return;
-            // Sem transição: nenhuma linha de log por troca de foco (DEC-037, item 11).
+            // Sem transição de propósito: troca de foco não gera linha de log.
             _s = _s with { Curiosidade = EstagioDaCuriosidade.Aguardando };
             ArmarCuriosidade(RestanteDoLimiar);
         }
 
-        /// <summary>CURIOSITY_TIMER: o disparo vigente avança a curiosidade; outro, substituído ou cancelado, é ignorado.</summary>
+        // Disparo de geração velha (substituído ou cancelado) é ignorado.
         private void DispararCuriosidade(long geracao)
         {
             if (!_s.CuriosidadeAgendada || geracao != _s.GeracaoDaCuriosidade) return;
             _s = _s with { CuriosidadeAgendada = false };
             if (_s.DispensaAtiva)
             {
-                // O fim da dispensa: a contagem recomeça com o foco de agora.
+                // Fim da dispensa: recomeça a contagem com o foco de agora.
                 _s = _s with { DispensaAtiva = false };
                 _transicoes.Add(new Transicao(_s.Estado, _s.Estado, "CURIOSIDADE: fim da dispensa"));
                 if (_s.FocoDoPrimeiroPlano is null) return;
@@ -113,10 +101,8 @@ public static partial class Maquina
             if (PodeSerCurioso && _s.Curiosidade is EstagioDaCuriosidade.IrVer or EstagioDaCuriosidade.Aproximar) DecidirCurioso();
         }
 
-        /// <summary>
-        /// A contagem venceu: noutro monitor, fora dos ocupados e sem a ida feita, vai ver; no monitor dele, depois do bastante
-        /// tempo do perfil (ou de novo, quando o intervalo vence), chega perto; senão, espera o intervalo.
-        /// </summary>
+        // Contagem venceu. Foco noutro monitor livre e sem ida feita: vai ver. No monitor dele, depois do
+        // tempo do perfil: chega perto. Senão espera o intervalo.
         private void Amadurecer()
         {
             if (_s.FocoDoPrimeiroPlano is not { } foco || _s.Topologia?.PorChave(foco) is null)
@@ -132,7 +118,7 @@ public static partial class Maquina
                     _s = _s with { FocoDoEpisodio = foco };
                     return;
                 }
-                // A ida já feita ou o alvo ocupado: espera um foco novo, sem disparo (nada periódico sem efeito).
+                // Ida já feita ou alvo ocupado: espera um foco novo, sem armar timer à toa.
                 Estagio(EstagioDaCuriosidade.Satisfeita, "nada a ver agora (espera um foco novo)");
                 return;
             }
@@ -146,10 +132,7 @@ public static partial class Maquina
             _s = _s with { FocoDoEpisodio = foco };
         }
 
-        /// <summary>
-        /// ACTIVE_WINDOW_SPAN (DEC-037, item 5): o vão pedido vira o destino dele no chão e é descartado; sem vão, ou sem poder
-        /// agir, o episódio termina.
-        /// </summary>
+        // O vão vira o destino no chão e é descartado. Sem vão, ou sem poder agir, o episódio termina.
         private void ReceberVao(long geracao, VaoDaJanela? vao)
         {
             if (_s.Curiosidade != EstagioDaCuriosidade.PedindoVao || geracao != _s.GeracaoDoVao) return;
@@ -176,11 +159,7 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- decisões
 
-        /// <summary>
-        /// A decisão da curiosidade, antes da agenda em IDLE (e no próprio disparo): devolve se ela tomou a decisão. Com um
-        /// estágio maduro, age; esperando o vão ou olhando, ocupa a decisão; com a ida ou a aproximação interrompidas, encerra o
-        /// episódio. Só com <see cref="PodeSerCurioso"/>.
-        /// </summary>
+        // Roda antes da agenda em IDLE. Devolve true se a curiosidade ficou com a decisão.
         private bool DecidirCurioso()
         {
             if (!PodeSerCurioso) return false;
@@ -218,10 +197,8 @@ public static partial class Maquina
             }
         }
 
-        /// <summary>
-        /// Ir ver (DEC-026, item 3; DEC-037, item 4): anda até a porta do lado que leva ao foco (sem vizinho direto, a que o
-        /// aproxima dele) e atravessa pelas passagens da Fase 5, sem sorteio; sem caminho, olha de longe.
-        /// </summary>
+        // Anda até a porta que leva ao foco (sem vizinho direto, a que aproxima dele) e atravessa, sem
+        // sorteio. Sem caminho, olha de longe.
         private bool IrVer()
         {
             if (_s.FocoDoPrimeiroPlano is not { } foco || foco == MeuMonitor || _s.IdaFeitaNesteFoco || Ocupado(foco)
@@ -253,7 +230,7 @@ public static partial class Maquina
             return true;
         }
 
-        /// <summary>Sem caminho até o foco: vira para o lado dele, com a cara curiosa, e a ida daquele foco conta como feita.</summary>
+        // Vira pro lado do foco com cara curiosa; conta como ida feita.
         private void OlharDeLonge(string motivo)
         {
             if (_s.FocoDoPrimeiroPlano is { } foco && _s.Topologia?.PorChave(foco) is { } alvo && _s.Lugar is { } lugar)
@@ -267,7 +244,7 @@ public static partial class Maquina
             Satisfazer("olhou de longe");
         }
 
-        /// <summary>Chegar perto (DEC-037, item 5): pede o vão ao adaptador, uma vez, com a espera de guarda.</summary>
+        // Pede o vão uma vez, com timer de guarda caso não chegue.
         private bool PedirVao()
         {
             if (_s.FocoDoPrimeiroPlano is not { } foco || foco != MeuMonitor)
@@ -283,7 +260,7 @@ public static partial class Maquina
             return true;
         }
 
-        /// <summary>Chegou perto do trecho da janela: para, virado para ela, com a cara curiosa, e sorteia quantas decisões fica olhando.</summary>
+        // Para virado pra janela e sorteia quantas decisões fica olhando.
         private void ChegarPerto(string regra)
         {
             PerfilDeEnergia perfil = Perfil;
@@ -295,10 +272,7 @@ public static partial class Maquina
             _transicoes.Add(new Transicao(_s.Estado, _s.Estado, "CURIOSIDADE: olha a janela"));
         }
 
-        /// <summary>
-        /// Olhando a janela, a cada decisão da agenda (DEC-037, item 5), no gerador da personalidade: fica olhando, olha ao
-        /// redor, coça-se ou perde o interesse; no fim das rodadas, perde o interesse.
-        /// </summary>
+        // A cada decisão: continua olhando, olha ao redor, se coça ou perde o interesse.
         private void DecidirOlhando()
         {
             PerfilDeEnergia perfil = Perfil;
@@ -336,7 +310,7 @@ public static partial class Maquina
             _transicoes.Add(new Transicao(Estado.Idle, Estado.Idle, $"IDLE + CURIOSIDADE: gesto {gesto} olhando"));
         }
 
-        /// <summary>Perde o interesse do jeito da energia (DEC-037, item 5): Baixa senta; Média espreguiça; Alta brinca.</summary>
+        // Energia baixa senta, média espreguiça, alta brinca.
         private void PerderOInteresse()
         {
             PerfilDeEnergia perfil = Perfil;
@@ -357,9 +331,7 @@ public static partial class Maquina
             }
         }
 
-        /// <summary>
-        /// O fim de um episódio: com o foco mudado no meio, a contagem recomeça com o novo; senão, espera o intervalo do perfil.
-        /// </summary>
+        // Fim de episódio. Se o foco mudou no meio, recomeça a contagem; senão espera o intervalo do perfil.
         private void Satisfazer(string motivo)
         {
             bool focoNovo = _s.FocoDoEpisodio is { } doEpisodio && _s.FocoDoPrimeiroPlano is { } foco && doEpisodio != foco;
@@ -376,10 +348,7 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- o usuário
 
-        /// <summary>
-        /// A dispensa (DEC-037, item 6): soltar, mostrar pelo comando ou redefinir a posição. A curiosidade não o move até o
-        /// disparo dela; a ida daquele foco acaba.
-        /// </summary>
+        // Depois de soltar, mostrar ou redefinir a posição, a curiosidade não o move até o timer vencer.
         private void Dispensar(string regra)
         {
             if (!_cfg.Curiosidade || !_s.Carregado) return;
@@ -388,7 +357,7 @@ public static partial class Maquina
             ArmarCuriosidade(Perfil.EsperaDepoisDoUsuario);
         }
 
-        /// <summary>Pegar o Buzzy indo ver ou chegando perto encerra o episódio (DEC-037, item 6); olhando, ele volta a olhar.</summary>
+        // Pegar indo ver ou chegando perto encerra o episódio; olhando, ele volta a olhar.
         private void PegarNoEpisodio()
         {
             if (!_cfg.Curiosidade) return;
@@ -403,7 +372,7 @@ public static partial class Maquina
             }
         }
 
-        /// <summary>O disparo da curiosidade em <see cref="Concluir"/>: armar substitui o pendente; saindo, cancela.</summary>
+        // Armar substitui o pendente; saindo do app, cancela.
         private void EfeitosDaCuriosidade(List<Efeito> tempo)
         {
             if (!_cfg.Curiosidade) return;
@@ -427,11 +396,8 @@ public static partial class Maquina
         }
     }
 
-    /// <summary>
-    /// Onde ele fica para olhar o trecho da janela (DEC-037, item 5): ao lado dele, do lado mais perto, com a meia largura
-    /// do sprite mais a folga entre o sprite e a borda do trecho, virado para a janela; com o trecho na largura toda
-    /// (maximizada), no canto do lado onde está, virado para dentro. Sempre dentro das laterais do chão. Função pura.
-    /// </summary>
+    // Fica ao lado do trecho, do lado mais perto, afastado meia largura do sprite + folga, virado pra janela.
+    // Janela maximizada: fica no canto onde está, virado pra dentro. Sempre dentro das laterais do chão.
     public static (double X, Direcao Lado) PontoDeOlhar(RetanguloPx area, Superficies sup, VaoDaJanela vao, double x, int larguraDoSprite, double folga)
     {
         double parte = area.Largura / (double)VaoDaJanela.Partes;

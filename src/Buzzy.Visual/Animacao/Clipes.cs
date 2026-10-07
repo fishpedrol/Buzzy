@@ -2,80 +2,63 @@ using System.Text.Json;
 
 namespace Buzzy.Visual.Animacao;
 
-/// <summary>De onde vem a cara de um clipe (DEC-036, item 1).</summary>
 public enum OrigemDaCara
 {
-    /// <summary>A cara do retrato do núcleo (a emoção, a onda ou a troca de cara).</summary>
+    // Do retrato do núcleo (emoção, onda ou troca de cara).
     Retrato,
 
-    /// <summary>A cara própria da pose.</summary>
     Pose,
 
-    /// <summary>A do retrato, mas a neutra dá lugar à da pose (no cipó, rindo; no esconderijo, a da pose).</summary>
+    // Do retrato, mas a neutra cede pra da pose (no cipó, rindo).
     RetratoSemNeutro,
 }
 
-/// <summary>A deformação de desenho animado de um quadro (toon force, DEC-023).</summary>
+// Toon force.
 public enum DeformacaoDoQuadro
 {
     Nenhuma,
 
-    /// <summary>Mais largo e mais baixo: o impacto.</summary>
+    // Mais largo e baixo: impacto.
     Achatado,
 
-    /// <summary>Mais estreito e mais alto: a velocidade.</summary>
+    // Mais estreito e alto: velocidade.
     Esticado,
 
-    /// <summary>Esticado só com a velocidade vertical alta (<see cref="Deformacoes.VelocidadeDoEsticamento"/>); senão, nenhuma.</summary>
+    // Esticado só acima de VelocidadeDoEsticamento na vertical.
     PelaVelocidade,
 }
 
-/// <summary>
-/// Um quadro de um clipe: a pose de <c>PosesPixel</c>, quantos passos do relógio lógico ele dura e, opcionais, a cara (o
-/// nome de <c>Rostos.Expressoes</c>, que vale no lugar da origem do clipe) e a deformação (no lugar da do clipe).
-/// </summary>
+// Passos = ticks do relógio lógico. Cara e Deformacao, se vierem, substituem as do clipe.
 public sealed record QuadroDoClipe(string Pose, int Passos, string? Cara = null, DeformacaoDoQuadro? Deformacao = null);
 
-/// <summary>
-/// Um clipe do manifesto (DEC-036): os quadros de uma situação, se repete ou para no último, de onde vem a cara, se espelha
-/// com a direção (as poses de perfil olham para a direita) e a deformação dos quadros que não têm a sua.
-/// </summary>
+// Espelha acompanha a direção: as poses de perfil olham pra direita.
 public sealed record Clipe(string Situacao, IReadOnlyList<QuadroDoClipe> Quadros, bool Repete, OrigemDaCara Cara, bool Espelha, DeformacaoDoQuadro Deformacao)
 {
-    /// <summary>A soma dos passos dos quadros: a duração de uma volta do clipe.</summary>
     public int Duracao => Quadros.Sum(q => q.Passos);
 }
 
-/// <summary>
-/// As escalas do achatar e do esticar de desenho animado (toon force, DEC-023), as mesmas para o app e para a validação
-/// do manifesto, e a velocidade a partir da qual o corpo aparece esticado.
-/// </summary>
+// Mesmos valores no app e na validação do manifesto.
 public static class Deformacoes
 {
-    /// <summary>Escalas horizontal e vertical do corpo achatado no impacto.</summary>
     public static readonly (double X, double Y) Achatado = (1.3, 0.7);
 
-    /// <summary>Escalas horizontal e vertical do corpo esticado pela velocidade.</summary>
     public static readonly (double X, double Y) Esticado = (0.8, 1.25);
 
-    /// <summary>A partir desta velocidade vertical, em DIP/s, o corpo aparece esticado.</summary>
+    // DIP/s, vertical.
     public const double VelocidadeDoEsticamento = 700;
 }
 
-/// <summary>
-/// As situações da apresentação (DEC-036, item 1): a lista fechada do que a escolha do quadro pode pedir ao manifesto. A
-/// apresentação decide a situação pelo retrato e pela dinâmica; o manifesto tem exatamente um clipe para cada uma.
-/// </summary>
+// Lista fechada do que a apresentação pode pedir ao manifesto; ele tem exatamente um clipe por situação.
 public static class Situacoes
 {
-    /// <summary>Os gestos da agenda e da onda que têm clipe próprio, pelo nome do gesto do núcleo em minúsculas.</summary>
+    // Nome do gesto do núcleo em minúsculas.
     public static readonly IReadOnlyList<string> Gestos =
         ["espiar", "olharaoredor", "cocar", "espreguicar", "brincar", "soluco", "danca", "gargalhada", "espirro", "tosse", "tremedeira", "olharproteto", "agachar"];
 
-    /// <summary>As variantes da reação ao clique com clipe próprio (DEC-037, item 8); a de antes é <c>reagindo</c>.</summary>
+    // Variantes da reação ao clique; a genérica é "reagindo".
     public static readonly IReadOnlyList<string> Reacoes = ["susto", "flagra", "empolgado", "preguica"];
 
-    /// <summary>Todas as situações, na ordem do manifesto.</summary>
+    // Na ordem do manifesto.
     public static readonly IReadOnlyList<string> Todas =
     [
         "parado", "andando", "escalando", "escalando-agarrado", "foguete", "cipo", "cipo-agarrado",
@@ -88,53 +71,41 @@ public static class Situacoes
         OlhandoJanela,
     ];
 
-    /// <summary>Olhar a janela em primeiro plano pela curiosidade (DEC-037, item 5), virado para ela.</summary>
+    // Olhando a janela em primeiro plano, por curiosidade.
     public const string OlhandoJanela = "olhando-janela";
 
-    /// <summary>Espiar para fora da lateral explorada (DEC-037, item 9), virado para fora.</summary>
+    // Espiando pra fora da lateral, virado pra fora.
     public const string EspiandoNaBorda = "espiando-na-borda";
 
-    /// <summary>A situação de uma variante da reação: <c>reagindo-</c> e o nome dela.</summary>
     public static string DaReacao(string variante) => "reagindo-" + variante;
 
-    /// <summary>A situação de um gesto: <c>gesto-</c> e o nome dele em minúsculas.</summary>
     public static string DoGesto(string gesto) => "gesto-" + gesto;
 }
 
-/// <summary>
-/// O manifesto de clipes (DEC-036): um clipe por situação, lido de um JSON com versão por um leitor estrito, sem
-/// JsonSerializer nem reflexão: só os campos conhecidos, listas fechadas e limites de tamanho (SECURITY.md 7). O núcleo
-/// não o conhece; trocar a animação é trocar o manifesto e as poses.
-/// </summary>
+// Um clipe por situação, de um JSON versionado. Leitor estrito, sem JsonSerializer/reflexão: só
+// campos conhecidos, listas fechadas e limites de tamanho. O núcleo não conhece isso: trocar a
+// animação é trocar manifesto e poses.
 public sealed class ManifestoDeClipes
 {
-    /// <summary>A versão do formato que este leitor entende.</summary>
     public const int Versao = 1;
 
-    /// <summary>Limites do formato: quadros por clipe, passos por quadro e tamanho do texto.</summary>
     public const int MaximoDeQuadros = 32, MaximoDePassos = 600, MaximoDeCaracteres = 256 * 1024;
 
     private readonly Dictionary<string, Clipe> _clipes;
 
     private ManifestoDeClipes(Dictionary<string, Clipe> clipes) => _clipes = clipes;
 
-    /// <summary>Os clipes, na ordem do arquivo.</summary>
+    // Na ordem do arquivo.
     public IReadOnlyCollection<Clipe> Clipes => _clipes.Values;
 
-    /// <summary>O clipe de uma situação; lança se o manifesto não tem (a validação o impede no build).</summary>
+    // A validação no build garante que todas as situações existem.
     public Clipe this[string situacao]
         => _clipes.TryGetValue(situacao, out Clipe? clipe) ? clipe : throw new KeyNotFoundException($"O manifesto não tem clipe para a situação \"{situacao}\".");
 
-    /// <summary>Se o manifesto tem o clipe de uma situação.</summary>
     public bool Tem(string situacao) => _clipes.ContainsKey(situacao);
 
-    /// <summary>
-    /// Lê o manifesto. Lança <see cref="FormatException"/> com o caminho do campo em qualquer desvio do formato: versão,
-    /// campo desconhecido ou ausente, tipo errado, situação fora de <see cref="Situacoes.Todas"/> ou repetida, enumerado
-    /// fora da lista, quadros ou passos fora dos limites, campo repetido ou texto que não é UTF-16 válido (um escape de
-    /// surrogate solto); nenhuma outra exceção sai daqui. Não confere se as poses e as caras existem na arte: isso é da
-    /// validação (<see cref="ValidadorDeClipes"/>).
-    /// </summary>
+    // Qualquer desvio do formato vira FormatException com o caminho do campo; nenhuma outra exceção
+    // sai daqui. Não confere se poses e caras existem na arte: isso é do ValidadorDeClipes.
     public static ManifestoDeClipes Ler(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -146,7 +117,7 @@ public sealed class ManifestoDeClipes
         }
         catch (Exception e) when (e is JsonException or ArgumentException)
         {
-            // ArgumentException: um surrogate cru no texto (não escapado), que a transcodificação para UTF-8 recusa.
+            // ArgumentException: surrogate cru (não escapado), que a conversão pra UTF-8 recusa.
             throw new FormatException($"Manifesto não é JSON válido: {e.Message}", e);
         }
         using (documento)
@@ -157,8 +128,7 @@ public sealed class ManifestoDeClipes
             }
             catch (InvalidOperationException e)
             {
-                // Só o System.Text.Json transcodificando um texto com surrogate solto (num nome ou num valor): os tipos dos
-                // elementos são conferidos antes de cada leitura.
+                // Só pode ser escape de surrogate solto: os tipos já são conferidos antes de cada leitura.
                 throw new FormatException("Manifesto com texto que não é UTF-16 válido (um escape de surrogate solto).", e);
             }
         }
@@ -211,7 +181,7 @@ public sealed class ManifestoDeClipes
         return new QuadroDoClipe(pose, passos, cara, deformacao);
     }
 
-    /// <summary>Um objeto com exatamente os campos obrigatórios e, no máximo, os opcionais, cada um uma vez só.</summary>
+    // Todos os obrigatórios, opcionais à vontade, nada repetido nem desconhecido.
     private static JsonElement Objeto(JsonElement e, string onde, string[] obrigatorios, string[] opcionais)
     {
         if (e.ValueKind != JsonValueKind.Object) throw new FormatException($"{onde}: não é um objeto.");
@@ -264,14 +234,11 @@ public sealed class ManifestoDeClipes
     };
 }
 
-/// <summary>
-/// O reprodutor de clipes (DEC-036, item 3): o quadro de um clipe pelos passos do relógio lógico desde a entrada na
-/// situação. O clipe que repete volta ao começo; o que não repete para no último quadro. Sem relógio, os passos não andam,
-/// e o quadro não muda (DEC-011).
-/// </summary>
+// Quadro pelos passos do relógio lógico desde que entrou na situação. Clipe que repete dá a volta;
+// o que não repete para no último. Relógio parado, quadro parado.
 public static class ReprodutorDeClipes
 {
-    /// <summary>O índice e o quadro do clipe no passo <paramref name="passos"/> (negativo vale 0).</summary>
+    // Passo negativo vale 0.
     public static (int Indice, QuadroDoClipe Quadro) Quadro(Clipe clipe, long passos)
     {
         ArgumentNullException.ThrowIfNull(clipe);

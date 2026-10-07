@@ -1,80 +1,53 @@
 ﻿<#
-    medir-desempenho.ps1 — linha de base de desempenho do Buzzy em repouso (Fase 1).
+    Mede o desempenho do Buzzy parado (CPU, acordadas, memória). Mede UM processo, pelo
+    PID, nunca pelo nome:
 
-    Critério 11 da Fase 1 (TODO.md): "parado por 10 min, o consumo de CPU, memória e
-    acordadas fica registrado como linha de base". Mede UM processo, identificado por PID
-    e nunca por nome, com as métricas de DEC-011:
+      M1  CPU                    delta de TotalProcessorTime / tempo de parede, em % de um
+                                 núcleo e da máquina; média, p95, máximo e total
+      M2  acordadas por segundo  trocas de contexto somadas das threads
+      M3  memória                privada e working set
+      M4  GPU                    UtilizationPercentage das engines de GPU do PID
+      M6  tempo até 1º quadro    informado pelo app (BUZZY|PRIMEIRO_QUADRO)
 
-      M1  CPU do processo        delta de TotalProcessorTime sobre o tempo de parede, em %
-                                 de um núcleo e % da máquina; média, p95, máximo e total
-      M2  acordadas por segundo  trocas de contexto somadas das threads do processo
-      M3  memória                memória privada e working set
-      M4  GPU por processo       UtilizationPercentage das engines de GPU do PID
-      M6  tempo até 1º quadro    informado pelo próprio app (BUZZY|PRIMEIRO_QUADRO)
+    Também registra a resolução do timer global antes, durante e depois (é do sistema
+    inteiro; só comparando os três dá pra culpar o Buzzy), processos filhos a cada
+    amostra e conexões de rede do PID (esperado: nenhum dos dois).
 
-    Também registra:
-      - a resolução do timer global antes de abrir, durante e depois de fechar o Buzzy.
-        Ela vale para o sistema inteiro; comparar os três momentos é o que permite atribuir
-        uma mudança ao Buzzy (critério de DEC-011);
-      - os processos filhos do Buzzy a cada amostra (Win32_Process com ParentProcessId =
-        PID; esperado nenhum, SECURITY.md 3.2);
-      - instantâneos das conexões de rede do PID (SECURITY.md 8, item 3; esperado nenhuma).
+    Usa classes CIM porque os nomes não são traduzidos (Get-Counter quebra em Windows em
+    português). M2 lê as trocas por thread via NtQuerySystemInformation, o mesmo dado do
+    "Context Switch Delta" do Process Explorer; a consulta CIM de threads levava 7 a 9 s
+    e estragava o intervalo de 1 s, então só entra se a nativa falhar. O filtro de GPU
+    confere o PID exato: em WQL "_" é curinga e 'pid_123_%' pegaria o PID 1234.
+    As metas de repouso no fim do relatório são só referência, não veredito.
 
-    Método: o protocolo aceito de P2 (spikes/ferramentas/medir-p2.ps1), com classes CIM,
-    cujos nomes não são traduzidos e por isso funcionam em Windows em português, ao
-    contrário dos nomes de contador de Get-Counter. Duas diferenças, ambas de fidelidade:
-      - M2 lê o contador acumulado de trocas de cada thread (NtQuerySystemInformation). É
-        o mesmo dado do "Context Switch Delta" do Process Explorer, citado em DEC-011, e da
-        classe CIM de threads usada em P2. A consulta CIM de threads levou de 7 a 9 s nesta
-        máquina (medido em 2026-09-29); em P2 ela esticou o "intervalo de 1 s" para cerca de
-        6,7 s (88 a 90 amostras em 10 min). A consulta CIM fica como alternativa, usada só
-        se a leitura nativa falhar.
-      - o filtro de GPU confere o PID exato: em WQL, "_" é curinga, e 'pid_123_%' também
-        pegaria as engines do PID 1234.
-
-    A Fase 1 só precisa REGISTRAR a linha de base. As metas de repouso de Q-08 (DEC-011)
-    aparecem no fim do relatório como referência informativa, não como veredito.
-
-    Contrato com o aplicativo (Buzzy.exe --diagnostico --perfil-de-teste desempenho):
-      - grava %LOCALAPPDATA%\Buzzy\diagnostico.log acrescentando; o script só lê o que for
-        escrito depois de abrir o app;
-      - com o perfil de teste, os dados do app (posição, preferências) ficam em
-        %LOCALAPPDATA%\Buzzy\testes\desempenho, nunca nas configurações reais do usuário; essa
-        pasta é apagada antes de abrir, para toda medição partir da posição inicial;
-      - linhas "[hh:mm:ss.fff] BUZZY|CHAVE|campo=valor|...": INICIO (pid), JANELA (hwnd em
+    Contrato com o app (Buzzy.exe --diagnostico --perfil-de-teste desempenho):
+      - acrescenta em %LOCALAPPDATA%\Buzzy\diagnostico.log; o script só lê o que vier
+        depois de abrir;
+      - os dados do app ficam em %LOCALAPPDATA%\Buzzy\testes\desempenho, nunca nas
+        configurações reais; a pasta é apagada antes, pra partir sempre da posição inicial;
+      - linhas "[hh:mm:ss.fff] BUZZY|CHAVE|campo=valor|...": INICIO (pid), JANELA (hwnd
         decimal), PRIMEIRO_QUADRO (ms desde o início do processo), FIM (codigo);
-      - instância única: se já houver processo Buzzy, o script aborta ANTES de abrir, e
-        nunca encerra processo que não tenha aberto;
-      - encerramento limpo por WM_CLOSE ao HWND de BUZZY|JANELA. A janela é tool window, e
-        Process.CloseMainWindow não a alcança.
-    Tempos limite: 30 s da abertura até as linhas de partida no log (sem BUZZY|JANELA o
-    script desiste e encerra o processo que abriu; sem BUZZY|PRIMEIRO_QUADRO a medição
-    segue e só M6 fica sem valor) e 15 s de WM_CLOSE até a saída (depois disso, registra a
-    falha e só então encerra à força o processo que ele mesmo abriu).
+      - se já houver Buzzy aberto, aborta ANTES de abrir; nunca encerra processo alheio;
+      - fecha com WM_CLOSE no HWND de BUZZY|JANELA (é tool window, o
+        Process.CloseMainWindow não alcança).
+    Limites: 30 s até a partida no log (sem JANELA desiste e encerra o que abriu; sem
+    PRIMEIRO_QUADRO segue sem M6) e 15 s do WM_CLOSE até sair (depois mata o que abriu).
 
-    ATENÇÃO: o script ABRE o Buzzy na tela e o deixa parado durante toda a medição (cerca
-    de Minutos + 1 min). Não interaja com o Buzzy nem passe o mouse sobre ele: isso acorda
-    o processo e entra na medição. Enquanto mede, o script pede ao Windows que não
-    desligue a tela nem suspenda a máquina (SetThreadExecutionState); o pedido é do
-    PowerShell, não do Buzzy, e termina com a medição.
+    ATENÇÃO: abre o Buzzy na tela por uns Minutos + 1 min. Não mexa nele nem passe o
+    mouse por cima, senão acorda o processo e suja a medição. Enquanto mede, o
+    PowerShell (não o Buzzy) pede pra tela não apagar (SetThreadExecutionState).
 
-    A partir da Fase 4 o Buzzy se move sozinho. O modo padrão, -Modo repouso, abre o app com
-    --pausado (movimento pausado, como pelo menu "Pausar movimento") e mede a linha de base.
-    -Modo autonomia deixa a agenda ligada: o personagem anda, escala e pula pela tela durante a
-    medição, e o relatório dá o custo médio desse comportamento.
-
-    -Modo onda (tamagotchi, DEC-028; crítica de integração, V13) abre pausado, como o repouso, e
-    antes do aquecimento deixa uma vodka em uso: o botão direito no personagem abre o menu, as
-    teclas I e V invocam a vodka, e ela é arrastada até ele. Tudo por mensagens POSTADAS às
-    janelas do próprio Buzzy aberto aqui (WM_RBUTTONDOWN/UP, WM_CHAR ao dono do menu,
-    WM_LBUTTONDOWN, WM_MOUSEMOVE e WM_LBUTTONUP à janela do item), com o PID de cada janela
-    conferido antes de cada mensagem, como nos testes de integração: nada passa pela fila de
-    input do Windows, o cursor não se move e nenhum outro aplicativo recebe nada. O menu toma o
-    primeiro plano por um instante, como sempre (DEC-016). A medição é o repouso pausado com a
-    onda de bebedeira em curso: os disparos únicos do temporizador da onda só trocam a cara, e o
-    relógio fica desligado. Uma vodka dura cerca de 5 min e 20 s (subida, dois níveis de pico e a
-    queda); o relatório mostra a linha do tempo da onda, a CPU com ela e depois dela, e se o
-    relógio ligou durante a janela medida.
+    Modos:
+      repouso (padrão)  abre com --pausado, como "Pausar movimento" no menu;
+      autonomia         agenda ligada: anda, escala e pula; dá o custo médio disso;
+      onda              pausado, mas antes do aquecimento põe uma vodka em uso: botão
+                        direito abre o menu, teclas I e V pegam a vodka e ela é arrastada
+                        até o personagem. Tudo por mensagens POSTADAS às janelas do Buzzy
+                        aberto aqui, conferindo o PID antes de cada uma: nada passa pela
+                        fila de input, o cursor não se move e nenhum outro app recebe nada.
+                        O menu toma o primeiro plano por um instante. Uma vodka dura uns
+                        5 min 20 s; o relatório mostra a linha do tempo da onda, a CPU com
+                        e depois dela, e se o relógio ligou na janela medida.
 
     Uso, na raiz do repositório, depois de compilar o Release de src/Buzzy.App:
       .\tools\medir-desempenho.ps1
@@ -83,43 +56,36 @@
       .\tools\medir-desempenho.ps1 -Modo onda
       .\tools\medir-desempenho.ps1 -Exe C:\caminho\Buzzy.exe -Destino C:\temp\medicao.txt
 
-    Código de saída: 0 medição completa e encerramento limpo; 1 medição incompleta ou
-    encerramento com falha (o relatório diz o motivo); 2 abortado antes de abrir o app.
+    Saída: 0 completa e fechou limpo; 1 incompleta ou falha ao fechar (o relatório diz
+    o motivo); 2 abortado antes de abrir.
 #>
 
 [CmdletBinding()]
 param(
-    # Duração da janela medida, depois do aquecimento. Q-08 avalia a CPU em 10 min.
+    # Janela medida, depois do aquecimento. A meta de CPU é avaliada em 10 min.
     [ValidateRange(1, 1440)]
     [int] $Minutos = 10,
 
-    # Intervalo entre amostras. DEC-011 prescreve 1 s para M1.
+    # 1 s é o intervalo certo pro M1.
     [ValidateRange(1, 3600)]
     [int] $IntervaloSegundos = 1,
 
-    # Descartado das estatísticas, contado a partir do primeiro quadro: a partida é o
+    # Conta a partir do primeiro quadro e fica fora das estatísticas: a partida é o
     # único trecho em que o app gasta CPU de verdade.
     [ValidateRange(0, 3600)]
     [int] $AquecimentoSegundos = 30,
 
-    # Executável medido. Padrão: o Release de src/Buzzy.App.
+    # Padrão: o Release de src/Buzzy.App.
     [string] $Exe,
 
-    # Arquivo do relatório. Padrão: resultados\desempenho-AAAAMMDD-HHMMSS.txt na raiz do
-    # repositório; a pasta é criada se faltar.
+    # Padrão: resultados\desempenho-AAAAMMDD-HHMMSS.txt; cria a pasta se faltar.
     [string] $Destino,
 
-    # O que medir. 'repouso' (padrão) abre o Buzzy com o movimento pausado (--pausado): é a
-    # linha de base de repouso (Fase 1, critério 11), que a Fase 4 não pode piorar.
-    # 'autonomia' abre com a agenda autônoma ligada (Fase 4): o personagem anda, escala, pula
-    # e descansa sozinho, e a medição dá o custo médio desse comportamento.
-    # 'onda' abre pausado e, antes do aquecimento, deixa uma vodka em uso por mensagens postadas
-    # às janelas do próprio Buzzy (tamagotchi, DEC-028; crítica, V13): repouso com a onda ativa.
+    # repouso, autonomia ou onda (ver o topo).
     [ValidateSet('repouso', 'autonomia', 'onda')]
     [string] $Modo = 'repouso',
 
-    # Semente da agenda autônoma (--semente), para repetir a mesma sequência de ações.
-    # Negativa: o app usa a própria semente.
+    # --semente da agenda, pra repetir a sequência. Negativa: o app escolhe.
     [long] $Semente = -1
 )
 
@@ -129,14 +95,13 @@ $ErrorActionPreference = 'Stop'
 $limitePartidaSegundos = 30        # abrir -> BUZZY|JANELA e BUZZY|PRIMEIRO_QUADRO no log
 $limiteSaidaSegundos = 15          # WM_CLOSE -> processo encerrado
 $limiteForcadoSegundos = 5         # encerramento forçado -> processo encerrado
-$leituraTimerSegundos = 3          # resolução do timer lida antes de abrir e depois de fechar
-$intervaloRedeSegundos = 10        # instantâneos de conexões de rede do PID
-$intervaloProgressoSegundos = 60   # linha de progresso no console
-$trocasDeUmTimer300ms = 1000.0 / 300.0   # um timer de 300 ms acorda a thread 3,33 vezes/s
+$leituraTimerSegundos = 3          # timer lido antes de abrir e depois de fechar
+$intervaloRedeSegundos = 10        # conexões de rede do PID
+$intervaloProgressoSegundos = 60   # progresso no console
+$trocasDeUmTimer300ms = 1000.0 / 300.0   # timer de 300 ms acorda a thread 3,33 vezes/s
 
-# Perfil de teste (Fase 5): os dados do Buzzy medido ficam em %LOCALAPPDATA%\Buzzy\testes\desempenho; a
-# medição nunca lê nem grava a posição e as preferências reais do usuário. O log continua na pasta do Buzzy.
-# A pasta do perfil é apagada antes de abrir (LimparPerfilDeTeste): toda medição parte da posição inicial.
+# Dados do Buzzy medido em %LOCALAPPDATA%\Buzzy\testes\desempenho, nunca nos reais; o log
+# continua na pasta do Buzzy. A pasta é apagada antes de abrir.
 $perfilDeTeste = 'desempenho'
 $argumentosDoBuzzy = '--diagnostico --perfil-de-teste ' + $perfilDeTeste
 if ($Modo -eq 'repouso' -or $Modo -eq 'onda') { $argumentosDoBuzzy += ' --pausado' }
@@ -158,17 +123,16 @@ $inicioScript = [DateTime]::Now
 $raiz = Split-Path -Parent $PSScriptRoot
 if (-not $Exe) { $Exe = Join-Path $raiz 'src\Buzzy.App\bin\Release\net10.0-windows\Buzzy.exe' }
 if (-not $Destino) { $Destino = Join-Path $raiz ('resultados\desempenho-{0}.txt' -f $inicioScript.ToString('yyyyMMdd-HHmmss')) }
-# Caminho relativo vale a partir da pasta atual do PowerShell, não da pasta do processo.
+# Relativo à pasta atual do PowerShell, não à do processo.
 $Exe = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Exe)
 $Destino = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destino)
 $logDiag = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Buzzy') 'diagnostico.log'
-# Ao passar de 1 MB, o Buzzy move o log para esta cópia e recomeça (Diagnostico.cs).
+# Passando de 1 MB, o Buzzy move o log pra cá e recomeça.
 $logDiagCopia = Join-Path (Split-Path -Parent $logDiag) 'diagnostico.1.log'
 $nomesProcesso = @('Buzzy', [IO.Path]::GetFileNameWithoutExtension($Exe)) | Select-Object -Unique
 
-# Os arquivos reais de configuração do usuário (os quatro nomes de ArquivoDeConfiguracoes), vistos só por fora: existência,
-# tamanho e datas, nunca o conteúdo (SECURITY.md 5). A medição usa o perfil de teste e nunca pode mudá-los: a foto de antes
-# de abrir e a do fim são comparadas (revisão de segurança do bloco P6-P9, achado 8; a mesma de ArquivosReais.cs).
+# Configurações reais vistas só por fora (existência, tamanho, datas), nunca o conteúdo.
+# A foto de antes e a do fim são comparadas: a medição não pode mexer nelas.
 $pastaDoBuzzyReal = Split-Path -Parent $logDiag
 function FotoDosArquivosReais {
     $arquivos = (@('settings.json', 'settings.json.bak', 'settings.json.tmp', 'settings.corrupt.json') | ForEach-Object {
@@ -176,8 +140,8 @@ function FotoDosArquivosReais {
         if ($info.Exists) { '{0}: {1} bytes, criado {2}, escrito {3}' -f $_, $info.Length, $info.CreationTimeUtc.ToString('o'), $info.LastWriteTimeUtc.ToString('o') }
         else { '{0}: ausente' -f $_ }
     }) -join '; '
-    # O registro real do início com o Windows (DEC-038, item 12), só por fora: se o valor Buzzy existe e de que tipo, nas
-    # chaves Run e StartupApproved\Run do usuário. Os dados nunca são lidos; nada é gravado.
+    # Registro do início com o Windows, só por fora: se o valor Buzzy existe e o tipo.
+    # Os dados nunca são lidos; nada é gravado.
     $registro = (@('Software\Microsoft\Windows\CurrentVersion\Run', 'Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run') | ForEach-Object {
         $chave = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($_)
         if ($null -eq $chave) { '{0}: chave ausente' -f $_ }
@@ -199,19 +163,17 @@ function ProcessosBuzzyAbertos {
     @(Get-Process -Name $nomesProcesso -ErrorAction SilentlyContinue | Sort-Object Id -Unique)
 }
 
-# Apaga a pasta do perfil de teste (<pastaLocal>\Buzzy\testes\<perfil>, com a pasta local do usuário), se existir,
-# com tudo o que houver dentro, como a limpeza dos testes (PerfilDeTeste.Limpar): só com nenhum Buzzy aberto, e
-# sem seguir junção nem link simbólico no caminho até ela, para nunca apagar nada fora da pasta do Buzzy. Sem a
-# posição gravada pela medição anterior, duas medições com a mesma semente partem do mesmo lugar e continuam
-# comparáveis. Devolve o que fez, para o relatório; se não puder apagar, aborta antes de abrir.
+# Apaga <pastaLocal>\Buzzy\testes\<perfil> como o PerfilDeTeste.Limpar: só com nenhum
+# Buzzy aberto e sem seguir junção nem link no caminho. Assim duas medições com a mesma
+# semente partem do mesmo lugar. Devolve o que fez; se não conseguir, aborta.
 function LimparPerfilDeTeste([string] $pastaLocal, [string] $perfil) {
     if ($perfil -cnotmatch '\A[a-z0-9][a-z0-9-]{0,31}\z') { Abortar ('nome de perfil de teste inválido: {0}' -f $perfil) }
     if ([string]::IsNullOrEmpty($pastaLocal) -or $pastaLocal -notmatch '\A([A-Za-z]:\\|\\\\)') { return 'sem a pasta local do usuário; nada a apagar' }
     $buzzy = [IO.Path]::Combine($pastaLocal, 'Buzzy')
     $testes = [IO.Path]::Combine($buzzy, 'testes')
     $pasta = [IO.Path]::Combine($testes, $perfil)
-    # Cada trecho que existe é conferido antes de tudo, também sem a pasta do perfil: com a pasta do Buzzy ou a dos testes
-    # como junção, o Buzzy medido gravaria do outro lado (revisão de segurança do bloco P6-P9, achado 5).
+    # Confere cada trecho mesmo sem a pasta do perfil: se a do Buzzy ou a dos testes for
+    # junção, o Buzzy medido gravaria do outro lado.
     foreach ($trecho in @($buzzy, $testes, $pasta)) {
         try { $atributos = [IO.File]::GetAttributes($trecho) } catch [IO.FileNotFoundException], [IO.DirectoryNotFoundException] { continue }
         if (($atributos -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
@@ -626,7 +588,7 @@ namespace BuzzyFerramentas
 }
 '@
 }
-# Uma sessão do PowerShell que já carregou uma versão anterior das ferramentas não carrega a nova (o tipo é o mesmo).
+# Sessão que já carregou uma versão antiga do tipo não carrega a nova (mesmo nome).
 if ($Modo -eq 'onda' -and $null -eq [BuzzyFerramentas.MedicaoDesempenho].GetMethod('PostarMouse')) {
     Abortar 'esta sessão do PowerShell carregou uma versão anterior das ferramentas de medição, sem as mensagens do modo onda. Rode o script num PowerShell novo (powershell -NoProfile -File tools\medir-desempenho.ps1 -Modo onda).'
 }
@@ -658,8 +620,8 @@ $encerramento = @{
     Saiu = $false; SegundosAteSair = $null; Forcado = $false; ErroForcado = $null
     JaTinhaSaido = $false; CodigoSaida = $null; HoraSaida = $null
 }
-# Modo onda (tamagotchi, DEC-028; crítica, V13)
-$preparacaoOnda = New-Object System.Collections.Generic.List[string]   # o que a preparação fez, para o relatório
+# Modo onda
+$preparacaoOnda = New-Object System.Collections.Generic.List[string]   # o que a preparação fez, pro relatório
 $temposCpu = New-Object System.Collections.Generic.List[double]         # s desde o início da janela, um por amostra de M1
 
 $script:posLog = [int64]0
@@ -723,7 +685,7 @@ function Media($valores) {
 }
 
 function Percentil($ordenados, [double] $fracao) {
-    # Posto mais próximo, como em medir-p2.ps1.
+    # Posto mais próximo.
     $n = $ordenados.Count
     if ($n -eq 0) { return [double]::NaN }
     $i = [int][Math]::Ceiling($n * $fracao) - 1
@@ -870,8 +832,8 @@ function ConverterLinhaBuzzy([string] $linha) {
 }
 
 function LerLinhasNovas([IO.FileStream] $fluxo, [int64] $desde) {
-    # Acrescenta as linhas completas do fluxo a partir de $desde e devolve quantos bytes consumiu. Só avança até a
-    # última quebra de linha: uma linha que o app ainda está escrevendo é lida inteira na próxima vez.
+    # Lê as linhas completas a partir de $desde e devolve os bytes consumidos. Para na
+    # última quebra: linha que o app ainda está escrevendo fica pra próxima vez.
     $pendentes = [int]($fluxo.Length - $desde)
     if ($pendentes -le 0) { return [int64]0 }
     $bytes = New-Object byte[] $pendentes
@@ -897,9 +859,8 @@ function LerLinhasNovas([IO.FileStream] $fluxo, [int64] $desde) {
 }
 
 function LerRestoDaCopia([int64] $desde) {
-    # Depois de uma rotação (o Buzzy passou de 1 MB e o log virou diagnostico.1.log), o trecho ainda não lido do
-    # arquivo anterior está na cópia, a partir do mesmo deslocamento. Uma cópia menor que ele (de outra rotação) não
-    # tem nada depois dele: a leitura não traz linha nenhuma.
+    # Depois de uma rotação o que faltava ler está em diagnostico.1.log, no mesmo
+    # deslocamento. Cópia menor que isso (de outra rotação) não traz nada.
     if (-not [IO.File]::Exists($logDiagCopia)) { return }
     $copia = $null
     try {
@@ -911,15 +872,14 @@ function LerRestoDaCopia([int64] $desde) {
 }
 
 function AtualizarLog {
-    # Lê as linhas completas acrescentadas ao log desde a última leitura. Abre com compartilhamento
-    # total para não atrapalhar a escrita do app.
+    # Compartilhamento total pra não atrapalhar a escrita do app.
     if (-not [IO.File]::Exists($logDiag)) { return }
     $fluxo = $null
     try {
         $fluxo = [IO.FileStream]::new($logDiag, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]'ReadWrite, Delete')
         if ($fluxo.Length -lt $script:posLog) {
-            # O arquivo encolheu depois de aberto o app: o Buzzy o rotacionou ou ele foi recriado ou truncado. O
-            # que faltava ler do arquivo anterior vem da cópia da rotação; depois, o arquivo novo, do começo.
+            # Encolheu: rotação, recriado ou truncado. O resto do anterior vem da cópia;
+            # depois lê o novo do começo.
             $script:logRecriado = $true
             LerRestoDaCopia $script:posLog
             $script:posLog = [int64]0
@@ -973,8 +933,8 @@ function VerificarFilhos {
     $script:verificacoesFilhos++
     $agora = 0
     foreach ($f in $lista) {
-        # Um órfão antigo, cujo pai morto tinha este mesmo PID, também aparece na consulta;
-        # só conta processo criado depois do Buzzy.
+        # Órfão antigo de um pai morto com o mesmo PID também aparece; só conta o que
+        # nasceu depois do Buzzy.
         if ($null -ne $f.CreationDate -and $f.CreationDate -lt $inicioProcesso) { continue }
         $agora++
         $criacao = if ($null -ne $f.CreationDate) { $f.CreationDate.Ticks } else { 0 }
@@ -987,7 +947,7 @@ function VerificarFilhos {
 }
 
 function VerificarRede {
-    # Instantâneo: pega conexão que esteja aberta no momento da consulta.
+    # Instantâneo: só pega conexão aberta no momento da consulta.
     try {
         $errosTcp = $null
         $errosUdp = $null
@@ -1041,7 +1001,7 @@ function LerGpu {
 }
 
 function LerTrocasCim {
-    # Alternativa de P2, usada só se a leitura nativa falhar: cada consulta leva segundos.
+    # Plano B, só se a leitura nativa falhar: cada consulta leva segundos.
     try {
         $soma = 0.0
         foreach ($t in @(Get-CimInstance -Query $consultaThread -ErrorAction Stop)) { $soma += [double]$t.ContextSwitchesPersec }
@@ -1057,13 +1017,13 @@ function MostrarProgresso([double] $t) {
     Write-Host ('   [{0} de {1}] {2} amostras | CPU média {3}% de um núcleo | trocas/s média {4} | privada {5} MB | filhos {6}' -f (Duracao $t), (Duracao ($Minutos * 60)), $amostrasCpu.Count, (Num $cpuMedia), (Num (Media $amostrasTrocas) '0.00'), (Num $priv '0.00'), $filhosVistos.Count) -ForegroundColor DarkGray
 }
 
-# ------------------------------------------------------------------ modo onda (tamagotchi, DEC-028; crítica, V13)
-# Mensagens POSTADAS às janelas do próprio Buzzy aberto aqui, com o PID de cada janela conferido imediatamente antes de
-# cada mensagem, como nos testes de integração (ItensIntegracaoTestes): nada passa pela fila de input do Windows, o
-# cursor não se move e nenhum outro aplicativo recebe nada.
+# ------------------------------------------------------------------ modo onda
+# Mensagens POSTADAS às janelas do Buzzy aberto aqui, conferindo o PID logo antes de
+# cada uma: nada passa pela fila de input, o cursor não se move e nenhum outro app
+# recebe nada.
 
 function EsperarEvento([int] $desde, [string] $chave, [hashtable] $campos, [string[]] $comCampos, [double] $limiteSegundos, [string] $oque) {
-    # Índice em $eventos do primeiro evento a partir de $desde com a chave, os valores e os campos pedidos.
+    # Índice do primeiro evento a partir de $desde com a chave, valores e campos pedidos.
     $relogio = [Diagnostics.Stopwatch]::StartNew()
     while ($true) {
         AtualizarLog
@@ -1107,13 +1067,13 @@ function LerRetangulo([string] $texto) {
 function Centro([int[]] $r) { return [int[]]@([int][Math]::Floor(($r[0] + $r[2]) / 2.0), [int][Math]::Floor(($r[1] + $r[3]) / 2.0)) }
 
 function PrepararOnda {
-    # 1. O ponto opaco do personagem parado, registrado pelo app (BUZZY|POSICAO), e a janela dele (BUZZY|JANELA).
+    # 1. Ponto opaco do personagem (BUZZY|POSICAO) e a janela dele (BUZZY|JANELA).
     $M = [BuzzyFerramentas.MedicaoDesempenho]
     $hwndPersonagem = LerHwnd $eJanela.Campos['hwnd']
     $iPosicao = EsperarEvento 0 'POSICAO' @{} @('pontoOpaco') 10 'BUZZY|POSICAO com o ponto opaco'
     $opaco = LerPonto $eventos[$iPosicao].Campos['pontoOpaco']
 
-    # 2. O menu pelo botão direito no personagem; as teclas de acesso I (Itens) e V (Vodka), como WM_CHAR ao dono do
+    # 2. Botão direito abre o menu; I (Itens) e V (Vodka) vão como WM_CHAR ao dono do
     # menu, cuja fila o laço modal do menu lê.
     $marca = $eventos.Count
     PostarMouse $hwndPersonagem $M::WM_RBUTTONDOWN 0 $opaco 'botão direito no personagem'
@@ -1133,7 +1093,7 @@ function PrepararOnda {
     }
     $preparacaoOnda.Add(('menu pelo botão direito no personagem (mensagem postada), teclas I e V (WM_CHAR ao dono do menu): fechado={0}, argumento={1}; o dono do menu teve o primeiro plano={2}' -f $fechado.Campos['fechado'], $fechado.Campos['argumento'], $fechado.Campos['donoEmPrimeiroPlano']))
 
-    # 3. A janela da vodka aparece, cai e para no chão: o relógio, ligado só pela queda, desliga.
+    # 3. A vodka aparece, cai e para no chão; o relógio, ligado pela queda, desliga.
     $iMostrado = EsperarEvento $marca 'ITEM' @{ item = 'Vodka' } @('mostrado', 'hwnd', 'retangulo', 'pontoOpaco') 5 'BUZZY|ITEM|mostrado da vodka'
     $mostrado = $eventos[$iMostrado]
     $id = $mostrado.Campos['mostrado']
@@ -1148,8 +1108,8 @@ function PrepararOnda {
     if ($null -eq $retItem -or $null -eq $retPersonagem) { throw 'não deu para ler o retângulo da janela da vodka ou do personagem' }
     $preparacaoOnda.Add(('vodka (Id {0}) invocada ao lado dele: nasceu em {1} e parou no chão em ({2},{3})-({4},{5})' -f $id, $mostrado.Campos['retangulo'], $retItem[0], $retItem[1], $retItem[2], $retItem[3]))
 
-    # 4. O arraste até ele: o botão no ponto opaco da vodka e o soltar deslocado do mesmo tanto, para o centro dela
-    # ficar no centro dele; oito movimentos com o botão, cada um convertido pela posição atual da janela do item.
+    # 4. Arrasta: aperta no ponto opaco da vodka e solta deslocado pra o centro dela cair
+    # no centro dele; oito movimentos, cada um convertido pela posição atual da janela.
     $de = [int[]]@(($retItem[0] + $opacoNascimento[0] - $retNascimento[0]), ($retItem[1] + $opacoNascimento[1] - $retNascimento[1]))
     $centroItem = Centro $retItem
     $centroPersonagem = Centro $retPersonagem
@@ -1173,7 +1133,7 @@ function PrepararOnda {
 }
 
 function VerificarFimDaOnda([double] $t) {
-    # A onda acaba no disparo que leva a "-> fim"; anota a amostra em que a linha apareceu.
+    # A onda acaba no disparo "-> fim"; anota a amostra em que a linha apareceu.
     for ($i = [Math]::Max($script:eventosVistosOnda, $script:indiceUsoDaOnda); $i -lt $eventos.Count; $i++) {
         $e = $eventos[$i]
         if ($e.Chave -eq 'NUCLEO' -and $e.Campos['evento'] -eq 'ItemEffectTimer' -and $e.Campos['regra'] -match '-> fim') {
@@ -1185,7 +1145,7 @@ function VerificarFimDaOnda([double] $t) {
 }
 
 function ResumoDaOnda {
-    # Na janela medida: os disparos da onda, as linhas de relógio ligado e as amostras de CPU com a onda e depois dela.
+    # Na janela medida: disparos da onda, relógio ligado e CPU com e depois da onda.
     $disparos = 0
     $relogioLigado = 0
     if ($script:indiceInicioJanela -ge 0) {
@@ -1205,7 +1165,7 @@ function ResumoDaOnda {
 
 # ------------------------------------------------------------------ encerramento e depois
 function Encerrar {
-    # Pode ser chamada de novo (pelo finally) se a primeira chamada for interrompida.
+    # O finally pode chamar de novo se a primeira vez for interrompida.
     if ($null -eq $proc) { return }
     if (-not $proc.HasExited) {
         $encerramento.Tentativas++
@@ -1226,8 +1186,8 @@ function Encerrar {
             }
         }
         if (-not $proc.HasExited) {
-            # Só o processo que este script abriu, pelo handle guardado desde a abertura;
-            # nunca por nome, para não atingir outra instância do Buzzy.
+            # Só o processo aberto aqui, pelo handle guardado; nunca por nome, pra não
+            # pegar outra instância.
             $encerramento.Forcado = $true
             try { $proc.Kill() } catch { $encerramento.ErroForcado = $_.Exception.Message }
             [void]$proc.WaitForExit($limiteForcadoSegundos * 1000)
@@ -1246,7 +1206,7 @@ function ColetarDepois {
     if ($script:depoisColetado -or $null -eq $proc) { return }
     # Últimas linhas do log, incluindo BUZZY|FIM.
     AtualizarLog
-    # Filhos ainda vivos depois da saída (critério 10 da Fase 1).
+    # Filhos ainda vivos depois da saída.
     try {
         foreach ($f in @(Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $pidAlvo" -ErrorAction Stop)) {
             if ($null -ne $f.CreationDate -and $f.CreationDate -lt $inicioProcesso) { continue }
@@ -1266,7 +1226,7 @@ function ColetarDepois {
 }
 
 function FecharJanela {
-    # Totais da janela medida até a última amostra; vale também para medição interrompida.
+    # Totais até a última amostra; vale também pra medição interrompida.
     $script:duracaoMedida = $tAnterior
     if ($tAnterior -gt 0) {
         $script:cpuSegundosJanela = ($cpuAnterior - $cpuInicioJanela).TotalSeconds
@@ -1518,7 +1478,7 @@ function EscreverRelatorio {
         $L.Add('   não se aplicam diretamente; a comparação fica só como ordem de grandeza.')
     }
     if ($Modo -eq 'onda') {
-        # V13 da crítica de integração: repouso pausado com a onda de uma vodka, CPU média até 0,1% e relógio desligado.
+        # Com a onda de uma vodka: CPU média até 0,1% e relógio desligado.
         $resumoOnda = ResumoDaOnda
         $L.Add(('   Modo onda (V13): repouso pausado com a onda de uma vodka; uma vodka dura cerca de 5 min e 20 s, e o resto da janela é o repouso de sempre.'))
         $L.Add(('   - relógio desligado durante a janela medida : {0} linha(s) RELOGIO|ligado=sim -> {1}' -f $resumoOnda.RelogioLigado, (Referencia ($resumoOnda.RelogioLigado -eq 0 -and $preparacaoOnda.Count -gt 0))))
@@ -1628,7 +1588,7 @@ if ($abertos.Count -gt 0) {
     Abortar ('um processo Buzzy apareceu antes da abertura (PID {0}). Feche-o pelo menu da bandeja e rode de novo.' -f (($abertos | ForEach-Object { $_.Id }) -join ', '))
 }
 
-# Sem nenhum Buzzy aberto, ninguém usa a pasta do perfil de teste: apagada, o Buzzy medido parte da posição inicial.
+# Sem Buzzy aberto ninguém usa a pasta do perfil; apagando, parte da posição inicial.
 $pastaLocalDoUsuario = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData, [Environment+SpecialFolderOption]::DoNotVerify)
 $limpezaDoPerfil = LimparPerfilDeTeste $pastaLocalDoUsuario $perfilDeTeste
 Write-Host ('Perfil de teste {0}: {1}.' -f $perfilDeTeste, $limpezaDoPerfil) -ForegroundColor DarkGray
@@ -1703,7 +1663,7 @@ try {
         }
         if ($relogioPartida.Elapsed.TotalSeconds -ge $limitePartidaSegundos) {
             if ($null -ne $eJanela) {
-                # Sem o primeiro quadro ainda dá para medir e fechar pela janela; só M6 fica sem valor.
+                # Sem o primeiro quadro ainda dá pra medir e fechar; só M6 fica sem valor.
                 $avisos.Add(('BUZZY|PRIMEIRO_QUADRO não apareceu em {0} s; a medição seguiu sem M6' -f $limitePartidaSegundos))
                 break
             }
@@ -1716,7 +1676,7 @@ try {
         Start-Sleep -Milliseconds 100
     }
 
-    # A janela registrada precisa ser do processo aberto aqui: é para ela que vai o WM_CLOSE.
+    # A janela tem de ser do processo aberto aqui: é pra ela que vai o WM_CLOSE.
     $hwndJanela = LerHwnd $eJanela.Campos['hwnd']
     if ($hwndJanela -eq [IntPtr]::Zero) { throw ('a linha BUZZY|JANELA não trouxe hwnd válido: {0}' -f $eJanela.Linha) }
     $donoJanela = [BuzzyFerramentas.MedicaoDesempenho]::PidDaJanela($hwndJanela)
@@ -1763,7 +1723,7 @@ try {
     }
 
     # ---------------------------------------------------------------- preparação
-    # As primeiras consultas CIM e a carga do módulo de rede custam mais; ficam fora da janela.
+    # As primeiras consultas CIM e o módulo de rede custam mais; ficam fora da janela.
     $etapa = 'preparação da medição'
     $consultaGpu = "SELECT Name, UtilizationPercentage FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine WHERE Name LIKE 'pid_${pidAlvo}_%'"
     try {
@@ -1782,7 +1742,7 @@ try {
         $motivoTrocasNativo = $_.Exception.Message
         $consultaThread = "SELECT IDProcess, ContextSwitchesPersec FROM Win32_PerfFormattedData_PerfProc_Thread WHERE IDProcess = $pidAlvo"
         $avisos.Add(('M2 pela consulta CIM de P2, porque a leitura nativa falhou ({0}); cada consulta leva segundos e alonga o intervalo das amostras' -f $motivoTrocasNativo))
-        # A primeira consulta só aquece o provedor CIM; não entra nas amostras nem nas falhas.
+        # A primeira só aquece o provedor CIM; não conta como amostra nem falha.
         LerTrocasCim
         $amostrasTrocas.Clear()
         $script:falhasTrocas = 0
@@ -1811,8 +1771,8 @@ try {
     $k = 0
 
     while ($true) {
-        # Agenda fixa: a amostra k cai em k * intervalo. Se uma rodada atrasar, pula para a
-        # próxima marca em vez de amostrar em rajada.
+        # Agenda fixa: amostra k em k * intervalo. Rodada atrasada pula pra próxima marca
+        # em vez de amostrar em rajada.
         $k = [Math]::Max($k + 1, [int][Math]::Floor($relogioMedicao.Elapsed.TotalSeconds / $IntervaloSegundos) + 1)
         $marca = $k * $IntervaloSegundos
         if ($marca -gt $duracaoAlvo + 0.000001) { break }
@@ -1930,8 +1890,8 @@ if ($fotoDepois -ne $fotoAntes) {
     exit 1
 }
 if ($null -ne $falha -or -not $encerramento.Saiu -or $encerramento.Forcado) { exit 1 }
-# DEC-040, item 8: o veredito de segurança entra no código de saída. Conexão vista, processo filho (durante ou depois da
-# saída), nenhuma verificação de rede feita ou mais de 10% delas falhando reprovam a medição (SECURITY.md 8, item 3).
+# Segurança entra no código de saída: conexão vista, processo filho (durante ou depois),
+# nenhuma verificação de rede ou mais de 10% delas falhando reprovam a medição.
 $vereditos = New-Object System.Collections.Generic.List[string]
 if ($conexoesVistas.Count -gt 0) { $vereditos.Add(('{0} conexão(ões) do PID' -f $conexoesVistas.Count)) }
 if ($filhosVistos.Count -gt 0) { $vereditos.Add(('{0} processo(s) filho(s)' -f $filhosVistos.Count)) }
@@ -1941,7 +1901,7 @@ elseif ($script:falhasRede -gt ($script:verificacoesRede / 10)) { $vereditos.Add
 if ($script:verificacoesFilhos -eq 0) { $vereditos.Add('nenhuma verificação de processos filhos feita') }
 elseif ($script:falhasFilhos -gt ($script:verificacoesFilhos / 10)) { $vereditos.Add(('{0} de {1} verificações de filhos falharam' -f $script:falhasFilhos, $script:verificacoesFilhos)) }
 if (-not $script:filhosDepoisVerificados) { $vereditos.Add('os filhos depois da saída não foram verificados') }
-# A resolução global do timer (Q-08): uma mudança atribuível ao Buzzy também reprova.
+# Mudança na resolução global do timer atribuível ao Buzzy também reprova.
 if ($null -eq $atribuicao) { try { $atribuicao = AtribuicaoTimer } catch { } }
 if ($null -ne $atribuicao -and $atribuicao.Codigo -eq 'possível') { $vereditos.Add('mudança da resolução global do timer possivelmente atribuível ao Buzzy') }
 if ($vereditos.Count -gt 0) {

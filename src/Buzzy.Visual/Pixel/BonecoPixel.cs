@@ -1,6 +1,6 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>Vista do boneco. O perfil olha para a direita; a esquerda é o espelho.</summary>
+// O perfil olha pra direita; a esquerda é o espelho.
 public enum Vista
 {
     Frente,
@@ -12,7 +12,7 @@ public enum Mao
     Aberta,
     Fechada,
 
-    /// <summary>O punho com o indicador esticado para cima, saindo do meio do alto dele (a paranoia aponta para o teto).</summary>
+    // Punho com o indicador pra cima (a paranoia aponta pro teto).
     Apontando,
 }
 
@@ -26,62 +26,45 @@ public enum Cauda
     PerfilCaida,
 }
 
-/// <summary>
-/// Ângulos de um membro, em graus, na tela: 0 aponta para baixo, 90 para a direita, −90 para a
-/// esquerda e 180 para cima. <see cref="Superior"/> é o do braço ou da coxa; <see cref="Inferior"/>,
-/// o do antebraço ou da canela, também absoluto.
-/// </summary>
+// Graus absolutos na tela: 0 = baixo, 90 = direita, -90 = esquerda, 180 = cima.
+// Superior = braço/coxa; Inferior = antebraço/canela.
 public readonly record struct Membro(double Superior, double Inferior);
 
-/// <summary>
-/// Como a pose segura o item do tamagotchi (DEC-028). O item fica na pega da mão: o centro da mão
-/// cai sobre a <see cref="ItemNaMao.Pega"/> do carimbo, e a palma é desenhada por cima dela. A
-/// variante do item (<see cref="PosePixel.VarianteDoItem"/>) diz se ele está em pé, no gole, mordido...
-/// </summary>
+// O centro da mão cai na Pega do carimbo do item e a palma é desenhada por cima.
+// VarianteDoItem diz se está em pé, no gole, mordido etc.
 public enum Segura
 {
-    /// <summary>Sem item.</summary>
     Nada,
 
-    /// <summary>Na mão B. (O espelhinho, que ia entre as duas mãos, também vai numa só: revisão da arte, achado 1.)</summary>
+    // Inclusive o espelhinho, que antes ia entre as duas mãos.
     MaoB,
 
-    /// <summary>A variante "frasco" na mão A e a "lenco" na mão B (a lança-perfume).</summary>
+    // Lança-perfume: "frasco" na mão A, "lenco" na B.
     Inalar,
 }
 
-/// <summary>
-/// Onde a pose de uso leva a <see cref="ItemNaMao.Ponta"/> do item: com o item na mão, o braço que o
-/// segura se dobra até a ponta cair no pixel da boca ou do nariz, qualquer que seja o tamanho do item.
-/// </summary>
+// O braço que segura dobra até a Ponta do item cair no pixel da boca ou do nariz, seja qual for
+// o tamanho do item.
 public enum PontaNoRosto
 {
-    /// <summary>O braço fica como a pose diz.</summary>
     Nenhuma,
 
-    /// <summary>A ponta vai à boca (beber, comer, tragar, engolir).</summary>
+    // Beber, comer, tragar, engolir.
     Boca,
 
-    /// <summary>A ponta vai ao nariz (cheirar, inalar).</summary>
+    // Cheirar, inalar.
     Nariz,
 }
 
-/// <summary>
-/// Um item já colocado no quadro de uma pose: o carimbo e o canto de cima à esquerda dele, em pixels
-/// do quadro de 64 × 64 sem espelho.
-/// </summary>
+// X, Y = canto de cima à esquerda, no quadro 64x64 sem espelho.
 public readonly record struct ItemColocado(ItemNaMao Item, int X, int Y)
 {
-    /// <summary>O centro do pixel da ponta do item no quadro; nulo se a variante não tem ponta.</summary>
+    // Centro do pixel da ponta; nulo se a variante não tem ponta.
     public (double X, double Y)? Ponta => Item.Ponta is { } p ? (X + p.X + 0.5, Y + p.Y + 0.5) : null;
 }
 
-/// <summary>
-/// Pontos do esqueleto de uma pose, em pixels do quadro de 64 × 64, sem espelho: o pixel (x, y)
-/// ocupa [x, x + 1) × [y, y + 1), e o centro dele é (x + 0,5; y + 0,5). As mãos são o centro da
-/// palma; a cabeça, o centro do círculo; a boca e o nariz, o centro dos carimbos de cada um (de
-/// frente ou de perfil, conforme a vista). No quadro espelhado, x vira 64 − x.
-/// </summary>
+// Quadro 64x64 sem espelho; o pixel (x, y) tem centro em (x + 0,5; y + 0,5). Mãos = centro da
+// palma, cabeça = centro do círculo, boca/nariz = centro dos carimbos. Espelhado: x vira 64 - x.
 public readonly record struct PontosDoEsqueleto(
     (double X, double Y) MaoA,
     (double X, double Y) MaoB,
@@ -89,11 +72,8 @@ public readonly record struct PontosDoEsqueleto(
     (double X, double Y) Boca,
     (double X, double Y) Nariz);
 
-/// <summary>
-/// Uma pose do boneco em pixel art, na grade nativa de 64 × 64 (1 pixel = 2 DIP a 100%). O
-/// quadril é a raiz; o resto sai do esqueleto de <see cref="BonecoPixel"/>. Na vista de frente, A é o
-/// lado esquerdo da tela e B o direito; no perfil, A é o lado de trás (mais escuro) e B o da frente.
-/// </summary>
+// Grade nativa 64x64 (1 px = 2 DIP a 100%), com o quadril como raiz. De frente, A é a esquerda
+// da tela e B a direita; de perfil, A é o lado de trás (mais escuro) e B o da frente.
 public sealed record PosePixel
 {
     public required string Nome { get; init; }
@@ -106,13 +86,13 @@ public sealed record PosePixel
 
     public double QuadrilY { get; init; } = 48.5;
 
-    /// <summary>Inclinação do tronco em graus: positiva leva o pescoço para a direita.</summary>
+    // Graus; positivo leva o pescoço pra direita.
     public double Tronco { get; init; }
 
-    /// <summary>Inclinação extra da cabeça em relação ao tronco.</summary>
+    // Relativa ao tronco.
     public double Cabeca { get; init; }
 
-    /// <summary>Quanto a cabeça desce em direção aos ombros (encolher, pendurar-se), em pixels.</summary>
+    // Pixels que a cabeça afunda nos ombros (encolher, pendurar).
     public double CabecaDescida { get; init; }
 
     public Membro BracoA { get; init; } = new(-10, -4);
@@ -131,53 +111,40 @@ public sealed record PosePixel
 
     public string Expressao { get; init; } = "neutro";
 
-    /// <summary>Pés: na frente, virados para fora; no perfil, para a frente. Sem pé, a canela termina redonda.</summary>
+    // De frente, pés virados pra fora; de perfil, pra frente. Sem pé, a canela termina redonda.
     public bool PesNoChao { get; init; } = true;
 
-    /// <summary>
-    /// Linha de uma borda (em pixels do quadro) atrás da qual o corpo se esconde, como ao espiar:
-    /// tudo abaixo dela some, e as mãos que a agarram ficam na frente da cabeça.
-    /// </summary>
+    // Linha (em px do quadro) atrás da qual o corpo se esconde, como ao espiar: o que está abaixo
+    // some, e as mãos que agarram a borda ficam na frente da cabeça.
     public double? Borda { get; init; }
 
-    /// <summary>
-    /// Cipó (DEC-024): se houver, um cipó desce do topo do quadro até a mão B, que o segura. O
-    /// valor é o deslocamento horizontal, em pixels, do ponto em que ele sai do topo em relação à
-    /// mão: negativo inclina o cipó para a esquerda, como no balanço para a direita. É o único
-    /// desenho que encosta numa borda do quadro, a de cima, onde ele se prende na borda da tela.
-    /// </summary>
+    // Se houver, um cipó desce do topo até a mão B. O valor é o deslocamento horizontal (px) de
+    // onde ele sai do topo em relação à mão; negativo inclina pra esquerda. Único desenho que
+    // encosta na borda do quadro (a de cima, onde prende na borda da tela).
     public double? Cipo { get; init; }
 
-    /// <summary>Como a pose segura o item do tamagotchi (só nas poses de uso, de frente).</summary>
+    // Só nas poses de uso, de frente.
     public Segura Segura { get; init; } = Segura.Nada;
 
-    /// <summary>
-    /// Variante do item na mão neste quadro (<see cref="ItensPixel.VariantesNaMao"/>); nula, ou uma
-    /// que o item não tem, vale a primeira. Os itens do mesmo verbo têm as mesmas variantes.
-    /// </summary>
+    // Nula ou inexistente no item vale a primeira. Itens do mesmo verbo têm as mesmas variantes.
     public string? VarianteDoItem { get; init; }
 
-    /// <summary>Com o item na mão, aonde o braço leva a ponta dele (<see cref="BonecoPixel.AjustadaAoItem"/>).</summary>
     public PontaNoRosto PontaNo { get; init; } = PontaNoRosto.Nenhuma;
 
-    /// <summary>O braço A é desenhado depois da cabeça, na frente do rosto.</summary>
+    // Desenhado depois da cabeça, na frente do rosto.
     public bool BracoANaFrente { get; init; }
 
-    /// <summary>O braço B é desenhado depois da cabeça, na frente do rosto.</summary>
     public bool BracoBNaFrente { get; init; }
 
-    /// <summary>Sobreposição de efeito própria da pose (a fumaça de quem solta a tragada).</summary>
+    // Ex.: a fumaça de quem solta a tragada.
     public EfeitoVisual EfeitoDaPose { get; init; } = EfeitoVisual.Nenhum;
 
-    /// <summary>Fase da <see cref="EfeitoDaPose"/>, de 0 a <see cref="EfeitosPixel.Fases"/> − 1.</summary>
+    // 0 a EfeitosPixel.Fases - 1.
     public int FaseDoEfeito { get; init; }
 }
 
-/// <summary>
-/// Monta o Buzzy em pixel art a partir de uma <see cref="PosePixel"/>: formas simples rasterizadas
-/// sem meio-tom, sombra de um pixel na borda de baixo e da direita, linhas internas entre partes
-/// sobrepostas, contorno externo escuro e carimbos desenhados à mão para o rosto.
-/// </summary>
+// Formas simples sem meio-tom, sombra de 1 px embaixo e à direita, linhas internas entre partes
+// sobrepostas, contorno escuro por fora e carimbos feitos à mão pro rosto.
 public static class BonecoPixel
 {
     public const int Lado = 64;
@@ -191,18 +158,12 @@ public static class BonecoPixel
     private const double Coxa = 5.6;
     private const double Canela = 5.2;
 
-    /// <summary>Do centro do punho até onde chega o traço do indicador da <see cref="Mao.Apontando"/>, para cima.</summary>
+    // Do centro do punho até a ponta do indicador, na Mao.Apontando.
     private const double PontaDoDedo = 5.6;
 
-    /// <summary>
-    /// Desenha a pose numa tela nova de 64 × 64. <paramref name="expressao"/> nula vale a cara da
-    /// pose (nas poses de uso, a cara é sempre a da pose: a apresentação passa nulo). O
-    /// <paramref name="item"/> (chave de <see cref="ItensPixel"/>) só aparece nas poses que o seguram
-    /// (<see cref="PosePixel.Segura"/>), de frente, com a pose ajustada a ele (<see cref="AjustadaAoItem"/>);
-    /// nulo desenha a pose sem item. O <paramref name="efeito"/> é a sobreposição pedida, na
-    /// <paramref name="fase"/> dada (a fase 0 é a parada), desenhada depois da da própria pose; o
-    /// modificador de pose do efeito (<see cref="EfeitosPixel.Modificar"/>) fica a cargo de quem chama.
-    /// </summary>
+    // expressao nula = cara da pose. O item só aparece em poses que seguram, de frente, com o braço
+    // ajustado a ele. O efeito vai por cima do da própria pose (fase 0 = parado); aplicar
+    // EfeitosPixel.Modificar na pose é com quem chama.
     public static Tela Desenhar(PosePixel pose, string? expressao = null, string? item = null, EfeitoVisual efeito = EfeitoVisual.Nenhum, int fase = 0)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -222,8 +183,8 @@ public static class BonecoPixel
             DesenharTronco(tela, e, pose.Vista);
             if (pose.Borda is null)
             {
-                // O item de cada mão vem logo antes da palma, que cobre a pega; o braço que vai à
-                // boca ou ao nariz é desenhado depois da cabeça, com o item na frente do rosto.
+                // O item vem logo antes da palma, que cobre a pega; o braço que vai à boca ou ao
+                // nariz é desenhado depois da cabeça, com o item na frente do rosto.
                 ItensDaPose itens = Colocar(pose, e, item);
                 if (!pose.BracoANaFrente) DesenharBraco(tela, e.OmbroA, pose.BracoA, pose.MaoA, longe: false, itens.MaoA);
                 if (!pose.BracoBNaFrente) DesenharBraco(tela, e.OmbroB, pose.BracoB, pose.MaoB, longe: false, itens.MaoB);
@@ -249,12 +210,12 @@ public static class BonecoPixel
             DesenharCabecaDePerfil(tela, e, rosto);
         }
 
-        // A gota de suor da cara paranoica vem por cima dos braços da frente: é um sinal de desenho animado, que
-        // precisa ficar à vista (no agachar, os antebraços passam pelas têmporas).
+        // A gota de suor vai por cima dos braços: precisa ficar à vista (no agachar os antebraços
+        // passam pelas têmporas).
         if (rosto.Gota) DesenharGota(tela, e, pose.Vista);
 
-        // Sobreposições de efeito (DEC-028): a da pose e a pedida, por cima do corpo e fora dos olhos
-        // e da boca (e da gota de suor); o contorno final as fecha.
+        // Efeitos (o da pose e o pedido) por cima do corpo, mas fora dos olhos, boca e gota; o
+        // contorno final fecha.
         if (pose.EfeitoDaPose != EfeitoVisual.Nenhum || efeito != EfeitoVisual.Nenhum)
         {
             PontosDoEsqueleto pontos = Pontos(pose, e);
@@ -275,10 +236,7 @@ public static class BonecoPixel
         return tela;
     }
 
-    /// <summary>
-    /// Os pontos do esqueleto da pose (mãos, cabeça, boca e nariz), sem espelho. Com um item na mão,
-    /// as mãos da pose desenhada são as de <c>Pontos(AjustadaAoItem(pose, item))</c>.
-    /// </summary>
+    // Com item na mão, as mãos desenhadas são as de Pontos(AjustadaAoItem(pose, item)).
     public static PontosDoEsqueleto Pontos(PosePixel pose)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -289,8 +247,7 @@ public static class BonecoPixel
     {
         (double cx, double cy) = e.Cabeca;
         int ex = (int)Math.Round(cx), ey = (int)Math.Round(cy);
-        // Os carimbos do rosto são colocados a partir do centro arredondado (DesenharCabecaDeFrente
-        // e DesenharCabecaDePerfil): a boca e o nariz são o centro deles.
+        // Os carimbos do rosto partem do centro arredondado; boca e nariz são o centro deles.
         bool frente = pose.Vista == Vista.Frente;
         return new(
             MaoDoBraco(e.OmbroA, pose.BracoA, pose.MaoA),
@@ -300,12 +257,8 @@ public static class BonecoPixel
             frente ? (ex, ey + 5) : (ex + 12, ey + 3));
     }
 
-    /// <summary>
-    /// A pose com o braço que leva o item ao rosto dobrado para a <see cref="ItemNaMao.Ponta"/> cair no
-    /// pixel da boca ou do nariz (<see cref="PosePixel.PontaNo"/>), qualquer que seja o tamanho do item:
-    /// a mão B vai aonde a pega precisa estar. Sem item, sem ponta no rosto ou com uma variante sem
-    /// ponta, a pose volta como está.
-    /// </summary>
+    // Dobra o braço B pra ponta do item cair na boca ou no nariz, seja qual for o tamanho do item.
+    // Sem item, sem PontaNo ou com variante sem ponta, devolve a pose igual.
     public static PosePixel AjustadaAoItem(PosePixel pose, string? item)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -320,10 +273,7 @@ public static class BonecoPixel
         return Alcancar(pose with { MaoB = Mao.Fechada }, bracoB: true, mao);
     }
 
-    /// <summary>
-    /// Os itens da pose já colocados no quadro (a pose é ajustada ao item antes, como em
-    /// <see cref="Desenhar"/>): o da mão A e o da mão B, nesta ordem, só os que existem.
-    /// </summary>
+    // Mão A e depois B, só os que existem; ajusta a pose ao item antes, como Desenhar.
     public static IReadOnlyList<ItemColocado> ItensColocados(PosePixel pose, string item)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -332,12 +282,8 @@ public static class BonecoPixel
         return [.. new[] { itens.MaoA, itens.MaoB }.Where(i => i is not null).Select(i => i!.Value)];
     }
 
-    /// <summary>
-    /// A pose com um braço dobrado para o centro da mão cair em <paramref name="mao"/> (cinemática
-    /// inversa de dois ossos). Das duas dobras possíveis, fica a do cotovelo mais perto do cotovelo que
-    /// a pose já tem: os ângulos da pose dizem para que lado o braço dobra. Fora do alcance, a mão vai
-    /// o mais perto possível, na mesma direção.
-    /// </summary>
+    // IK de dois ossos. Das duas dobras possíveis, fica a com o cotovelo mais perto do que a pose já
+    // tem. Fora do alcance, a mão vai o mais longe que der na mesma direção.
     public static PosePixel Alcancar(PosePixel pose, bool bracoB, (double X, double Y) mao)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -365,10 +311,7 @@ public static class BonecoPixel
 
     private readonly record struct ItensDaPose(ItemColocado? MaoA, ItemColocado? MaoB);
 
-    /// <summary>
-    /// As variantes do item de cada mão, pela <see cref="PosePixel.Segura"/>. A variante pedida pela pose
-    /// vale só se o item a tiver; senão, a primeira.
-    /// </summary>
+    // A variante pedida só vale se o item tiver; senão, a primeira.
     private static (ItemNaMao? MaoA, ItemNaMao? MaoB) Variantes(PosePixel pose, string? item)
     {
         if (item is null || pose.Segura == Segura.Nada) return (null, null);
@@ -384,7 +327,7 @@ public static class BonecoPixel
         };
     }
 
-    /// <summary>Coloca os itens da pose: a pega de cada um no pixel do centro da mão que o segura.</summary>
+    // A pega de cada item no pixel do centro da mão.
     private static ItensDaPose Colocar(PosePixel pose, Esqueleto e, string? item)
     {
         (ItemNaMao? a, ItemNaMao? b) = Variantes(pose, item);
@@ -396,7 +339,7 @@ public static class BonecoPixel
     private static ItemColocado NaPega(ItemNaMao item, (double X, double Y) centro)
         => new(item, (int)Math.Floor(centro.X) - item.Pega.X, (int)Math.Floor(centro.Y) - item.Pega.Y);
 
-    /// <summary>Carimba o item com uma linha de contorno onde ele encosta no corpo já desenhado.</summary>
+    // Com linha de contorno onde encosta no corpo já desenhado.
     private static void Carimbar(Tela tela, ItemColocado item) => tela.Carimbar(item.Item.Desenho, item.X, item.Y, linhaInterna: Cor.Contorno);
 
     // ------------------------------------------------------------------ esqueleto
@@ -432,7 +375,7 @@ public static class BonecoPixel
         internal (double X, double Y) QuadrilA { get; }
         internal (double X, double Y) QuadrilB { get; }
 
-        /// <summary>Ponto no referencial do tronco: x para a direita do tronco, y para cima.</summary>
+        // Referencial do tronco: x pra direita dele, y pra cima.
         internal (double X, double Y) NoTronco(double x, double y) => Somar(Somar(Quadril, Escalar(Direita, x)), Escalar(Cima, y));
     }
 
@@ -456,7 +399,7 @@ public static class BonecoPixel
         tela.Pintar(barriga, Cor.Creme, Cor.CremeSombra);
     }
 
-    /// <summary>Centro da mão de um braço, pelo mesmo esqueleto de <see cref="DesenharBraco"/>.</summary>
+    // Tem que bater com DesenharBraco.
     private static (double X, double Y) MaoDoBraco((double X, double Y) ombro, Membro membro, Mao mao)
     {
         (double X, double Y) cotovelo = Somar(ombro, Escalar(Direcao(membro.Superior), BracoSuperior));
@@ -464,11 +407,8 @@ public static class BonecoPixel
         return Somar(pulso, Escalar(Direcao(membro.Inferior), mao == Mao.Aberta ? 1.9 : 1.2));
     }
 
-    /// <summary>
-    /// Cipó (DEC-024): desce do topo do quadro, em x = mão + <paramref name="deslocamento"/>, até a
-    /// mão, com uma curva leve e duas folhas. Passa um pouco acima do quadro para encostar na borda
-    /// de cima, onde se prende na borda da tela.
-    /// </summary>
+    // Do topo (x = mão + deslocamento) até a mão, com curva leve e duas folhas. Começa um pouco
+    // acima do quadro pra encostar na borda de cima, onde prende na borda da tela.
     private static void DesenharCipo(Tela tela, (double X, double Y) mao, double deslocamento)
     {
         (double X, double Y) topo = (mao.X + deslocamento, -2);
@@ -519,10 +459,9 @@ public static class BonecoPixel
         Mascara palma = mao == Mao.Aberta
             ? Nova().Elipse(centroDaMao.X, centroDaMao.Y, 2.2, 2.9, -membro.Inferior)
             : Nova().Circulo(centroDaMao.X, centroDaMao.Y, 2.2);
-        // Apontando: o indicador sai do meio do alto do punho, reto para cima, na coluna do centro da mão: um traço de
-        // 1 pixel, 4 acima do punho, pintado junto com a mão (o contorno passa em volta dos dois) e de pele clara (fino
-        // assim, a sombra o pintaria inteiro). Na direção do antebraço inclinado, ele saía curto pela beira do punho e
-        // lia como um polegar (revisão da paranoia, achado 4).
+        // Indicador: traço de 1 px reto pra cima, do meio do punho, pintado junto com a mão (o
+        // contorno envolve os dois) e sem sombra, que fino assim o pintaria inteiro. Seguindo o
+        // antebraço inclinado ele saía curto pela beira e parecia um polegar.
         Mascara? dedo = null;
         if (mao == Mao.Apontando)
         {
@@ -629,8 +568,8 @@ public static class BonecoPixel
             Cor rubor = rosto.Rubor ?? Cor.Bochecha;
             if (rosto.RuborGrande)
             {
-                // Mancha grande (bêbado, enjoado): 3 × 2 pixels em cada bochecha, logo abaixo dos olhos
-                // e toda sobre o creme (o corado de 4 pixels encosta no pelo da borda do rosto).
+                // Mancha grande (bêbado, enjoado): 3x2 px por bochecha, toda sobre o creme (o
+                // corado normal encosta no pelo da borda do rosto).
                 for (int y = ey + 4; y <= ey + 5; y++)
                 {
                     for (int k = 0; k < 3; k++)
@@ -678,8 +617,7 @@ public static class BonecoPixel
         int ex = (int)Math.Round(cx), ey = (int)Math.Round(cy);
         if (rosto.Corado && rosto.RuborGrande)
         {
-            // De perfil, só a mancha grande aparece (o bêbado e o enjoado se leem andando): 3 × 2
-            // pixels na bochecha, logo abaixo do olho.
+            // De perfil só a mancha grande aparece (bêbado e enjoado precisam se ler andando).
             Cor rubor = rosto.Rubor ?? Cor.Bochecha;
             for (int y = ey + 3; y <= ey + 4; y++)
                 for (int x = ex + 3; x <= ex + 5; x++)
@@ -696,12 +634,9 @@ public static class BonecoPixel
         DesenharChapeu(tela, cx, cy, rosto.Topete, perfil: true);
     }
 
-    /// <summary>
-    /// Chapéu de palha com faixa vermelha, como nas pranchas (DEC-019). Reage à emoção junto com o
-    /// tufo: salta com o susto e a risada, desce com o sono e entorta com a bebedeira (DEC-028):
-    /// no <see cref="Topete.Torto"/>, todas as formas giram 12° no sentido anti-horário em torno do
-    /// centro da aba, que desce meio pixel e vai um pixel para a frente.
-    /// </summary>
+    // Chapéu de palha com faixa vermelha. Reage junto com o tufo: salta no susto e na risada, desce
+    // no sono e entorta na bebedeira (Torto: gira tudo 12° anti-horário em volta do centro da aba,
+    // que desce meio pixel e vai um pra frente).
     private static void DesenharChapeu(Tela tela, double cx, double cy, Topete topete, bool perfil)
     {
         bool torto = topete == Topete.Torto;
@@ -712,13 +647,12 @@ public static class BonecoPixel
         double abaRx = perfil ? 15.4 : 17.0, abaRy = perfil ? 2.2 : 2.8;
         double copaRx = perfil ? 8.8 : 9.4, copaRy = 5.5;
 
-        // Sem giro, os pontos ficam exatamente como são, e o desenho dos outros topetes não muda.
+        // Sem giro os pontos ficam idênticos, pra não mexer nos outros topetes.
         double graus = torto ? -12 : 0;
         (double X, double Y) G(double x, double y) => torto ? Girar(x, y, abaX, abaY, graus) : (x, y);
 
-        // A copa nunca chega à linha de cima do quadro: o contorno dela precisa caber (revisão da arte,
-        // achado 5). Só o chapéu eriçado, no alto da escalada (escalando-2), chegava lá; o chapéu desce
-        // pixel a pixel, inteiro e com a mesma forma, até a copa começar na linha 1. Onde ela já cabe, nada muda.
+        // A copa não pode tocar a linha 0, senão o contorno não cabe. Só o eriçado no alto da
+        // escalada chegava lá: desce o chapéu inteiro, pixel a pixel, até a copa começar na linha 1.
         for (int descida = 0; descida < 4 && PrimeiraLinha(Nova().Elipse(G(copaX, copaY).X, G(copaX, copaY).Y, copaRx, copaRy, graus)) < 1; descida++)
         {
             abaY += 1;
@@ -760,21 +694,16 @@ public static class BonecoPixel
         tela.Pintar(labio, Cor.Palha, Cor.PalhaEscura, null, Cor.PalhaEscura);
     }
 
-    /// <summary>
-    /// A gota de suor da cara paranoica (<see cref="Rosto.Gota"/>): só o preenchimento, com a ponta para cima e o brilho
-    /// do lado da luz; o contorno vem da linha interna, onde ela passa por cima do desenho, e do contorno final.
-    /// </summary>
+    // Gota de suor da paranoia: só o preenchimento, ponta pra cima e brilho do lado da luz. O
+    // contorno vem da linha interna e do contorno final.
     internal static readonly Carimbo GotaDeSuor = new(
         ".A.",
         "AAa",
         "WAa",
         "Aaa");
 
-    /// <summary>
-    /// O canto de cima à esquerda da <see cref="GotaDeSuor"/>, a partir do centro arredondado da cabeça (o dos carimbos do
-    /// rosto): de frente, na têmpora da esquerda da tela, entre a aba e a orelha (a mão que aponta para o teto é a B, do
-    /// outro lado); de perfil, atrás do olho, sob a aba.
-    /// </summary>
+    // A partir do centro arredondado da cabeça. De frente, na têmpora esquerda entre aba e orelha
+    // (a mão que aponta é a B, do outro lado); de perfil, atrás do olho, sob a aba.
     internal static (int X, int Y) CantoDaGota(Vista vista, int ex, int ey)
         => vista == Vista.Frente ? (ex - 13, ey - 6) : (ex - 3, ey - 8);
 
@@ -785,7 +714,7 @@ public static class BonecoPixel
         tela.Carimbar(GotaDeSuor, x, y, linhaInterna: Cor.Contorno);
     }
 
-    /// <summary>A primeira linha com algum pixel da máscara; <see cref="int.MaxValue"/> se ela estiver vazia.</summary>
+    // int.MaxValue se vazia.
     private static int PrimeiraLinha(Mascara m)
     {
         for (int y = 0; y < m.Altura; y++)
@@ -794,7 +723,7 @@ public static class BonecoPixel
         return int.MaxValue;
     }
 
-    /// <summary>Gira (x, y) em torno de (px, py), em graus no sentido horário da tela, como <see cref="Mascara.Elipse"/>.</summary>
+    // Graus no sentido horário da tela, igual a Mascara.Elipse.
     private static (double X, double Y) Girar(double x, double y, double px, double py, double graus)
     {
         double a = graus * Math.PI / 180, cos = Math.Cos(a), sin = Math.Sin(a);
@@ -802,7 +731,7 @@ public static class BonecoPixel
         return (px + rx * cos - ry * sin, py + rx * sin + ry * cos);
     }
 
-    /// <summary>Tufo de pelo bagunçado no alto da cabeça (substitui o chapéu das pranchas como marca da silhueta).</summary>
+    // Tufo bagunçado no alto da cabeça, por baixo do chapéu.
     private static Mascara Tufo(double cx, double cy, Topete topete, bool perfil)
     {
         double s = perfil ? -1 : 1;

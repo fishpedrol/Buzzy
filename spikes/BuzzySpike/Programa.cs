@@ -103,9 +103,7 @@ internal static class Programa
         _ => "desconhecido",
     };
 
-    // O protótipo é WinExe e não tem console próprio. Erros de linha de comando aparecem
-    // numa caixa de diálogo, que é o único jeito de serem vistos quando o processo é
-    // iniciado pelo Explorer.
+    // WinExe não tem console; aberto pelo Explorer, a caixa de diálogo é o único jeito de ver o erro.
     private static void Reclamar(string texto)
         => MessageBox.Show(texto, "BuzzySpike", MessageBoxButton.OK, MessageBoxImage.Information);
 }

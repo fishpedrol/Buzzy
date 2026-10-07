@@ -6,44 +6,35 @@ using System.Windows;
 using Buzzy.App.Composicao;
 using Buzzy.App.Plataforma;
 
-// DEC-040, item 3: o P/Invoke só carrega DLLs do System32. Uma wtsapi32.dll ou shcore.dll plantada ao lado do Buzzy.exe
-// (a busca padrão começa pela pasta do assembly) não é carregada.
+// P/Invoke só carrega DLLs do System32. A busca padrão começa pela pasta do exe, então
+// uma wtsapi32.dll ou shcore.dll plantada ao lado do Buzzy.exe seria carregada.
 [assembly: DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
 
 namespace Buzzy.App;
 
-/// <summary>
-/// Ponto de entrada do Buzzy.
-///
-/// Uso: <c>Buzzy.exe [--diagnostico] [--pausado] [--semente N] [--perfil-de-teste NOME] [--sem-tela-cheia]</c>.
-/// <list type="bullet">
-/// <item><c>--diagnostico</c> liga o log em <c>%LOCALAPPDATA%\Buzzy\diagnostico.log</c>; sem ele, o
-/// Buzzy só grava as configurações (<c>settings.json</c>, com a reserva <c>settings.json.bak</c>, o temporário
-/// de cada gravação e, no máximo, uma cópia de um arquivo ilegível), na mesma pasta (Fase 5, passo P7).</item>
-/// <item><c>--pausado</c> começa com o movimento autônomo pausado (o mesmo que "Pausar movimento" no
-/// menu); as verificações de tela usam para ter o personagem parado no lugar inicial.</item>
-/// <item><c>--semente N</c> fixa a semente da agenda autônoma, para reproduzir um comportamento.</item>
-/// <item><c>--perfil-de-teste NOME</c> isola os dados do Buzzy em <c>%LOCALAPPDATA%\Buzzy\testes\NOME</c>
-/// (Fase 5): os testes e as ferramentas que abrem o Buzzy usam, para nunca tocar nas configurações reais
-/// do usuário. NOME tem de 1 a 32 caracteres entre a–z, 0–9 e hífen (sem começar por hífen) e não pode
-/// ser um nome reservado do Windows; sem nome, com um inválido ou com a opção escrita de outro jeito
-/// (<c>--perfil-de-teste=NOME</c>, outra caixa, <c>/perfil-de-teste</c>), a persistência fica desligada
-/// nesta execução.</item>
-/// <item><c>--sem-tela-cheia</c> não liga o observador da janela em primeiro plano (DEC-034): os testes e a
-/// verificação de tela, que conferem o lugar inicial, não dependem do que estiver em tela cheia na máquina.</item>
-/// </list>
-/// </summary>
+// Uso: Buzzy.exe [--diagnostico] [--pausado] [--semente N] [--perfil-de-teste NOME] [--sem-tela-cheia]
+//   --diagnostico      log em %LOCALAPPDATA%\Buzzy\diagnostico.log. Sem ele, só as
+//                      configurações são gravadas (settings.json, .bak, temporário e no
+//                      máximo uma cópia de arquivo ilegível).
+//   --pausado          começa sem movimento autônomo.
+//   --semente N        semente fixa da agenda, pra reproduzir um comportamento.
+//   --perfil-de-teste NOME
+//                      dados em %LOCALAPPDATA%\Buzzy\testes\NOME. NOME: 1 a 32 de a-z, 0-9
+//                      e hífen, sem hífen no começo, e não pode ser nome reservado do
+//                      Windows. Sem nome, nome inválido ou opção mal escrita
+//                      (--perfil-de-teste=NOME, outra caixa, /perfil-de-teste) desliga a
+//                      persistência.
+//   --sem-tela-cheia   não liga o observador do primeiro plano.
 internal static class Programa
 {
     [STAThread]
     internal static int Main(string[] argumentos)
     {
-        // SECURITY.md 8, item 5, e DEC-040, item 2: o Buzzy não usa privilégio de administrador. Iniciado elevado (por um
-        // terminal de administrador ou "Executar como administrador"), ele avisa e sai antes de tudo: sem log, sem ler as
-        // opções, sem criar pasta, janela ou objeto nomeado. Um processo elevado nunca grava através de um link plantado
-        // por um processo comum na pasta do Buzzy. Limite do .exe único (F9-P10; DEC-042, item 9; SECURITY.md 9): antes
-        // deste Main, o host do .NET já extraiu (ou reaproveitou) as DLLs nativas do WPF em %TEMP%\.net\<nome do exe>,
-        // também quando iniciado elevado; daqui em diante, nada do Buzzy roda elevado.
+        // Elevado (terminal de admin ou "Executar como administrador"), avisa e sai antes de
+        // tudo: sem log, sem ler opções, sem criar pasta, janela ou objeto nomeado. Assim um
+        // processo elevado nunca grava através de um link plantado na pasta do Buzzy.
+        // Limite do .exe único: antes deste Main o host do .NET já extraiu as DLLs nativas
+        // do WPF em %TEMP%\.net\<nome do exe>, mesmo elevado; daqui pra frente, nada roda elevado.
         if (Environment.IsPrivilegedProcess)
         {
             MessageBox.Show(Textos.AvisoElevado, Textos.DicaDaBandeja, MessageBoxButton.OK, MessageBoxImage.Information);
@@ -68,7 +59,7 @@ internal static class Programa
         }
         catch (Exception e) when (e is UnauthorizedAccessException or WaitHandleCannotBeOpenedException or IOException)
         {
-            // Só o tipo e o código: a mensagem traz o nome dos objetos da instância única, com o SID da conta (SECURITY.md 6).
+            // Só tipo e código: a mensagem traz o nome dos objetos, que inclui o SID da conta.
             Diagnostico.Evento("INSTANCIA", ("erro", $"{e.GetType().Name} 0x{e.HResult:X8}"));
             Diagnostico.Evento("FIM", ("codigo", CodigosDeSaida.InstanciaUnicaIndisponivel), ("pid", Environment.ProcessId));
             return CodigosDeSaida.InstanciaUnicaIndisponivel;
@@ -95,7 +86,7 @@ internal static class Programa
         }
     }
 
-    /// <summary>Opções da linha de comando; um valor ilegível é ignorado e registrado no diagnóstico.</summary>
+    // Valor ilegível é ignorado e vai pro log.
     internal static OpcoesDaAplicacao LerOpcoes(string[] argumentos)
     {
         bool pausado = argumentos.Contains("--pausado", StringComparer.Ordinal);
@@ -109,9 +100,9 @@ internal static class Programa
                 Diagnostico.Evento("ARGUMENTO", ("ignorado", "--semente"), ("motivo", "falta um número inteiro sem sinal"));
         }
 
-        // Perfil de teste: um nome inválido nunca cai na pasta real do usuário, desliga a persistência. Uma
-        // grafia parecida com a da opção também desliga: quem a escreveu quis isolar o Buzzy e errou a opção.
-        // O argumento recusado não vai para o log: pode ser um caminho.
+        // Nome inválido nunca cai na pasta real: desliga a persistência. Grafia parecida com a
+        // da opção também desliga, porque quem escreveu queria isolar o Buzzy e errou.
+        // O argumento recusado não vai pro log: pode ser um caminho.
         string? perfil = null;
         bool persistenciaDesligada = false;
         if (argumentos.Any(ParecidoComAOpcaoDoPerfil))
@@ -137,16 +128,12 @@ internal static class Programa
         return new OpcoesDaAplicacao(pausado, semente, perfil, persistenciaDesligada, semTelaCheia);
     }
 
-    /// <summary>A opção do perfil de teste, exatamente como tem de ser escrita.</summary>
     internal const string OpcaoDoPerfil = "--perfil-de-teste";
 
-    /// <summary>
-    /// Se o argumento é outra grafia da opção do perfil de teste: começa por <c>/</c> ou por traços (um, dois,
-    /// travessão) e, contando só as letras, começa por "perfildeteste" em qualquer caixa, mas não é exatamente
-    /// <see cref="OpcaoDoPerfil"/>. Pega <c>--perfil-de-teste=NOME</c>, <c>--Perfil-De-Teste</c>,
-    /// <c>/perfil-de-teste</c>, <c>-perfil-de-teste</c> e <c>--perfil_de_teste</c>. Um argumento sem esse
-    /// prefixo, como o próprio nome do perfil, nunca conta.
-    /// </summary>
+    // Começa com / ou traços (inclusive travessão) e, só pelas letras, com "perfildeteste"
+    // em qualquer caixa, sem ser a grafia exata. Pega --perfil-de-teste=NOME,
+    // --Perfil-De-Teste, /perfil-de-teste, -perfil-de-teste, --perfil_de_teste. Sem esse
+    // prefixo (o próprio nome do perfil, por exemplo), nunca conta.
     internal static bool ParecidoComAOpcaoDoPerfil(string argumento)
     {
         if (string.Equals(argumento, OpcaoDoPerfil, StringComparison.Ordinal)) return false;

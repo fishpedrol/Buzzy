@@ -1,9 +1,6 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Capacidades proibidas, na ordem da tabela de SECURITY.md 3.2. <see cref="Manifesto"/> não
-/// vem de 3.2: cobre SECURITY.md 8, item 5 (sem elevação) e ARCHITECTURE.md 2.4 (Per-Monitor V2).
-/// </summary>
+// Manifesto cobre "sem elevação" e Per-Monitor V2. Não reordene: os valores novos vão no fim.
 internal enum Categoria
 {
     InputGlobal,
@@ -16,23 +13,16 @@ internal enum Categoria
     CodigoDinamico,
     Manifesto,
 
-    /// <summary>
-    /// Alterar a configuração global do Windows (AGENTS.md; regra dura do projeto): só o usuário muda vídeo, energia e
-    /// sessão. Fica no fim do enum para não renumerar as outras (revisão de segurança do bloco P6-P9, achado 6).
-    /// </summary>
+    // Vídeo, energia e sessão são do usuário; o Buzzy não mexe.
     ConfiguracaoGlobal,
 
-    /// <summary>
-    /// APIs que dependem de o assembly ser um arquivo no disco e, num executável de arquivo único (F9-P10, DEC-042),
-    /// devolvem vazio ou lançam: o que o analisador de arquivo único do SDK acusaria, sem o pacote dele (DEC-016,
-    /// item 2). Não é capacidade de SECURITY.md 3.2; fica no fim do enum para não renumerar as outras.
-    /// </summary>
+    // APIs que precisam do assembly como arquivo no disco e, no exe de arquivo único, voltam vazio
+    // ou lançam. Faz o papel do analisador de arquivo único do SDK, sem depender do pacote dele.
     ArquivoUnico,
 }
 
 internal static class Categorias
 {
-    /// <summary>Nome da linha correspondente em SECURITY.md 3.2.</summary>
     public static string Nome(this Categoria categoria) => categoria switch
     {
         Categoria.InputGlobal => "Input global",
@@ -50,48 +40,28 @@ internal static class Categorias
     };
 }
 
-/// <summary>O que uma regra da lista proibida reconhece nos binários.</summary>
 internal enum TipoDeRegra
 {
-    /// <summary>
-    /// Função nativa pelo nome, num P/Invoke ou na tabela de importação de um PE. Aceita o nome
-    /// exato e os sufixos A e W, sem diferenciar maiúsculas, em qualquer módulo.
-    /// </summary>
+    // Num P/Invoke ou na tabela de importação; aceita sufixos A/W, sem caixa, em qualquer módulo.
     FuncaoNativa,
 
-    /// <summary>Qualquer função de um módulo nativo, sem diferenciar maiúsculas nem a extensão .dll.</summary>
+    // Qualquer função do módulo, sem caixa nem extensão .dll.
     ModuloNativo,
 
-    /// <summary>Referência a um tipo gerenciado pelo nome completo.</summary>
     TipoGerenciado,
 
-    /// <summary>Referência a qualquer tipo de um namespace ou dos namespaces abaixo dele.</summary>
+    // Inclui os namespaces filhos.
     NamespaceGerenciado,
 
-    /// <summary>Referência a um membro de um tipo gerenciado, em qualquer sobrecarga.</summary>
+    // Qualquer sobrecarga.
     MembroGerenciado,
 
-    /// <summary>
-    /// Método de interface COM pelo nome: declarado numa interface do próprio assembly (como
-    /// fica uma interface [ComImport] escrita em C#) ou referenciado em outro assembly.
-    /// </summary>
+    // Declarado numa interface [ComImport] do próprio assembly ou referenciado em outro.
     MetodoCom,
 }
 
-/// <summary>Uma entrada da lista proibida.</summary>
-/// <param name="Tipo">O que a regra reconhece nos binários.</param>
-/// <param name="Alvo">
-/// Nome da função, do módulo sem extensão, do tipo completo, do namespace ou do método COM.
-/// Em <see cref="TipoDeRegra.MembroGerenciado"/>, o tipo que declara o membro.
-/// </param>
-/// <param name="Membro">Só em <see cref="TipoDeRegra.MembroGerenciado"/>: o nome do membro.</param>
-/// <param name="Categoria">Linha de SECURITY.md 3.2.</param>
-/// <param name="Motivo">Por que a API dá a capacidade proibida; aparece no relatório.</param>
-/// <param name="PadroesNaFonte">
-/// Palavras inteiras, ou sequências de palavras separadas por ponto, procuradas no código-fonte
-/// sem diferenciar maiúsculas. Lista vazia: a regra só vale para os binários, e o comentário da
-/// regra explica por quê.
-/// </param>
+// Em MembroGerenciado, Alvo é o tipo que declara o Membro. PadroesNaFonte são palavras inteiras
+// (ou com ponto) procuradas no fonte sem caixa; vazia quer dizer regra só pros binários.
 internal sealed record Regra(
     TipoDeRegra Tipo,
     string Alvo,
@@ -100,36 +70,26 @@ internal sealed record Regra(
     string Motivo,
     IReadOnlyList<string> PadroesNaFonte)
 {
-    /// <summary>Nome legível: <c>SendInput</c>, <c>ws2_32</c>, <c>System.Diagnostics.Process.Start</c>.</summary>
     public string Descricao => Membro is null ? Alvo : $"{Alvo}.{Membro}";
 }
 
-/// <summary>
-/// A lista proibida: tabela única com todas as regras do portão, agrupadas pelas categorias de
-/// SECURITY.md 3.2. Cada regra traz o motivo. Entradas marcadas "(além da lista mínima)" foram
-/// acrescentadas por darem a mesma capacidade por outro nome; nenhuma é usada pelo produto.
-///
-/// Exceções deliberadas, que NÃO estão aqui e portanto são permitidas:
-/// - System.Diagnostics.Process como tipo, Process.GetCurrentProcess e os membros de leitura do
-///   próprio processo (Id, StartTime, WorkingSet64 e afins): o Buzzy pode medir a si mesmo.
-///   Só Start, GetProcesses, GetProcessesByName e GetProcessById são proibidos.
-/// - O namespace System.Windows.Automation como um todo: o WPF usa AutomationProperties e
-///   System.Windows.Automation.Peers para a acessibilidade das próprias janelas. Só o lado
-///   cliente, que lê outros processos (AutomationElement, Automation), é proibido.
-/// - Microsoft.Win32 como namespace (SystemEvents avisa mudanças de tela e sessão). Só Registry
-///   e RegistryKey são proibidos.
-/// - Leitura nativa do registro (RegOpenKeyEx, RegQueryValueEx, RegGetValue): SECURITY.md 3.2
-///   proíbe criar persistência, não ler. O acesso gerenciado ao registro é proibido inteiro,
-///   porque Registry e RegistryKey servem para as duas coisas.
-/// - Funções de janela e monitor que o adaptador de plataforma usa sobre as próprias janelas e a
-///   topologia (SetWindowPos, GetWindowLongPtr, MonitorFromPoint, GetMonitorInfo,
-///   EnumDisplayMonitors, Shell_NotifyIcon, SetForegroundWindow para o menu da bandeja e afins),
-///   conforme SECURITY.md 3.1.
-///
-/// O Buzzy.exe (apphost) tem uma lista de permissões própria, em <see cref="PermissoesDoApphost"/>. O observador de tela
-/// cheia (DEC-013 e DEC-034) usa três funções desta lista por uma permissão restrita a um tipo e a um arquivo, em
-/// <see cref="UsosRestritos"/>; no resto do produto, elas continuam proibidas.
-/// </summary>
+// Todas as regras do portão, por categoria. "(além da lista mínima)" marca APIs que dão a mesma
+// capacidade por outro nome; o produto não usa nenhuma.
+//
+// Ficam de fora de propósito:
+// - Process como tipo e a leitura do próprio processo (GetCurrentProcess, Id, WorkingSet64...):
+//   o Buzzy pode medir a si mesmo. Só Start e os GetProcess* são proibidos.
+// - System.Windows.Automation inteiro: o WPF usa AutomationProperties e Peers na acessibilidade
+//   das próprias janelas. Só o lado cliente (AutomationElement, Automation) é proibido.
+// - Microsoft.Win32 como namespace (SystemEvents avisa mudança de tela e sessão). Só Registry e
+//   RegistryKey são proibidos.
+// - Leitura nativa do registro: proibido é criar persistência. O acesso gerenciado cai inteiro
+//   porque Registry/RegistryKey servem pra ler e gravar.
+// - Funções de janela e monitor usadas sobre as próprias janelas (SetWindowPos, GetMonitorInfo,
+//   Shell_NotifyIcon, SetForegroundWindow pro menu da bandeja e afins).
+//
+// O apphost tem permissões próprias em PermissoesDoApphost. O observador de tela cheia usa três
+// funções daqui por UsosRestritos, presas a um tipo e um arquivo; no resto continuam proibidas.
 internal static class ListaProibida
 {
     public static readonly IReadOnlyList<Regra> Regras =
@@ -144,8 +104,7 @@ internal static class ListaProibida
         Funcao("RegisterHotKey", Categoria.InputGlobal, "atalho global de teclado; exige decisão aprovada"),
 
         // ---- Injetar input --------------------------------------------------------------
-        // SendInput é permitido só em ferramentas de teste fora do executável (spikes/ e tools/
-        // de teste), nunca no produto.
+        // SendInput só em ferramentas de teste fora do produto (spikes/, tools/ de teste).
         Funcao("SendInput", Categoria.InjetarInput, "injeta teclado e mouse sintéticos"),
         Funcao("mouse_event", Categoria.InjetarInput, "injeta mouse sintético (antecessora de SendInput)"),
         Funcao("keybd_event", Categoria.InjetarInput, "injeta teclado sintético (antecessora de SendInput)"),
@@ -160,7 +119,7 @@ internal static class ListaProibida
         Funcao("StretchBlt", Categoria.CapturaDeTela, "copia pixels de um DC com escala; sobre o desktop ou outra janela, captura a tela"),
         Funcao("PrintWindow", Categoria.CapturaDeTela, "fotografa o conteúdo de uma janela"),
         Funcao("CreateDC", Categoria.CapturaDeTela, "cria DC do monitor ou do desktop, de onde se leem os pixels da tela"),
-        // DEC-037, item 12: os pixels da tela também saem por um DC obtido sem CreateDC.
+        // Dá pra ler os pixels da tela com um DC obtido sem CreateDC.
         Funcao("GetDC", Categoria.CapturaDeTela, "obtém o DC de uma janela ou da tela inteira, de onde se leem os pixels (além da lista mínima)"),
         Funcao("GetWindowDC", Categoria.CapturaDeTela, "obtém o DC de uma janela inteira, inclusive de outro aplicativo (além da lista mínima)"),
         Funcao("GetDCEx", Categoria.CapturaDeTela, "obtém o DC de uma janela ou da tela com opções (além da lista mínima)"),
@@ -190,7 +149,7 @@ internal static class ListaProibida
         Tipo("System.Diagnostics.ProcessStartInfo", Categoria.Processos, "descreve um processo a iniciar"),
 
         // ---- Rede -----------------------------------------------------------------------
-        // O MVP não tem rede (SECURITY.md 1 e 6). Módulos inteiros: qualquer função deles.
+        // Sem rede nenhuma. Módulo inteiro: qualquer função dele reprova.
         Modulo("ws2_32", Categoria.Rede, "Winsock: sockets"),
         Modulo("wsock32", Categoria.Rede, "Winsock antigo: sockets"),
         Modulo("mswsock", Categoria.Rede, "extensões do Winsock (além da lista mínima)"),
@@ -203,8 +162,7 @@ internal static class ListaProibida
         Funcao("URLOpenStream", Categoria.Rede, "lê conteúdo da rede (urlmon) (além da lista mínima)"),
         Funcao("URLOpenBlockingStream", Categoria.Rede, "lê conteúdo da rede (urlmon) (além da lista mínima)"),
         Funcao("URLOpenPullStream", Categoria.Rede, "lê conteúdo da rede (urlmon) (além da lista mínima)"),
-        // A lista de nomes simples também pega o uso sem o namespace escrito, pelo global using
-        // implícito do SDK (que fica em obj/ e não é lido).
+        // Os nomes simples pegam o uso via global using implícito do SDK (fica em obj/, que não é lido).
         Namespace("System.Net.Http", Categoria.Rede, "cliente HTTP (HttpClient e afins)",
             fonte: ["System.Net.Http", "HttpClient", "HttpClientHandler", "SocketsHttpHandler", "HttpRequestMessage", "HttpResponseMessage"]),
         Namespace("System.Net.Sockets", Categoria.Rede, "sockets TCP e UDP",
@@ -250,13 +208,13 @@ internal static class ListaProibida
         Funcao("QueryFullProcessImageName", Categoria.LerOutrosAplicativos, "lê o caminho do executável de um processo"),
         Funcao("GetModuleFileNameEx", Categoria.LerOutrosAplicativos, "lê o caminho de um módulo de outro processo"),
         Funcao("K32GetModuleFileNameEx", Categoria.LerOutrosAplicativos, "GetModuleFileNameEx exportada pelo kernel32 (além da lista mínima)"),
-        // As três abaixo marcadas com DEC-034 só valem no observador de tela cheia, pela permissão restrita de UsosRestritos
-        // (SECURITY.md 3.1 e 8, item 1); em qualquer outro tipo ou arquivo, reprovam.
+        // GetForegroundWindow, GetWindowThreadProcessId e SetWinEventHook só passam no observador de
+        // tela cheia, via UsosRestritos; em qualquer outro lugar reprovam.
         Funcao("GetForegroundWindow", Categoria.LerOutrosAplicativos, "identifica a janela de outro aplicativo em primeiro plano; só no observador de tela cheia (DEC-013, DEC-034)"),
         Funcao("GetWindowThreadProcessId", Categoria.LerOutrosAplicativos, "identifica a thread e o processo donos de uma janela, inclusive de outro aplicativo; só no observador de tela cheia, sem o processo (DEC-034) (além da lista mínima)"),
         Funcao("WindowFromPoint", Categoria.LerOutrosAplicativos, "identifica a janela de outro aplicativo sob um ponto"),
         Funcao("SetWinEventHook", Categoria.LerOutrosAplicativos, "observa eventos de janelas de outros aplicativos; só no observador de tela cheia, restrito aos eventos e filtros da DEC-013 (DEC-034)"),
-        // DEC-037, item 12: identidade, hierarquia e processo de janelas de outros aplicativos, por outros caminhos.
+        // Outros caminhos pra identidade, hierarquia e processo de janelas alheias.
         Funcao("RealGetWindowClass", Categoria.LerOutrosAplicativos, "lê a classe de uma janela (além da lista mínima)"),
         Funcao("GetWindowModuleFileName", Categoria.LerOutrosAplicativos, "lê o módulo dono de uma janela (além da lista mínima)"),
         Funcao("GetWindowInfo", Categoria.LerOutrosAplicativos, "lê estilos, classe e geometria de uma janela (além da lista mínima)"),
@@ -282,8 +240,7 @@ internal static class ListaProibida
         Tipo("System.Windows.Clipboard", Categoria.LerOutrosAplicativos, "lê a área de transferência (WPF)", fonte: ["Clipboard"]),
         Tipo("System.Windows.Forms.Clipboard", Categoria.LerOutrosAplicativos, "lê a área de transferência (Windows Forms)", fonte: ["Clipboard"]),
         Tipo("System.Windows.Automation.AutomationElement", Categoria.LerOutrosAplicativos, "UI Automation do lado cliente: lê a interface de outros processos"),
-        // Só nos binários: na fonte, "Automation" é também parte do namespace
-        // System.Windows.Automation, que o WPF usa para a própria acessibilidade.
+        // Só nos binários: na fonte "Automation" casaria com o namespace que o WPF usa na acessibilidade.
         Tipo("System.Windows.Automation.Automation", Categoria.LerOutrosAplicativos, "UI Automation do lado cliente: observa foco e eventos de outros processos (além da lista mínima)",
             fonte: []),
         Membro("System.Diagnostics.Process", "GetProcesses", Categoria.LerOutrosAplicativos, "lista os processos do sistema",
@@ -294,14 +251,14 @@ internal static class ListaProibida
             fonte: ["GetProcessById"]),
 
         // ---- Persistência escondida -----------------------------------------------------
-        // A chave Run de Q-04 (iniciar com o Windows, opcional e ligada pelo usuário): RegSetValueExW e RegDeleteValueW
-        // são usos restritos do adaptador do início (UsosRestritos; DEC-038, item 11); no resto do produto, reprovam.
+        // "Iniciar com o Windows" (opcional, ligado pelo usuário) usa a chave Run: RegSetValueExW e
+        // RegDeleteValueW só passam no adaptador do início, via UsosRestritos.
         Funcao("RegSetValueEx", Categoria.PersistenciaEscondida, "grava valor no registro, como a chave Run"),
         Funcao("RegSetValue", Categoria.PersistenciaEscondida, "grava valor no registro (API antiga) (além da lista mínima)"),
         Funcao("RegSetKeyValue", Categoria.PersistenciaEscondida, "grava valor no registro (além da lista mínima)"),
         Funcao("RegCreateKeyEx", Categoria.PersistenciaEscondida, "cria chave no registro"),
         Funcao("RegCreateKey", Categoria.PersistenciaEscondida, "cria chave no registro (API antiga) (além da lista mínima)"),
-        // DEC-038, item 11: apagar ou gravar no registro por outros nomes, e a pasta Inicializar.
+        // Gravar/apagar no registro por outros nomes, e a pasta Inicializar.
         Funcao("RegDeleteValue", Categoria.PersistenciaEscondida, "apaga valor do registro, como o da chave Run (além da lista mínima)"),
         Funcao("RegDeleteKey", Categoria.PersistenciaEscondida, "apaga chave do registro (além da lista mínima)"),
         Funcao("RegDeleteKeyEx", Categoria.PersistenciaEscondida, "apaga chave do registro (além da lista mínima)"),
@@ -323,7 +280,7 @@ internal static class ListaProibida
         Funcao("LdrLoadDll", Categoria.CodigoDinamico, "carrega DLL pelo ntdll, por baixo de LoadLibrary (além da lista mínima)"),
         Funcao("GetProcAddress", Categoria.CodigoDinamico, "obtém função por nome em tempo de execução, escondendo a chamada do portão"),
         Funcao("LdrGetProcedureAddress", Categoria.CodigoDinamico, "obtém função pelo ntdll, por baixo de GetProcAddress (além da lista mínima)"),
-        // Qualificados na fonte: "Load", "LoadFrom" e "LoadFile" sozinhos são nomes comuns.
+        // Qualificados na fonte: "Load", "LoadFrom" e "LoadFile" soltos são nomes comuns.
         Membro("System.Reflection.Assembly", "Load", Categoria.CodigoDinamico, "carrega assembly em tempo de execução",
             fonte: ["Assembly.Load"]),
         Membro("System.Reflection.Assembly", "LoadFrom", Categoria.CodigoDinamico, "carrega assembly de um caminho",
@@ -349,9 +306,9 @@ internal static class ListaProibida
         Namespace("System.Reflection.Emit", Categoria.CodigoDinamico, "gera código em tempo de execução",
             fonte: ["System.Reflection.Emit", "DynamicMethod", "ILGenerator", "AssemblyBuilder", "PersistedAssemblyBuilder"]),
 
-        // ---- Arquivo único (F9-P10, DEC-042) ------------------------------------------------
-        // Num executável de arquivo único, o assembly não é um arquivo: Location e CodeBase vêm vazios (ou lançam), e
-        // GetFile/GetFiles lançam. O caminho do executável vem de Environment.ProcessPath; a pasta, de AppContext.BaseDirectory.
+        // ---- Arquivo único ---------------------------------------------------------------
+        // No exe único o assembly não é arquivo: Location/CodeBase voltam vazios ou lançam, GetFile(s)
+        // lança. Use Environment.ProcessPath e AppContext.BaseDirectory.
         Membro("System.Reflection.Assembly", "get_Location", Categoria.ArquivoUnico, "vazio num executável de arquivo único; use Environment.ProcessPath ou AppContext.BaseDirectory",
             fonte: ["Assembly.Location"]),
         Membro("System.Reflection.Assembly", "get_CodeBase", Categoria.ArquivoUnico, "lança num executável de arquivo único (e é obsoleto)",
@@ -366,8 +323,8 @@ internal static class ListaProibida
             fonte: []),
         Membro("System.Reflection.AssemblyName", "get_EscapedCodeBase", Categoria.ArquivoUnico, "vazio num executável de arquivo único (e é obsoleto)",
             fonte: []),
-        // As outras APIs marcadas [RequiresAssemblyFiles] no runtime 10.0.12 (as do aviso IL3002 do analisador; revisão
-        // adversarial do F9-P10): só nos binários, porque Name e FullyQualifiedName são nomes comuns na fonte.
+        // O resto do [RequiresAssemblyFiles] do runtime 10.0.12 (aviso IL3002). Só nos binários:
+        // Name e FullyQualifiedName são nomes comuns na fonte.
         Membro("System.Runtime.InteropServices.Marshal", "GetHINSTANCE", Categoria.ArquivoUnico, "devolve -1 para um módulo dentro de um executável de arquivo único",
             fonte: ["GetHINSTANCE"]),
         Membro("System.Reflection.Module", "get_Name", Categoria.ArquivoUnico, "devolve \"<Unknown>\" para um módulo dentro de um executável de arquivo único",
@@ -376,15 +333,15 @@ internal static class ListaProibida
             fonte: []),
 
         // ---- Alterar configuração global --------------------------------------------------
-        // A chave estável do monitor (DEC-030) só LÊ a configuração de vídeo (GetDisplayConfigBufferSizes, QueryDisplayConfig e
-        // DisplayConfigGetDeviceInfo, permitidas); estas a mudam para o sistema todo (revisão de segurança do bloco P6-P9).
+        // A chave estável do monitor só LÊ a configuração de vídeo (QueryDisplayConfig e afins, que
+        // passam); estas mudam o vídeo do sistema todo.
         Funcao("SetDisplayConfig", Categoria.ConfiguracaoGlobal, "muda a topologia, a resolução, a orientação ou o modo de vídeo do sistema todo"),
         Funcao("DisplayConfigSetDeviceInfo", Categoria.ConfiguracaoGlobal, "muda propriedades de um alvo ou de uma fonte de vídeo (escala, HDR) para o sistema todo"),
         Funcao("ChangeDisplaySettings", Categoria.ConfiguracaoGlobal, "muda o modo de vídeo do monitor principal para o sistema todo"),
         Funcao("ChangeDisplaySettingsEx", Categoria.ConfiguracaoGlobal, "muda o modo de vídeo ou a posição de um monitor para o sistema todo"),
-        // ---- Fase 9 (DEC-040, item 6): famílias que a auditoria achou fora da lista ------------------------
-        // Input global sem hook: a posição do cursor, a ociosidade e o estado de input de outra thread. O Buzzy só lê o
-        // cursor nas mensagens entregues às próprias janelas (SECURITY.md 3.1).
+        // ---- Famílias que faltavam -------------------------------------------------------
+        // Input global sem hook: cursor, ociosidade, input de outra thread. O Buzzy só vê o cursor
+        // nas mensagens das próprias janelas.
         Funcao("GetCursorPos", Categoria.InputGlobal, "lê a posição do cursor do sistema, fora das mensagens das próprias janelas"),
         Funcao("GetPhysicalCursorPos", Categoria.InputGlobal, "lê a posição física do cursor do sistema"),
         Funcao("GetCursorInfo", Categoria.InputGlobal, "lê o cursor do sistema (posição e forma)"),
@@ -392,8 +349,8 @@ internal static class ListaProibida
         Funcao("GetMouseMovePointsEx", Categoria.InputGlobal, "lê o histórico de movimento do mouse do sistema"),
         Funcao("AttachThreadInput", Categoria.InputGlobal, "compartilha o estado de input com a thread de outro aplicativo"),
 
-        // Ler outros aplicativos: shell hook, acessibilidade (MSAA e UIA por COM), metadados do clipboard, identidade de
-        // processos, do usuário e da máquina, e observação de arquivos do usuário (SECURITY.md 6).
+        // Ler outros aplicativos: shell hook, MSAA/UIA por COM, metadados do clipboard, identidade de
+        // processo, usuário e máquina, e observar arquivos do usuário.
         Funcao("RegisterShellHookWindow", Categoria.LerOutrosAplicativos, "recebe o HWND de toda janela criada ou ativada no sistema"),
         Funcao("AccessibleObjectFromEvent", Categoria.LerOutrosAplicativos, "lê nome e valor do objeto de um evento de outro aplicativo"),
         Funcao("AccessibleChildren", Categoria.LerOutrosAplicativos, "percorre a árvore de acessibilidade de outro aplicativo"),
@@ -419,9 +376,8 @@ internal static class ListaProibida
         Tipo("System.IO.FileSystemWatcher", Categoria.LerOutrosAplicativos, "observa mudanças em arquivos e pastas do usuário"),
         Tipo("System.Windows.DataObject", Categoria.LerOutrosAplicativos, "recebe conteúdo de outro aplicativo por arrastar e soltar"),
         Tipo("System.Windows.DragDrop", Categoria.LerOutrosAplicativos, "recebe conteúdo de outro aplicativo por arrastar e soltar"),
-        // As propriedades viram o método get_ no metadado: é esse nome que o binário referencia. (Sem a regra do
-        // GetFocusedElement da UIA por COM: o FocusManager do WPF tem o mesmo nome, e a UIA por COM já exige o
-        // CoCreateInstance, proibido.)
+        // Propriedade vira get_ no metadado, e é esse nome que o binário referencia. GetFocusedElement
+        // da UIA fica de fora: o FocusManager do WPF tem o mesmo nome e a UIA já exige CoCreateInstance.
         Membro("System.Environment", "get_UserName", Categoria.LerOutrosAplicativos, "lê o nome do usuário (SECURITY.md 6)", fonte: ["Environment.UserName"]),
         Membro("System.Environment", "get_MachineName", Categoria.LerOutrosAplicativos, "lê o nome da máquina (SECURITY.md 6)", fonte: ["Environment.MachineName"]),
         Membro("System.Environment", "get_UserDomainName", Categoria.LerOutrosAplicativos, "lê o domínio do usuário (SECURITY.md 6)", fonte: ["Environment.UserDomainName"]),
@@ -509,10 +465,7 @@ internal static class ListaProibida
     private static readonly Dictionary<string, Regra> MetodosComPorNome = Indexar(TipoDeRegra.MetodoCom, r => r.Alvo);
     private static readonly Regra[] Namespaces = [.. Regras.Where(r => r.Tipo == TipoDeRegra.NamespaceGerenciado)];
 
-    /// <summary>
-    /// Regra que proíbe uma função nativa: primeiro pelo nome da função (ignorando maiúsculas e
-    /// os sufixos A e W), depois pelo módulo (ignorando maiúsculas, caminho e extensão .dll).
-    /// </summary>
+    // Primeiro pela função (sem caixa, com A/W), depois pelo módulo.
     public static Regra? ProcurarNativa(string modulo, string funcao)
     {
         ArgumentNullException.ThrowIfNull(modulo);
@@ -521,7 +474,7 @@ internal static class ListaProibida
         return ModulosPorNome.GetValueOrDefault(NormalizarModulo(modulo));
     }
 
-    /// <summary>Regra que proíbe um tipo gerenciado de nível superior, pelo nome ou pelo namespace.</summary>
+    // Tipo de nível superior, pelo nome ou pelo namespace.
     public static Regra? ProcurarTipo(string nomeDoNamespace, string nome)
     {
         ArgumentNullException.ThrowIfNull(nomeDoNamespace);
@@ -536,17 +489,13 @@ internal static class ListaProibida
         return null;
     }
 
-    /// <summary>Regra que proíbe um membro, dado o nome completo do tipo que o declara.</summary>
+    // tipo é o nome completo de quem declara o membro.
     public static Regra? ProcurarMembro(string tipo, string membro)
         => MembrosPorNome.GetValueOrDefault($"{tipo}::{membro}");
 
-    /// <summary>Regra que proíbe um método de interface COM pelo nome.</summary>
     public static Regra? ProcurarMetodoCom(string metodo) => MetodosComPorNome.GetValueOrDefault(metodo);
 
-    /// <summary>
-    /// Nome de módulo comparável: sem caminho, sem ponto final, sem extensão .dll, em minúsculas.
-    /// "C:\Windows\System32\WS2_32.DLL", "ws2_32.dll" e "ws2_32" viram "ws2_32".
-    /// </summary>
+    // "C:\Windows\System32\WS2_32.DLL", "ws2_32.dll" e "ws2_32" viram "ws2_32".
     public static string NormalizarModulo(string modulo)
     {
         ArgumentNullException.ThrowIfNull(modulo);
@@ -560,8 +509,8 @@ internal static class ListaProibida
 
     public static string Juntar(string nomeDoNamespace, string nome) => nomeDoNamespace.Length == 0 ? nome : $"{nomeDoNamespace}.{nome}";
 
-    // O nome exato e os sufixos A e W de cada função. Comparar variantes, em vez de cortar o
-    // último caractere, evita falso positivo: "PrintWindow" termina em W e não é variante de nada.
+    // Indexa nome, nome+A e nome+W. Cortar a última letra daria falso positivo: "PrintWindow"
+    // termina em W e não é variante de nada.
     private static Dictionary<string, Regra> IndexarFuncoes()
     {
         var indice = new Dictionary<string, Regra>(StringComparer.Ordinal);

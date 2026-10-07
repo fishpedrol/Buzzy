@@ -8,15 +8,10 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// O painel compacto de energia (Fase 8; DEC-038, item 4; critério 11): só o seletor de três posições, num grupo "Energia",
-/// sem botão de fechar, sem texto livre e sem animação; a fonte do sistema e o tema "chapéu de palha" das configurações
-/// (<see cref="TemaDoBuzzy"/>, DEC-039: a faixa azul com o retrato e o título, e o seletor sem título à vista; no alto
-/// contraste, as cores do sistema). Fica no topo enquanto
-/// está aberto e fora da barra de tarefas e do Alt+Tab. Fecha com Esc, Enter, Alt+F4 ou a perda de foco (pelo usuário,
-/// <see cref="FechadoPeloUsuario"/>, uma vez só) ou pelo núcleo (<see cref="FecharPeloNucleo"/>, sem avisar). Escolher não
-/// fecha. Nada periódico: só eventos da janela.
-/// </summary>
+// Painel compacto de energia: só o seletor de três posições, sem botão de fechar nem
+// animação, com o tema das configurações. Topmost enquanto aberto, fora da barra e do
+// Alt+Tab. Esc, Enter, Alt+F4 ou perder o foco fecham avisando FechadoPeloUsuario
+// (uma vez só); FecharPeloNucleo fecha sem avisar. Escolher não fecha.
 internal sealed class PainelDeEnergia : Window
 {
     private readonly Seletor<NivelDeEnergia> _seletor;
@@ -71,25 +66,22 @@ internal sealed class PainelDeEnergia : Window
         };
     }
 
-    /// <summary>O usuário escolheu um nível (o painel continua aberto).</summary>
+    // O painel continua aberto.
     internal event Action<NivelDeEnergia>? Escolheu;
 
-    /// <summary>O usuário fechou o painel, com o motivo (<c>esc</c>, <c>enter</c>, <c>foco</c>, <c>altF4</c>, <c>semFoco</c>); uma vez só.</summary>
+    // Motivo: esc, enter, foco, altF4 ou semFoco. Uma vez só.
     internal event Action<string>? FechadoPeloUsuario;
 
-    /// <summary>O seletor, para os testes.</summary>
     internal Seletor<NivelDeEnergia> Seletor => _seletor;
 
-    /// <summary>O HWND, depois de criado.</summary>
     internal nint Hwnd => new WindowInteropHelper(this).Handle;
 
-    /// <summary>O retângulo do próprio painel, em pixels físicos; nulo antes de criado.</summary>
+    // Pixels físicos; nulo antes de a janela existir.
     internal RetanguloPx? RetanguloNaTela() => Win32.GetWindowRect(Hwnd, out Win32.RECT r) ? new RetanguloPx(r.Left, r.Top, r.Right, r.Bottom) : null;
 
-    /// <summary>Atualiza a marca a partir do núcleo (o efeito <c>GravarPreferencias</c>), sem pedido.</summary>
+    // Vem do GravarPreferencias do núcleo; não levanta pedido.
     internal void Marcar(NivelDeEnergia nivel) => _seletor.Marcar(nivel);
 
-    /// <summary>Fecha a pedido do usuário: avisa uma vez e fecha.</summary>
     internal void FecharPeloUsuario(string motivo)
     {
         if (_fechando) return;
@@ -97,7 +89,7 @@ internal sealed class PainelDeEnergia : Window
         Close();
     }
 
-    /// <summary>Fecha a pedido do núcleo (arraste, esconder, sair): sem avisar.</summary>
+    // Arraste, esconder, sair: fecha sem avisar.
     internal void FecharPeloNucleo()
     {
         if (_fechando) return;
@@ -125,7 +117,7 @@ internal sealed class PainelDeEnergia : Window
         if (Teclar(e.Key)) e.Handled = true;
     }
 
-    /// <summary>Esc e Enter fecham pelo usuário; devolve se a tecla foi tratada.</summary>
+    // Devolve se a tecla foi tratada.
     internal bool Teclar(Key tecla)
     {
         switch (tecla)

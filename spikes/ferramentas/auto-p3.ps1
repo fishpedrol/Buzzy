@@ -1,22 +1,17 @@
 ﻿<#
-    auto-p3.ps1 — gestos SINTÉTICOS para os cenários de P3 que o teste humano não cobriu.
+    auto-p3.ps1 — gestos via SendInput nos casos de arraste difíceis de fazer na mão.
 
-    Ferramenta de teste fora do produto (SECURITY.md 3.2 permite injeção só aqui).
-    Todo evento carrega a marca de injetado; o resultado é rotulado como sintético.
+    Uso: .\auto-p3.ps1
 
-    Cenários, nesta ordem:
-      B7  clique curto (move 1 px, abaixo do limiar de 4 px) -> deve virar CLIQUE
-      B2  arraste de 144 px -> deve virar ARRASTE sem tirar o foco do Bloco de Notas
-      B6  ClickLock: ligado SÓ EM MEMÓRIA (fWinIni = 0, nada gravado no perfil) e
-          restaurado no fim, mesmo com erro
+    Ordem:
+      B7  clique curto (1 px, abaixo do limiar de 4 px) -> CLIQUE
+      B2  arraste de 144 px -> ARRASTE sem tirar o foco do Bloco de Notas
+      B6  ClickLock ligado só em memória (fWinIni = 0) e restaurado no fim, mesmo com erro
       B4  Alt+Tab no meio do arraste (por último, porque troca a janela ativa)
 
-    Texto: entre os gestos, digita marcadores no Bloco de Notas, SOMENTE se ele estiver
-    em primeiro plano naquele instante. O script não lê o Bloco de Notas (SECURITY.md
-    proíbe); quem confere se o texto entrou é a pessoa, olhando a janela.
-
-    Segurança operacional: se houver qualquer processo do Bloco de Notas aberto, o script
-    aborta. Ele nunca encerra documentos do usuário à força.
+    Entre os gestos digita marcadores no Bloco de Notas, só se ele estiver na frente. O
+    script não lê o Bloco de Notas: quem confere o texto é a pessoa, olhando.
+    Se o Bloco de Notas já estiver aberto, aborta; nunca fecha documento do usuário.
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -164,7 +159,7 @@ try {
     $novas = @(Get-Content $log -Encoding UTF8 | Select-Object -Skip $linhasAntes)
     $hSpike = [IntPtr][int64](($novas | Where-Object { $_ -match 'SONDA\|HWND\|' } | Select-Object -First 1) -replace '.*SONDA\|HWND\|','')
 
-    # Ponto de agarre: coluna de rótulos, opaca, em coordenada local (20,100).
+    # Agarra na coluna opaca de rótulos, local (20,100).
     $gx = $X + 20; $gy = $Y + 100
 
     Nota ""
@@ -203,8 +198,8 @@ try {
     $marcaB6 = @(Get-Content $log -Encoding UTF8).Count
     $rb = New-Object G+RECT; [void][G]::GetWindowRect($hSpike, [ref]$rb); $cx = $rb.Left + 20; $cy = $rb.Top + 100
     [void][G]::Descer($cx, $cy)
-    Start-Sleep -Milliseconds 1700          # segura parado além do tempo de trava (1200 ms)
-    [void][G]::Subir($cx, $cy)              # com a trava, este "soltar" deve ser engolido
+    Start-Sleep -Milliseconds 1700          # passa do tempo da trava (1200 ms)
+    [void][G]::Subir($cx, $cy)              # a trava deve engolir este soltar
     Start-Sleep -Milliseconds 400
     for ($i = 1; $i -le 10; $i++) { $cx -= 12; [void][G]::Mover($cx, $cy); Start-Sleep -Milliseconds 40 }
     Start-Sleep -Milliseconds 300
@@ -213,11 +208,9 @@ try {
 
     [void][G]::SpiSet($SPI_SETMOUSECLICKLOCK, 0, [IntPtr]$clickLockOriginal, 0)
 
-    # Critério: com a trava, o "soltar" depois de segurar 1,7 s é engolido, então o MESMO
-    # gesto continua nos movimentos seguintes e só termina no clique de liberação.
-    # Sem a trava, apareceria um SOLTAR classificado como CLIQUE logo após segurar, e os
-    # movimentos seguintes seriam só passagem do cursor, sem ARRASTE.
-    # (GetCapture não serve de prova aqui: chamado de outro processo, retorna sempre 0.)
+    # Com a trava, o soltar depois de 1,7 s some e o MESMO gesto segue até o clique de
+    # liberação. Sem ela, viria um SOLTAR como CLIQUE e os movimentos não arrastariam.
+    # GetCapture não prova nada aqui: de outro processo sempre volta 0.
     $b6 = @(Get-Content $log -Encoding UTF8 | Select-Object -Skip $marcaB6)
     $b6Movs = @($b6 | Where-Object { $_ -match 'Movimentos aplicados: (\d+)' } | ForEach-Object { [int]$matches[1] })
     $b6MaxMov = if ($b6Movs.Count) { ($b6Movs | Measure-Object -Maximum).Maximum } else { 0 }
@@ -248,7 +241,7 @@ try {
     Nota ("B4 Alt+Tab no meio (" + $nAlt + "/4 teclas aceitas): gesto encerrado=" + $b4Fim + " captura presa=" + ($capturaDepois -ne [IntPtr]::Zero) + " Buzzy na frente=" + $buzzyNaFrente + " (frente agora: " + $fgNome + ") roubos=" + $b4Roubo + " -> " + $(if ($b4Fim -and $capturaDepois -eq [IntPtr]::Zero -and -not $buzzyNaFrente -and $b4Roubo -eq 0) { 'OK' } else { 'DIVERGENTE' }))
 }
 finally {
-    # Restaurações que valem mesmo com erro
+    # Restaura mesmo com erro
     [void][G]::SpiSet($SPI_SETMOUSECLICKLOCK, 0, [IntPtr]$clickLockOriginal, 0)
     $clFinal = 0; [void][G]::SpiGet($SPI_GETMOUSECLICKLOCK, 0, [ref]$clFinal, 0)
     Nota ("ClickLock restaurado para o original (" + ($clickLockOriginal -ne 0) + "): agora=" + ($clFinal -ne 0))

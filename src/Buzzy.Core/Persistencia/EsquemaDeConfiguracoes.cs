@@ -6,54 +6,37 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.Core.Persistencia;
 
-/// <summary>
-/// Esquema v7 do settings.json (Fase 5; ARCHITECTURE.md 2.12; SECURITY.md 7): converte bytes em
-/// <see cref="ConfiguracoesSalvas"/> e de volta, sem E/S. A v2 acrescentou a emoção dominante
-/// (<c>preferencias.emocaoDominante</c>, DEC-027); a v3, a postura gravada com a posição (DEC-029, item 11): a borda do
-/// esconderijo (<c>posicao.esconderijo</c>, DEC-025) e a marca "preso pelo usuário" (<c>posicao.presoPeloUsuario</c>,
-/// DEC-024); a v4, a chave do conteúdo adulto (<c>preferencias.conteudoAdulto</c>, DEC-033); a v5, o sempre no topo e a
-/// escala (<c>preferencias.sempreNoTopo</c> e <c>preferencias.escala</c>, DEC-038); a v6, os itens adultos habilitados
-/// (<c>preferencias.itensAdultosHabilitados</c>, DEC-041); a v7, o uso por conta própria das seis drogas ilícitas
-/// (<c>preferencias.itensPorContaPropria</c>, DEC-045; ausente, nenhuma). Campos ausentes usam os padrões atuais: chave geral adulta
-/// desligada e vodka, cerveja e cigarro selecionados; o baseado fica desmarcado. Valores gerais já gravados continuam preservados; a raiz só
-/// regrava uma versão anterior no primeiro pedido, conforme a agenda existente.
-///
-/// A leitura é tolerante campo a campo e nunca lança. Só é ilegível o arquivo grande demais, fora de
-/// UTF-8, que não é JSON (comentários e vírgula final são aceitos), fundo demais, sem objeto na raiz ou
-/// sem um <c>schemaVersion</c> inteiro positivo. No resto, um campo desconhecido é ignorado, um repetido
-/// vale na primeira ocorrência, um número fora da faixa é preso ao limite e um tipo errado vale o padrão
-/// do campo; a posição é tudo ou nada nos campos obrigatórios. Cada caso gera um aviso.
-///
-/// A escrita produz sempre o mesmo texto para o mesmo conteúdo: UTF-8 sem BOM, indentação de 2
-/// espaços, fim de linha <c>\n</c> (também no fim do arquivo), campos numa ordem fixa e números no
-/// formato mais curto que reproduz o valor, sem depender da cultura.
-///
-/// Sem JsonSerializer e sem reflexão: a leitura extrai campo a campo de um <see cref="JsonDocument"/>, e
-/// a escrita usa <see cref="Utf8JsonWriter"/>.
-/// </summary>
+// settings.json <-> ConfiguracoesSalvas, sem E/S. Histórico do esquema:
+// v2 emoção dominante; v3 esconderijo e preso junto da posição; v4 conteúdo adulto; v5 sempre
+// no topo e escala; v6 itens adultos habilitados; v7 uso por conta própria das seis ilícitas.
+// Campo ausente vale o padrão atual (adulto desligado; vodka, cerveja e cigarro marcados).
+//
+// Leitura tolerante, nunca lança. Só é ilegível se for grande demais, não-UTF-8, não-JSON
+// (comentário e vírgula final passam), fundo demais, sem objeto na raiz ou sem schemaVersion
+// inteiro positivo. Fora isso: desconhecido é ignorado, repetido vale o primeiro, número fora da
+// faixa é preso e tipo errado vale o padrão; a posição é tudo ou nada. Tudo gera aviso.
+//
+// Escrita determinística: UTF-8 sem BOM, 2 espaços, \n (inclusive no fim), ordem fixa e números
+// no formato mais curto, sem cultura. Sem JsonSerializer/reflexão de propósito.
 public static class EsquemaDeConfiguracoes
 {
-    /// <summary>
-    /// Versão escrita no campo <c>schemaVersion</c>. Toda ampliação do esquema a incrementa: a 2 acrescentou a emoção
-    /// dominante, a 3, a borda do esconderijo e a marca de preso, a 4, o conteúdo adulto, a 5, o sempre no topo e a escala
-    /// (DEC-038), a 6, os itens adultos habilitados (DEC-041), e a 7, o uso por conta própria (DEC-045); um build anterior vê o
-    /// arquivo novo como versão futura e não grava por cima.
-    /// </summary>
+    // Toda ampliação do esquema incrementa. Build antigo vê o arquivo novo como versão futura e
+    // não grava por cima.
     public const int VersaoAtual = 7;
 
-    /// <summary>Tamanho máximo do arquivo, contando um BOM; maior, é ilegível sem ser interpretado.</summary>
+    // Contando o BOM. Maior que isso é ilegível sem nem interpretar.
     public const int TamanhoMaximoEmBytes = 65_536;
 
-    /// <summary>Profundidade máxima de objetos e listas aninhados, contando a raiz; mais funda, o arquivo é ilegível.</summary>
+    // Contando a raiz.
     public const int ProfundidadeMaxima = 8;
 
-    /// <summary>Comprimento máximo da chave do monitor, em caracteres UTF-16.</summary>
+    // Em chars UTF-16.
     public const int ComprimentoMaximoDaChave = 1_024;
 
-    /// <summary>Faixa das coordenadas gravadas (âncora e tela do monitor), em pixels físicos.</summary>
+    // Âncora e tela, em pixels físicos.
     public const int CoordenadaMinima = -32_768, CoordenadaMaxima = 32_767;
 
-    // Campos do esquema v6, na ordem em que são escritos.
+    // Na ordem em que são escritos.
     private static readonly string[] CamposDaRaiz = ["schemaVersion", "posicao", "preferencias"];
     private static readonly string[] CamposDaPosicao = ["chaveMonitor", "telaDoMonitor", "fracaoX", "fracaoY", "ancoraAbsoluta", "esconderijo", "presoPeloUsuario"];
     private static readonly string[] CamposDaTela = ["esquerda", "topo", "direita", "base"];
@@ -64,16 +47,12 @@ public static class EsquemaDeConfiguracoes
 
     private static readonly NivelDeEnergia[] NiveisDeEnergia = [NivelDeEnergia.Baixa, NivelDeEnergia.Media, NivelDeEnergia.Alta];
 
-    /// <summary>As bordas do esconderijo e o "nenhum", a lista fechada da leitura (<see cref="TentarLerEsconderijo"/>).</summary>
     private static readonly LadoDoEsconderijo[] Bordas = [LadoDoEsconderijo.Nenhum, LadoDoEsconderijo.Baixo, LadoDoEsconderijo.Esquerda, LadoDoEsconderijo.Direita, LadoDoEsconderijo.Cima];
 
-    /// <summary>A emoção dominante "Automática" (nula) no arquivo.</summary>
+    // Emoção nula ("Automática") no arquivo.
     private const string EmocaoAutomatica = "automatica";
 
-    /// <summary>
-    /// Os 14 nomes da emoção dominante no arquivo, na ordem de <see cref="Expressoes.DeHumor"/>: o nome da cara em
-    /// minúsculas ASCII. É a lista fechada da leitura (<see cref="TentarLerEmocao"/>).
-    /// </summary>
+    // Na ordem de Expressoes.DeHumor, em minúsculas ASCII.
     private static readonly string[] NomesDasEmocoes = [.. Expressoes.DeHumor.Select(e => e.ToString().ToLowerInvariant())];
 
     private static readonly JsonDocumentOptions OpcoesDeLeitura = new()
@@ -93,10 +72,7 @@ public static class EsquemaDeConfiguracoes
 
     private static ReadOnlySpan<byte> Bom => [0xEF, 0xBB, 0xBF];
 
-    /// <summary>
-    /// Lê o settings.json. Nunca lança: um arquivo que não se consegue ler é
-    /// <see cref="SituacaoDaLeitura.Ilegivel"/>, com as configurações padrão.
-    /// </summary>
+    // Nunca lança: o que não dá pra ler vira Ilegivel com os padrões.
     public static LeituraDasConfiguracoes Ler(ReadOnlyMemory<byte> conteudo)
     {
         if (conteudo.Length > TamanhoMaximoEmBytes) return Ilegivel("tamanho");
@@ -121,20 +97,16 @@ public static class EsquemaDeConfiguracoes
             }
             catch (InvalidOperationException)
             {
-                // Um texto do arquivo que não vira UTF-16 válido (um escape de surrogate solto, num nome de campo ou num
-                // valor): o System.Text.Json lança ao transcodificar, e o arquivo conta como JSON ilegível. A captura é só
-                // dessa falha: um defeito da extração não pode passar por arquivo ilegível, que a gravação seguinte
-                // trocaria pela cópia de diagnóstico, perdendo a posição; ele escapa, e a partida desliga a persistência.
+                // Escape de surrogate solto: o System.Text.Json lança ao transcodificar. Só essa falha
+                // conta como ilegível; um bug da extração tem que escapar, senão a próxima gravação
+                // trocaria o arquivo pela cópia de diagnóstico e a posição se perderia.
                 return Ilegivel("json");
             }
         }
     }
 
-    /// <summary>
-    /// Bytes do settings.json com as configurações normalizadas (<see cref="Normalizar"/>). Nunca lança por
-    /// causa do conteúdo e nunca passa de <see cref="TamanhoMaximoEmBytes"/>: o pior caso, uma chave de
-    /// 1024 caracteres todos escapados como <c>\uXXXX</c>, fica perto de 6 KiB.
-    /// </summary>
+    // Normaliza antes. Nunca passa de TamanhoMaximoEmBytes: o pior caso, chave de 1024 chars
+    // todos escapados como \uXXXX, dá uns 6 KiB.
     public static byte[] Escrever(ConfiguracoesSalvas configuracoes)
     {
         ConfiguracoesSalvas normalizadas = Normalizar(configuracoes);
@@ -190,14 +162,9 @@ public static class EsquemaDeConfiguracoes
         return [.. saida.WrittenSpan, (byte)'\n'];
     }
 
-    /// <summary>
-    /// As configurações como o arquivo as guarda: posição sem chave válida (vazia, longa demais, com
-    /// caractere de controle ou surrogate solto) vira nenhuma; frações saneadas (NaN vira 0,5, o resto é
-    /// preso em [0, 1]); coordenadas presas na faixa; tela que fica vazia vira desconhecida; energia fora dos
-    /// três níveis vira Média; emoção dominante fora das 14 caras de humor vira automática; preferências nulas, as
-    /// padrão; a postura só existe com a posição (sem ela, nenhuma borda e solto), e uma borda fora do enum vira
-    /// nenhuma. É o que <see cref="Ler"/> devolve do que <see cref="Escrever"/> escreveu.
-    /// </summary>
+    // Como o arquivo guarda, ou seja, o que Ler devolve do que Escrever escreveu: chave inválida
+    // apaga a posição; frações saneadas; coordenadas presas; tela vazia vira desconhecida; enums
+    // fora da lista voltam ao padrão; esconderijo e preso só existem com posição.
     public static ConfiguracoesSalvas Normalizar(ConfiguracoesSalvas configuracoes)
     {
         ArgumentNullException.ThrowIfNull(configuracoes);
@@ -209,7 +176,6 @@ public static class EsquemaDeConfiguracoes
         };
     }
 
-    /// <summary>Nome da escala no arquivo (DEC-038, item 9): <c>"pequena"</c>, <c>"media"</c> ou <c>"grande"</c>; fora das três, <c>"media"</c>.</summary>
     public static string NomeDaEscala(EscalaDoPersonagem escala) => escala switch
     {
         EscalaDoPersonagem.Pequena => "pequena",
@@ -217,10 +183,8 @@ public static class EsquemaDeConfiguracoes
         _ => "media",
     };
 
-    /// <summary>
-    /// Escala pelos três nomes do arquivo (<see cref="NomeDaEscala"/>), sem diferenciar maiúsculas, e nunca pelo Enum.Parse
-    /// (SECURITY.md 7). Falso, <paramref name="escala"/> é a Média, o padrão.
-    /// </summary>
+    // Lista fechada, sem diferenciar maiúsculas. Nunca Enum.Parse (aceitaria "1" e "a,b").
+    // Se falhar, devolve Média.
     public static bool TentarLerEscala(string texto, out EscalaDoPersonagem escala)
     {
         ArgumentNullException.ThrowIfNull(texto);
@@ -236,7 +200,7 @@ public static class EsquemaDeConfiguracoes
         return false;
     }
 
-    /// <summary>Nome ASCII estável de um dos nove itens adultos no settings.json.</summary>
+    // Nomes estáveis: não renomear, já estão gravados nos arquivos.
     private static string NomeDoItemAdulto(Item item) => item switch
     {
         Item.Vodka => "vodka",
@@ -251,7 +215,6 @@ public static class EsquemaDeConfiguracoes
         _ => throw new ArgumentOutOfRangeException(nameof(item), item, "Item não é adulto."),
     };
 
-    /// <summary>Leitor por lista fechada para os identificadores persistidos (DEC-041).</summary>
     private static bool TentarLerItemAdulto(string nome, out Item item)
     {
         item = nome.ToLowerInvariant() switch
@@ -270,7 +233,6 @@ public static class EsquemaDeConfiguracoes
         return TabelaDoTamagotchi.Adulto(item) && string.Equals(nome, NomeDoItemAdulto(item), StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Nome do nível no arquivo: <c>"baixa"</c>, <c>"media"</c> ou <c>"alta"</c>; fora dos três, <c>"media"</c>.</summary>
     public static string NomeDaEnergia(NivelDeEnergia nivel) => nivel switch
     {
         NivelDeEnergia.Baixa => "baixa",
@@ -278,11 +240,8 @@ public static class EsquemaDeConfiguracoes
         _ => "media",
     };
 
-    /// <summary>
-    /// Nível pelos três nomes do arquivo (<see cref="NomeDaEnergia"/>), sem diferenciar maiúsculas, e nunca
-    /// pelo Enum.Parse, que aceitaria <c>"1"</c> e <c>"Baixa,Alta"</c>. Falso, <paramref name="nivel"/> é
-    /// Média, o padrão seguro (SECURITY.md 7).
-    /// </summary>
+    // Lista fechada, sem diferenciar maiúsculas. Nunca Enum.Parse (aceitaria "1" e "Baixa,Alta").
+    // Se falhar, devolve Média.
     public static bool TentarLerEnergia(string texto, out NivelDeEnergia nivel)
     {
         ArgumentNullException.ThrowIfNull(texto);
@@ -298,18 +257,12 @@ public static class EsquemaDeConfiguracoes
         return false;
     }
 
-    /// <summary>
-    /// Nome da emoção dominante no arquivo (DEC-027): <c>"automatica"</c> para nula, ou o nome da cara de humor em
-    /// minúsculas ASCII, como <c>"feliz"</c>; fora das 14 caras de humor, <c>"automatica"</c>.
-    /// </summary>
+    // Nula ou cara que não é de humor vira "automatica".
     public static string NomeDaEmocao(Expressao? emocao)
         => emocao is { } e && Expressoes.EhDeHumor(e) ? NomesDasEmocoes[(int)e] : EmocaoAutomatica;
 
-    /// <summary>
-    /// Emoção dominante por um dos nomes do arquivo (<see cref="NomeDaEmocao"/>: <c>"automatica"</c> ou uma das 14 caras
-    /// de humor), sem diferenciar maiúsculas, e nunca pelo Enum.Parse, que aceitaria números, listas e as caras que
-    /// não são de humor (SECURITY.md 7). Falso, <paramref name="emocao"/> é nula: a automática, o padrão seguro.
-    /// </summary>
+    // Lista fechada, sem diferenciar maiúsculas. Nunca Enum.Parse: aceitaria números, listas e
+    // caras que não são de humor. Se falhar, devolve nula (automática).
     public static bool TentarLerEmocao(string texto, out Expressao? emocao)
     {
         ArgumentNullException.ThrowIfNull(texto);
@@ -326,11 +279,7 @@ public static class EsquemaDeConfiguracoes
         return false;
     }
 
-    /// <summary>
-    /// Nome da borda do esconderijo no arquivo (DEC-025): <c>"nenhum"</c>, <c>"baixo"</c>, <c>"esquerda"</c>,
-    /// <c>"direita"</c> ou <c>"cima"</c> (2026-10-03, no mesmo esquema: uma versão anterior lê <c>"cima"</c> como nenhum, o
-    /// padrão seguro); fora do enum, <c>"nenhum"</c>.
-    /// </summary>
+    // "cima" entrou sem subir a versão: um build antigo lê como nenhum, que é seguro.
     public static string NomeDoEsconderijo(LadoDoEsconderijo lado) => lado switch
     {
         LadoDoEsconderijo.Baixo => "baixo",
@@ -340,11 +289,7 @@ public static class EsquemaDeConfiguracoes
         _ => "nenhum",
     };
 
-    /// <summary>
-    /// Borda do esconderijo pelos nomes do arquivo (<see cref="NomeDoEsconderijo"/>), sem diferenciar maiúsculas,
-    /// e nunca pelo Enum.Parse, que aceitaria números e listas (SECURITY.md 7). Falso, <paramref name="lado"/> é nenhum,
-    /// o padrão seguro.
-    /// </summary>
+    // Lista fechada, sem Enum.Parse (aceitaria números e listas). Se falhar, devolve Nenhum.
     public static bool TentarLerEsconderijo(string texto, out LadoDoEsconderijo lado)
     {
         ArgumentNullException.ThrowIfNull(texto);
@@ -373,7 +318,7 @@ public static class EsquemaDeConfiguracoes
 
         (PosicaoDoPersonagem? posicao, LadoDoEsconderijo esconderijo, bool preso) = LerPosicao(campos[1], avisos);
         Preferencias lidas = LerPreferencias(campos[2], avisos);
-        // Até a v6, a travessia era gravada sempre ligada, sem a opção nas Configurações: vale o padrão novo (DEC-046).
+        // Até a v6 a travessia era gravada sempre ligada, sem opção na tela: usa o padrão novo.
         if (versao < 7) lidas = lidas with { AtravessarMonitores = Preferencias.Padrao.AtravessarMonitores };
         var configuracoes = new ConfiguracoesSalvas(posicao, lidas) { Esconderijo = esconderijo, PresoPeloUsuario = preso };
         SituacaoDaLeitura situacao = versao > VersaoAtual ? SituacaoDaLeitura.VersaoFutura : SituacaoDaLeitura.Valida;
@@ -383,11 +328,8 @@ public static class EsquemaDeConfiguracoes
     private static LeituraDasConfiguracoes Ilegivel(string motivo)
         => new(SituacaoDaLeitura.Ilegivel, null, ConfiguracoesSalvas.Padrao, [], motivo);
 
-    /// <summary>
-    /// A primeira ocorrência de cada campo do esquema no objeto, na ordem de <paramref name="nomes"/>; nula
-    /// quando ausente. O nome precisa ser igual, diferenciando maiúsculas. Uma repetição e um campo
-    /// desconhecido só geram aviso, com o nome do esquema e nunca um nome ou valor do arquivo.
-    /// </summary>
+    // Primeira ocorrência de cada campo, na ordem de nomes (nula se ausente). Nome com maiúsculas
+    // exatas. O aviso nunca repete nome ou valor vindo do arquivo.
     private static JsonElement?[] Campos(JsonElement objeto, string[] nomes, string onde, List<string> avisos)
     {
         var achados = new JsonElement?[nomes.Length];
@@ -405,12 +347,9 @@ public static class EsquemaDeConfiguracoes
         return achados;
     }
 
-    /// <summary>
-    /// A posição, tudo ou nada nos campos obrigatórios: sem a chave ou uma das frações, ou com uma delas
-    /// inválida, não há posição, nem a postura que vem com ela. A tela do monitor e a âncora são opcionais: inválidas,
-    /// valem desconhecida e (0, 0), porque a partida recalcula a âncora de qualquer forma (Posicionador.Restaurar). A
-    /// postura (v3) também é opcional: ausente, como num arquivo v1 ou v2, vale nenhuma borda e solto, sem aviso.
-    /// </summary>
+    // Chave e frações são tudo ou nada: falta uma, não há posição (nem esconderijo/preso). Tela e
+    // âncora são opcionais (a partida recalcula a âncora). Esconderijo/preso ausentes (v1, v2)
+    // valem nenhum e solto, sem aviso.
     private static (PosicaoDoPersonagem? Posicao, LadoDoEsconderijo Esconderijo, bool Preso) LerPosicao(JsonElement? valor, List<string> avisos)
     {
         if (valor is not { } posicao || posicao.ValueKind == JsonValueKind.Null) return default;
@@ -433,10 +372,7 @@ public static class EsquemaDeConfiguracoes
         return (lida, LerEsconderijo(campos[5], avisos), LerBooleano(campos[6], "posicao.presoPeloUsuario", false, avisos));
     }
 
-    /// <summary>
-    /// Borda do esconderijo, opcional: um dos nomes (<see cref="TentarLerEsconderijo"/>). Ausente ou nula vale
-    /// nenhuma, sem aviso, como a emoção; outro valor vale nenhuma, com um aviso que não repete o valor do arquivo.
-    /// </summary>
+    // Ausente ou nula: nenhum, sem aviso. Inválida: nenhum, com aviso (sem repetir o valor).
     private static LadoDoEsconderijo LerEsconderijo(JsonElement? valor, List<string> avisos)
     {
         if (valor is not { ValueKind: not JsonValueKind.Null } borda) return LadoDoEsconderijo.Nenhum;
@@ -445,7 +381,7 @@ public static class EsquemaDeConfiguracoes
         return LadoDoEsconderijo.Nenhum;
     }
 
-    /// <summary>Fração obrigatória: um número finito, preso em [0, 1]. Falso se ausente ou de outro tipo.</summary>
+    // Número finito, preso em [0, 1].
     private static bool LerFracao(JsonElement? valor, string nome, List<string> avisos, out double fracao)
     {
         if (valor is { ValueKind: JsonValueKind.Number } numero && numero.TryGetDouble(out double lida) && double.IsFinite(lida))
@@ -459,10 +395,7 @@ public static class EsquemaDeConfiguracoes
         return false;
     }
 
-    /// <summary>
-    /// Tela do monitor da época, opcional: os quatro lados inteiros, presos na faixa das coordenadas, com
-    /// esquerda menor que direita e topo menor que base. Qualquer outra coisa vale desconhecida.
-    /// </summary>
+    // Quatro lados inteiros, presos na faixa e não vazio; qualquer outra coisa vira desconhecida.
     private static RetanguloPx? LerTela(JsonElement? valor, List<string> avisos)
     {
         if (valor is not { } tela || tela.ValueKind == JsonValueKind.Null) return null;
@@ -480,7 +413,7 @@ public static class EsquemaDeConfiguracoes
         return null;
     }
 
-    /// <summary>Âncora absoluta, opcional: x e y inteiros, presos na faixa das coordenadas; senão, (0, 0).</summary>
+    // Inválida vira (0, 0).
     private static PontoPx LerAncora(JsonElement? valor, List<string> avisos)
     {
         if (valor is not { } ancora || ancora.ValueKind == JsonValueKind.Null) return default;
@@ -494,7 +427,6 @@ public static class EsquemaDeConfiguracoes
         return default;
     }
 
-    /// <summary>Coordenada: um número inteiro, preso na faixa das coordenadas. Falso se ausente ou de outro tipo.</summary>
     private static bool LerCoordenada(JsonElement? valor, string nome, List<string> avisos, out int coordenada)
     {
         coordenada = 0;
@@ -504,11 +436,7 @@ public static class EsquemaDeConfiguracoes
         return true;
     }
 
-    /// <summary>
-    /// Preferências campo a campo: ausente vale o padrão, sem aviso; inválido vale o padrão, com aviso. A emoção dominante
-    /// nula ou ausente é automática; conteúdo adulto ausente é desligado; topo ausente é ligado; escala ausente é Média;
-    /// seleção de itens ausente habilita vodka, cerveja e cigarro; o baseado fica desmarcado.
-    /// </summary>
+    // Ausente vale o padrão sem aviso; inválido vale o padrão com aviso.
     private static Preferencias LerPreferencias(JsonElement? valor, List<string> avisos)
     {
         Preferencias padrao = Preferencias.Padrao;
@@ -545,10 +473,8 @@ public static class EsquemaDeConfiguracoes
         };
     }
 
-    /// <summary>
-    /// Uma lista fechada de itens adultos pelos nomes estáveis: a dos habilitados (os nove) ou, com <paramref name="aceitos"/>,
-    /// a do uso por conta própria (só as seis ilícitas, DEC-045). Um nome fora da lista ou repetido é ignorado, com aviso.
-    /// </summary>
+    // Sem aceitos: os nove adultos. Com aceitos: só esses (as seis ilícitas, pro uso por conta
+    // própria). Nome fora da lista ou repetido é ignorado com aviso.
     private static ConjuntoDeItens LerItensAdultos(JsonElement? valor, ConjuntoDeItens padrao, List<string> avisos,
         string campo = "itensAdultosHabilitados", ConjuntoDeItens? aceitos = null)
     {
@@ -621,10 +547,7 @@ public static class EsquemaDeConfiguracoes
         return preferencias;
     }
 
-    /// <summary>
-    /// Chave gravável: de 1 a <see cref="ComprimentoMaximoDaChave"/> caracteres, sem caractere de controle e
-    /// em UTF-16 válido (um surrogate solto não tem representação em JSON).
-    /// </summary>
+    // Sem caractere de controle e UTF-16 válido: surrogate solto não tem representação em JSON.
     private static bool ChaveValida([NotNullWhen(true)] string? chave)
     {
         if (string.IsNullOrEmpty(chave) || chave.Length > ComprimentoMaximoDaChave) return false;
@@ -637,10 +560,7 @@ public static class EsquemaDeConfiguracoes
         return true;
     }
 
-    /// <summary>
-    /// Fração saneada como na restauração (<see cref="Posicionador.SanearFracao"/>), sem o zero negativo, que
-    /// o arquivo escreveria como <c>-0</c>.
-    /// </summary>
+    // Tira o zero negativo, que sairia como -0 no arquivo.
     private static double Fracao(double fracao)
     {
         double saneada = Posicionador.SanearFracao(fracao);

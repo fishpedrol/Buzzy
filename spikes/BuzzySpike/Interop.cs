@@ -2,15 +2,8 @@ using System.Runtime.InteropServices;
 
 namespace BuzzySpike;
 
-/// <summary>
-/// Chamadas ao Windows usadas pelos protótipos. No produto, tudo isto ficaria confinado
-/// ao adaptador de plataforma de ARCHITECTURE.md 2.2.
-///
-/// Limites respeitados de propósito, conforme SECURITY.md 3.2:
-/// nenhum hook global, nenhuma injeção de input, nenhuma captura de tela, nenhuma rede,
-/// nenhuma leitura de título ou conteúdo de janela de outro processo. O teste de foco
-/// compara apenas identificadores de janela, sem ler nada sobre o outro aplicativo.
-/// </summary>
+// Sem hook global, injeção de input, captura de tela, rede ou leitura de janela alheia.
+// O teste de foco só compara HWNDs, não lê nada do outro app.
 internal static class Interop
 {
     // ---- Estilos de janela -------------------------------------------------
@@ -75,12 +68,8 @@ internal static class Interop
         public string szDevice;
     }
 
-    // Nota para quem revisar: o analisador sugere trocar DllImport por LibraryImport em
-    // todas as declarações abaixo. NÃO faça isso em bloco. O marshalling gerado em tempo
-    // de compilação do LibraryImport não sabe lidar com o campo ByValTStr de MONITORINFOEX,
-    // e GetMonitorInfo passa a devolver retângulos zerados sem erro visível. Foi exatamente
-    // esse o primeiro defeito encontrado ao levantar o ambiente. DllImport é a escolha
-    // deliberada, e o protótipo compila sem aviso.
+    // Não troque por LibraryImport como o analisador sugere: o marshalling gerado não entende o
+    // ByValTStr de MONITORINFOEX e GetMonitorInfo volta retângulos zerados, sem erro nenhum.
 
     internal const uint MONITORINFOF_PRIMARY = 0x00000001;
     internal const uint MONITOR_DEFAULTTONULL = 0;
@@ -136,24 +125,16 @@ internal static class Interop
     [DllImport("user32.dll")]
     internal static extern uint GetDpiForWindow(nint hWnd);
 
-    /// <summary>
-    /// Resolução atual do timer global, em unidades de 100 ns. Usada por P2 para o critério
-    /// oficial de DEC-011 "nenhum processo muda a resolução do timer do sistema".
-    /// Consulta somente leitura; nada é alterado.
-    /// </summary>
+    // Unidades de 100 ns. Só leitura: serve pra provar que ninguém mexeu na resolução do timer.
     [DllImport("ntdll.dll")]
     internal static extern int NtQueryTimerResolution(out uint minimo, out uint maximo, out uint atual);
 
-    /// <summary>
-    /// ARCHITECTURE.md 2.4 exige extrair as coordenadas do mouse preservando o sinal.
-    /// Monitor à esquerda do primário produz x negativo: nesta máquina o secundário
-    /// começa em x = -1920.
-    /// </summary>
+    // Tem que manter o sinal: monitor à esquerda do primário dá x negativo (aqui o secundário
+    // começa em x = -1920).
     internal static int XComSinal(nint lParam) => unchecked((short)(long)lParam);
 
     internal static int YComSinal(nint lParam) => unchecked((short)((long)lParam >> 16));
 
-    /// <summary>Descreve os bits de estilo estendido que interessam aos protótipos.</summary>
     internal static string DescreverEstiloEstendido(long ex)
     {
         List<string> bits = [];

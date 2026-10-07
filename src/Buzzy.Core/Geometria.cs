@@ -1,24 +1,20 @@
 namespace Buzzy.Core;
 
-/// <summary>Ponto em pixels físicos do desktop virtual (DEC-008). Aceita valores negativos.</summary>
+// Pixels físicos do desktop virtual; pode ser negativo (monitor à esquerda/acima do principal).
 public readonly record struct PontoPx(int X, int Y)
 {
     public override string ToString() => $"({X},{Y})";
 }
 
-/// <summary>Tamanho em pixels físicos.</summary>
 public readonly record struct TamanhoPx(int Largura, int Altura)
 {
     public override string ToString() => $"{Largura}x{Altura}";
 }
 
-/// <summary>
-/// Tamanho lógico em DIPs (1 DIP = 1 px a 96 DPI). O tamanho físico depende do DPI do
-/// monitor em que está a âncora (ARCHITECTURE.md 2.4).
-/// </summary>
+// 1 DIP = 1 px a 96 DPI. O tamanho físico depende do DPI do monitor onde está a âncora.
 public readonly record struct TamanhoDip(int Largura, int Altura)
 {
-    /// <summary>Tamanho físico no DPI dado, arredondando a metade para longe de zero.</summary>
+    // Arredonda a metade pra longe de zero.
     public TamanhoPx ParaPixels(int dpi)
     {
         if (dpi <= 0) throw new ArgumentOutOfRangeException(nameof(dpi), dpi, "DPI precisa ser positivo.");
@@ -30,10 +26,7 @@ public readonly record struct TamanhoDip(int Largura, int Altura)
     public override string ToString() => $"{Largura}x{Altura} DIP";
 }
 
-/// <summary>
-/// Retângulo em pixels físicos, semiaberto: contém os pontos com
-/// Esquerda ≤ X &lt; Direita e Topo ≤ Y &lt; Base, como o RECT do Windows.
-/// </summary>
+// Pixels físicos, semiaberto como o RECT do Windows: Esquerda <= X < Direita, Topo <= Y < Base.
 public readonly record struct RetanguloPx(int Esquerda, int Topo, int Direita, int Base)
 {
     public int Largura => Direita - Esquerda;
@@ -41,7 +34,7 @@ public readonly record struct RetanguloPx(int Esquerda, int Topo, int Direita, i
     public bool Vazio => Largura <= 0 || Altura <= 0;
     public TamanhoPx Tamanho => new(Largura, Altura);
 
-    /// <summary>Centro, arredondado para baixo (em direção a menos infinito) em cada eixo.</summary>
+    // Arredonda pra menos infinito em cada eixo.
     public PontoPx Centro => new(Esquerda + (int)Math.Floor(Largura / 2.0), Topo + (int)Math.Floor(Altura / 2.0));
 
     public static RetanguloPx DePosicaoETamanho(PontoPx canto, TamanhoPx tamanho)
@@ -49,7 +42,7 @@ public readonly record struct RetanguloPx(int Esquerda, int Topo, int Direita, i
 
     public bool Contem(PontoPx p) => p.X >= Esquerda && p.X < Direita && p.Y >= Topo && p.Y < Base;
 
-    /// <summary>Verdadeiro se <paramref name="outro"/> cabe inteiro neste retângulo. Um retângulo vazio não cabe.</summary>
+    // Cabe inteiro. Retângulo vazio nunca cabe.
     public bool Contem(RetanguloPx outro)
         => !outro.Vazio && outro.Esquerda >= Esquerda && outro.Direita <= Direita && outro.Topo >= Topo && outro.Base <= Base;
 
@@ -58,10 +51,8 @@ public readonly record struct RetanguloPx(int Esquerda, int Topo, int Direita, i
 
     public RetanguloPx Deslocado(int dx, int dy) => new(Esquerda + dx, Topo + dy, Direita + dx, Base + dy);
 
-    /// <summary>
-    /// Quadrado da distância do ponto ao pixel mais próximo do retângulo; zero se o ponto
-    /// está dentro. Usa o último pixel incluído (Direita − 1, Base − 1) como limite.
-    /// </summary>
+    // Distância² até o pixel mais próximo (zero se dentro). O limite é o último
+    // pixel incluído: Direita - 1, Base - 1.
     public long DistanciaAoQuadrado(PontoPx p)
     {
         if (Vazio) throw new InvalidOperationException("Distância a um retângulo vazio não é definida.");

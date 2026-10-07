@@ -3,74 +3,50 @@ using Buzzy.Core.Persistencia;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>Estado de um dos arquivos de configurações no disco (<see cref="ArquivoDeConfiguracoes"/>).</summary>
 internal enum EstadoDoArquivo
 {
-    /// <summary>O arquivo, ou a pasta dele, não existe.</summary>
+    // O arquivo ou a pasta não existe.
     Ausente,
 
-    /// <summary>Existe, mas não deu para abrir nem ler: preso por outro processo sem compartilhar, sem permissão, é uma pasta.</summary>
+    // Existe mas não abre: preso por outro processo, sem permissão, ou é uma pasta.
     Inacessivel,
 
-    /// <summary>Lido, com a estrutura inválida (<see cref="SituacaoDaLeitura.Ilegivel"/>), inclusive grande demais.</summary>
+    // Estrutura inválida, inclusive grande demais.
     Ilegivel,
 
-    /// <summary>Lido na versão atual do esquema.</summary>
     Valido,
 
-    /// <summary>Lido, de uma versão futura do esquema: vale o que se conhece, e nada é gravado por cima dele.</summary>
+    // Esquema mais novo: vale o que se conhece e nada é gravado por cima.
     VersaoFutura,
 }
 
-/// <summary>De onde vieram as configurações de uma leitura (<see cref="ArquivoDeConfiguracoes.Ler"/>).</summary>
 internal enum OrigemDasConfiguracoes
 {
-    /// <summary>Do settings.json.</summary>
     Principal,
 
-    /// <summary>Do settings.json.bak, a última cópia boa, porque o principal faltou ou não serviu.</summary>
+    // settings.json.bak, a última cópia boa.
     Reserva,
 
-    /// <summary>Nenhum dos dois serviu: as configurações padrão.</summary>
     Padroes,
 }
 
-/// <summary>
-/// Etapas de <see cref="ArquivoDeConfiguracoes.Gravar"/>, na ordem em que acontecem. O gancho dos testes é chamado
-/// depois de cada uma; se ele lança, simula uma queda logo depois dela.
-/// </summary>
+// Na ordem em que acontecem. O gancho dos testes roda depois de cada uma;
+// se ele lança, simula uma queda ali.
 internal enum EtapaDaGravacao
 {
-    /// <summary>O temporário foi criado, vazio, e está aberto.</summary>
     TemporarioAberto,
-
-    /// <summary>O conteúdo novo foi escrito no temporário.</summary>
     TemporarioEscrito,
 
-    /// <summary>O temporário foi descarregado no disco (<c>Flush(true)</c>) e fechado.</summary>
+    // Flush(true) feito e arquivo fechado.
     TemporarioDescarregado,
 
-    /// <summary>O principal atual foi conferido.</summary>
     PrincipalConferido,
-
-    /// <summary>O temporário virou o principal.</summary>
     Substituido,
 }
 
-/// <summary>Resultado de <see cref="ArquivoDeConfiguracoes.Ler"/>.</summary>
-/// <param name="Configuracoes">O que vale: o lido do principal ou da reserva, campo a campo, ou as configurações padrão.</param>
-/// <param name="Origem">De qual arquivo vieram as configurações.</param>
-/// <param name="Principal">Estado do settings.json.</param>
-/// <param name="Reserva">Estado do settings.json.bak; nulo quando o principal serviu e a reserva nem foi consultada.</param>
-/// <param name="GravacaoBloqueada">
-/// Se nada mais será gravado nesta execução: o arquivo usado é de versão futura, ou o principal estava inacessível.
-/// </param>
-/// <param name="Versao">O <c>schemaVersion</c> do arquivo usado; nulo com as configurações padrão.</param>
-/// <param name="Avisos">Quantos avisos a leitura do arquivo usado gerou (campo ignorado, repetido, fora da faixa ou do tipo errado).</param>
-/// <param name="TentativasNoPrincipal">
-/// Quantas vezes o settings.json foi aberto, ou tentado: 1 quando foi lido, ou visto ausente, de primeira; até
-/// <see cref="ArquivoDeConfiguracoes.TentativasDeLeitura"/> quando estava preso por outro processo.
-/// </param>
+// Reserva é nulo quando o principal serviu e a reserva nem foi lida.
+// GravacaoBloqueada: versão futura ou principal inacessível, nada mais é gravado nesta execução.
+// TentativasNoPrincipal: 1 de primeira, até TentativasDeLeitura se estava preso.
 internal sealed record LeituraDoArquivo(
     ConfiguracoesSalvas Configuracoes,
     OrigemDasConfiguracoes Origem,
@@ -81,16 +57,9 @@ internal sealed record LeituraDoArquivo(
     int Avisos,
     int TentativasNoPrincipal);
 
-/// <summary>Resultado de <see cref="ArquivoDeConfiguracoes.Gravar"/>.</summary>
-/// <param name="Gravou">Se o principal passou a ter o conteúdo novo.</param>
-/// <param name="Bytes">Tamanho do conteúdo novo; 0 quando a gravação já estava bloqueada.</param>
-/// <param name="PrincipalAntes">Estado do principal na última conferência; nulo se nenhuma tentativa chegou a conferi-lo.</param>
-/// <param name="CopiaDeDiagnostico">Se um principal ilegível foi guardado como settings.corrupt.json.</param>
-/// <param name="Tentativas">Quantas tentativas foram feitas; 0 quando a gravação já estava bloqueada.</param>
-/// <param name="Erro">
-/// Por que não gravou: <c>"bloqueada"</c>, <c>"versaoFutura"</c>, <c>"principalInacessivel"</c> ou o tipo e o código da
-/// exceção de E/S da última tentativa. Nunca leva um caminho, que contém o nome do usuário (SECURITY.md 6).
-/// </param>
+// Bytes e Tentativas ficam 0 quando a gravação já estava bloqueada.
+// Erro: "bloqueada", "versaoFutura", "principalInacessivel" ou tipo + HResult da
+// última exceção. Nunca o caminho, que tem o nome do usuário do Windows.
 internal sealed record ResultadoDaGravacao(
     bool Gravou,
     int Bytes,
@@ -99,29 +68,18 @@ internal sealed record ResultadoDaGravacao(
     int Tentativas,
     string? Erro);
 
-/// <summary>
-/// O settings.json no disco (Fase 5; ARCHITECTURE.md 2.12; SECURITY.md 5 e 7): lê sem efeito colateral e grava de
-/// forma atômica. O formato e a validação são do núcleo (<see cref="EsquemaDeConfiguracoes"/>); aqui ficam só os
-/// arquivos. E/S síncrona: o arquivo tem menos de 1 KiB.
-///
-/// São quatro arquivos, todos na mesma pasta, e nenhum outro:
-/// <list type="bullet">
-/// <item><c>settings.json</c>, o principal;</item>
-/// <item><c>settings.json.bak</c>, a reserva: o principal anterior, válido quando foi substituído;</item>
-/// <item><c>settings.json.tmp</c>, o temporário de uma gravação, criado do zero a cada uma e nunca lido;</item>
-/// <item><c>settings.corrupt.json</c>, a cópia de diagnóstico: o último principal ilegível substituído, uma só, nunca lida.</item>
-/// </list>
-///
-/// A leitura (<see cref="Ler"/>) usa o principal; se ele faltar ou não servir, a reserva; senão, as configurações
-/// padrão. Um arquivo de versão futura, ou um principal inacessível, bloqueia a gravação nesta execução, para não
-/// apagar o que não se conhece ou não se conseguiu ler.
-///
-/// A gravação (<see cref="Gravar"/>) escreve o temporário sem buffer e o descarrega no disco, confere o principal
-/// atual e troca tudo de uma vez: sem principal, o temporário vira o principal; com um válido,
-/// <see cref="File.Replace(string, string, string?, bool)"/> guarda o anterior como reserva; com um ilegível, guarda-o
-/// como cópia de diagnóstico e deixa a reserva como está. Uma queda em qualquer ponto deixa o principal anterior, o
-/// novo ou só a reserva: o Buzzy nunca deixa um principal presente e ilegível.
-/// </summary>
+// Arquivos do settings.json; formato e validação ficam no EsquemaDeConfiguracoes.
+// E/S síncrona de propósito, o arquivo tem menos de 1 KiB.
+//
+// Quatro arquivos na mesma pasta, e só eles:
+//   settings.json          principal
+//   settings.json.bak      reserva: o principal anterior, que era válido
+//   settings.json.tmp      temporário da gravação, recriado a cada vez, nunca lido
+//   settings.corrupt.json  último principal ilegível substituído, nunca lido
+//
+// Gravação atômica: temporário sem buffer + Flush(true), depois troca. Principal válido
+// vira reserva via File.Replace; ilegível vira o .corrupt e a reserva fica como está.
+// Uma queda em qualquer ponto nunca deixa um principal presente e ilegível.
 internal sealed class ArquivoDeConfiguracoes
 {
     internal const string NomePrincipal = "settings.json";
@@ -129,13 +87,12 @@ internal sealed class ArquivoDeConfiguracoes
     internal const string NomeTemporario = "settings.json.tmp";
     internal const string NomeIlegivel = "settings.corrupt.json";
 
-    /// <summary>Tentativas de abrir e ler um arquivo preso na leitura da partida; depois delas, ele é inacessível.</summary>
+    // Depois disso um arquivo preso conta como inacessível.
     internal const int TentativasDeLeitura = 3;
 
-    /// <summary>Pausa entre as tentativas de leitura.</summary>
     internal static readonly TimeSpan PausaEntreLeituras = TimeSpan.FromMilliseconds(100);
 
-    /// <summary>Os únicos nomes que o Buzzy cria ou lê na pasta.</summary>
+    // Os únicos nomes que o Buzzy cria ou lê na pasta.
     internal static readonly IReadOnlyList<string> Nomes = [NomePrincipal, NomeReserva, NomeTemporario, NomeIlegivel];
 
     private readonly Action<EtapaDaGravacao>? _aoConcluirEtapa;
@@ -145,8 +102,7 @@ internal sealed class ArquivoDeConfiguracoes
     private readonly string _ilegivel;
     private bool _gravacaoBloqueada;
 
-    /// <param name="pasta">Pasta dos arquivos, em caminho completo. Só é criada na primeira gravação.</param>
-    /// <param name="aoConcluirEtapa">Só para testes: chamado depois de cada etapa da gravação; se lançar, simula uma queda ali.</param>
+    // A pasta só é criada na primeira gravação. aoConcluirEtapa é só pros testes.
     internal ArquivoDeConfiguracoes(string pasta, Action<EtapaDaGravacao>? aoConcluirEtapa = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(pasta);
@@ -162,23 +118,17 @@ internal sealed class ArquivoDeConfiguracoes
 
     internal string Pasta { get; }
 
-    /// <summary>Se nada mais é gravado nesta execução (versão futura ou principal inacessível); não volta a falso.</summary>
+    // Uma vez bloqueada, não volta a falso.
     internal bool GravacaoBloqueada => _gravacaoBloqueada;
 
-    /// <summary>
-    /// O arquivo de configurações desta execução, na pasta que <see cref="PastaDeDados.DasConfiguracoes(string?, bool)"/>
-    /// escolhe pelas opções da linha de comando; nulo sem pasta (persistência desligada, perfil de teste inválido ou
-    /// sem a pasta local do usuário), e então nada é lido nem gravado. É a única forma de o aplicativo criar o
-    /// arquivo: o isolamento dos testes e a falha fechada ficam numa regra só, testada.
-    /// </summary>
+    // Único jeito do app criar o arquivo, pra o isolamento dos perfis de teste ficar num
+    // lugar só. Nulo (nada lido nem gravado) com persistência desligada, perfil inválido
+    // ou sem pasta local.
     internal static ArquivoDeConfiguracoes? DaExecucao(string? perfilDeTeste, bool persistenciaDesligada)
         => PastaDeDados.DasConfiguracoes(perfilDeTeste, persistenciaDesligada) is { } pasta ? new ArquivoDeConfiguracoes(pasta) : null;
 
-    /// <summary>
-    /// Lê as configurações: principal, depois reserva, depois padrões. Não cria, não altera e não
-    /// apaga nenhum arquivo nem a pasta, e não impede outro processo de usá-los. O temporário e a cópia de
-    /// diagnóstico nunca são lidos. Um arquivo preso é tentado <see cref="TentativasDeLeitura"/> vezes.
-    /// </summary>
+    // Principal, senão reserva, senão padrões. Não cria, altera nem apaga nada e
+    // abre compartilhado pra não travar outro processo.
     internal LeituraDoArquivo Ler()
     {
         ArquivoLido principal = LerUm(_principal, TentativasDeLeitura);
@@ -196,12 +146,7 @@ internal sealed class ArquivoDeConfiguracoes
             _gravacaoBloqueada, Versao: null, Avisos: 0, principal.Tentativas);
     }
 
-    /// <summary>
-    /// Grava as configurações (normalizadas pelo esquema) pelo protocolo atômico descrito no resumo da classe, em até
-    /// <paramref name="tentativas"/> tentativas, com a pausa da política entre elas. Uma falha de E/S ou de
-    /// permissão é tentada de novo; qualquer outra exceção é defeito e propaga. Com a gravação bloqueada, nada é
-    /// tocado.
-    /// </summary>
+    // Só erro de E/S ou permissão é tentado de novo; outra exceção é bug e propaga.
     internal ResultadoDaGravacao Gravar(ConfiguracoesSalvas configuracoes, int tentativas = 1)
     {
         ArgumentNullException.ThrowIfNull(configuracoes);
@@ -220,7 +165,7 @@ internal sealed class ArquivoDeConfiguracoes
                 Directory.CreateDirectory(Pasta);
                 EscreverTemporario(dados);
 
-                // Conferido agora, e não na partida: o principal pode ter mudado desde a leitura.
+                // Confere de novo: o principal pode ter mudado desde a leitura.
                 principalAntes = LerUm(_principal, tentativas: 1).Estado;
                 Concluir(EtapaDaGravacao.PrincipalConferido);
                 switch (principalAntes)
@@ -232,11 +177,11 @@ internal sealed class ArquivoDeConfiguracoes
                         File.Replace(_temporario, _principal, _reserva, ignoreMetadataErrors: true);
                         break;
                     case EstadoDoArquivo.Ilegivel:
-                        // A reserva continua sendo o último arquivo bom; o ilegível vira a única cópia de diagnóstico.
+                        // A reserva continua sendo o último bom; o ilegível vai pro .corrupt.
                         File.Replace(_temporario, _principal, _ilegivel, ignoreMetadataErrors: true);
                         break;
                     case EstadoDoArquivo.VersaoFutura:
-                        // Uma versão mais nova gravou depois da leitura: nada mais é gravado nesta execução.
+                        // Uma versão mais nova gravou depois da leitura: para de gravar.
                         _gravacaoBloqueada = true;
                         ApagarTemporario();
                         return new ResultadoDaGravacao(false, dados.Length, principalAntes, CopiaDeDiagnostico: false, tentativa, "versaoFutura");
@@ -253,17 +198,13 @@ internal sealed class ArquivoDeConfiguracoes
             }
         }
 
-        // O temporário de uma gravação que desistiu não serve para nada: nunca é lido, e a próxima o recria.
+        // Temporário de gravação abortada não serve pra nada.
         ApagarTemporario();
         return new ResultadoDaGravacao(false, dados.Length, principalAntes, CopiaDeDiagnostico: false, tentativas, erro);
     }
 
-    /// <summary>
-    /// Temporário escrito sem buffer e descarregado no disco antes de virar o principal. Um temporário que sobrou de
-    /// uma gravação que caiu é apagado antes, e o novo é criado do zero (<see cref="FileMode.CreateNew"/>): se esse
-    /// nome fosse um link, físico ou simbólico, para outro arquivo, abri-lo por cima truncaria e gravaria o outro
-    /// arquivo, fora da pasta; apagar remove só o link.
-    /// </summary>
+    // Apaga e cria com CreateNew em vez de abrir por cima: se o .tmp fosse um link
+    // (físico ou simbólico), abrir por cima gravaria no alvo, fora da pasta.
     private void EscreverTemporario(byte[] dados)
     {
         File.Delete(_temporario);
@@ -285,7 +226,7 @@ internal sealed class ArquivoDeConfiguracoes
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Fica para a próxima gravação, que o recria; o temporário nunca é lido.
+            // A próxima gravação recria; ninguém lê o .tmp.
         }
     }
 
@@ -293,21 +234,16 @@ internal sealed class ArquivoDeConfiguracoes
 
     private LeituraDoArquivo Usar(ArquivoLido lido, OrigemDasConfiguracoes origem, ArquivoLido principal, EstadoDoArquivo? reserva)
     {
-        // Versão futura: vale o que se conhece, e nada é gravado por cima, para não apagar o que não se conhece.
+        // Versão futura: usa o que se conhece, mas não grava por cima do resto.
         if (lido.Estado == EstadoDoArquivo.VersaoFutura) _gravacaoBloqueada = true;
         LeituraDasConfiguracoes conteudo = lido.Conteudo!;
         return new LeituraDoArquivo(conteudo.Configuracoes, origem, principal.Estado, reserva, _gravacaoBloqueada, conteudo.Versao, conteudo.Avisos.Count,
             principal.Tentativas);
     }
 
-    /// <summary>Estado de um arquivo, quantas vezes ele foi aberto (ou tentado) e, quando lido, o que o esquema achou dele.</summary>
     private readonly record struct ArquivoLido(EstadoDoArquivo Estado, LeituraDasConfiguracoes? Conteudo, int Tentativas);
 
-    /// <summary>
-    /// Avalia um arquivo sem alterá-lo nem impedir outro processo de usá-lo: ausente; grande demais (ilegível, sem ler
-    /// o conteúdo); ou o que o esquema disser dos bytes. Preso ou sem permissão, tenta de novo até
-    /// <paramref name="tentativas"/> vezes, com <see cref="PausaEntreLeituras"/> entre elas, e então é inacessível.
-    /// </summary>
+    // Grande demais conta como ilegível sem nem ler o conteúdo.
     private static ArquivoLido LerUm(string caminho, int tentativas)
     {
         for (int tentativa = 1; ; tentativa++)
@@ -317,7 +253,7 @@ internal sealed class ArquivoDeConfiguracoes
                 using var fluxo = new FileStream(caminho, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 if (fluxo.Length > EsquemaDeConfiguracoes.TamanhoMaximoEmBytes) return new ArquivoLido(EstadoDoArquivo.Ilegivel, null, tentativa);
 
-                // Um byte além do limite, para o esquema recusar um arquivo que cresceu desde a consulta do tamanho.
+                // +1 byte pro esquema recusar um arquivo que cresceu depois do Length.
                 LeituraDasConfiguracoes lida = EsquemaDeConfiguracoes.Ler(LerNoMaximo(fluxo, EsquemaDeConfiguracoes.TamanhoMaximoEmBytes + 1));
                 EstadoDoArquivo estado = lida.Situacao switch
                 {

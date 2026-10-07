@@ -1,70 +1,46 @@
 namespace Buzzy.Core;
 
-/// <summary>
-/// Onde o personagem está, de um jeito que sobrevive a mudanças de topologia
-/// (ARCHITECTURE.md 2.8): a chave do monitor, a posição relativa da âncora dentro da área
-/// útil desse monitor (frações de 0 a 1) e a última âncora absoluta, usada como reserva
-/// quando o monitor some.
-/// </summary>
+// Posição que sobrevive a mudança de monitores: chave do monitor, frações 0..1 dentro da área
+// útil dele e a última âncora absoluta, de reserva se o monitor sumir.
 public sealed record PosicaoDoPersonagem(string ChaveMonitor, double FracaoX, double FracaoY, PontoPx AncoraAbsoluta)
 {
-    /// <summary>
-    /// Tela do monitor da chave na última vez em que a posição foi descrita nele (o "retângulo desse
-    /// monitor na época" de ARCHITECTURE.md 2.8); nula quando é desconhecida. Na partida, acha o
-    /// monitor pelo retângulo quando a chave não existe mais (<see cref="Posicionador.Restaurar"/>); em execução, acha o mesmo
-    /// monitor com chave nova (<see cref="Posicionador.MonitorCorrespondente"/>). Nunca é deslocada por cálculo: a posição que
-    /// acompanha a topologia (<see cref="Posicionador.Rebasear"/>) fica com a tela de um monitor real ou com a de antes.
-    /// Fica fora do construtor posicional: uma posição construída sem ela tem a tela desconhecida.
-    /// </summary>
+    // Tela do monitor da última vez que a posição foi descrita nele (nula = desconhecida). Serve pra
+    // achar o monitor quando a chave muda (Restaurar, MonitorCorrespondente). Nunca é deslocada por
+    // cálculo: sempre é a tela de um monitor real ou a de antes. Fora do construtor de propósito.
     public RetanguloPx? TelaDoMonitor { get; init; }
 }
 
-/// <summary>Resultado de posicionar o sprite: monitor, âncora, tamanho físico e retângulo da janela.</summary>
+// Retangulo é o da janela; Tamanho, em pixels físicos.
 public sealed record Posicionamento(MonitorDoDesktop Monitor, PontoPx Ancora, TamanhoPx Tamanho, RetanguloPx Retangulo);
 
-/// <summary>Qual passo de <see cref="Posicionador.Restaurar"/> achou o monitor da posição salva.</summary>
+// Como Restaurar achou o monitor da posição salva.
 public enum OrigemDaRestauracao
 {
-    /// <summary>O monitor da chave salva existe.</summary>
     PelaChave,
 
-    /// <summary>A chave não existe, mas há um monitor com a tela salva (<see cref="PosicaoDoPersonagem.TelaDoMonitor"/>).</summary>
+    // Chave sumiu, mas há um monitor com a mesma tela salva.
     PeloRetangulo,
 
-    /// <summary>Nem a chave nem a tela: o monitor principal.</summary>
     NoPrincipal,
 }
 
-/// <summary>
-/// Posiciona o sprite estático da Fase 1. A âncora é o ponto entre os pés: o centro da
-/// borda inferior do sprite. O sprite sempre termina inteiro dentro da área útil de um
-/// monitor presente, quando cabe nela.
-/// </summary>
+// A âncora é o ponto entre os pés (centro da borda de baixo do sprite). O sprite sempre
+// termina inteiro dentro da área útil de algum monitor, se couber.
 public static class Posicionador
 {
-    /// <summary>
-    /// Posição horizontal inicial da âncora, como fração da largura da área útil do monitor
-    /// principal: perto do canto inferior direito, onde o Buzzy atrapalha menos. Vale na primeira
-    /// execução e sempre que não há posição salva; com ela, vale <see cref="Restaurar"/>.
-    /// </summary>
+    // Perto do canto inferior direito do principal, onde atrapalha menos. Só sem posição salva.
     public const double FracaoInicialX = 0.85;
 
-    /// <summary>
-    /// Retângulo do sprite com a âncora dada. A âncora fica na coluna
-    /// <c>Esquerda + Largura / 2</c> e na borda inferior exclusiva (<c>Base</c>): com a âncora
-    /// no chão da área útil, a última linha do sprite é a última linha da área útil.
-    /// </summary>
+    // Âncora na coluna Esquerda + Largura / 2 e na borda de baixo exclusiva (Base): com a
+    // âncora no chão da área útil, a última linha do sprite é a última da área.
     public static RetanguloPx RetanguloDoSprite(PontoPx ancora, TamanhoPx tamanho)
     {
         int esquerda = ancora.X - tamanho.Largura / 2;
         return new RetanguloPx(esquerda, ancora.Y - tamanho.Altura, esquerda + tamanho.Largura, ancora.Y);
     }
 
-    /// <summary>
-    /// Âncora mais próxima de <paramref name="ancora"/> com o sprite inteiro dentro da área
-    /// útil. Se o sprite for mais largo que a área, fica centralizado nela; se for mais alto,
-    /// fica com os pés no chão da área útil e a cabeça passa do topo.
-    /// </summary>
+    // Âncora mais próxima com o sprite inteiro na área útil. Mais largo que a área: centraliza.
+    // Mais alto: pés no chão e a cabeça passa do topo.
     public static PontoPx PrenderNaAreaUtil(PontoPx ancora, TamanhoPx tamanho, RetanguloPx areaUtil)
     {
         if (areaUtil.Vazio) throw new ArgumentException("Área útil vazia.", nameof(areaUtil));
@@ -84,24 +60,17 @@ public static class Posicionador
         return new PontoPx(x, y);
     }
 
-    /// <summary>
-    /// Pixel dos pés: o logo acima da âncora. A âncora fica na borda inferior exclusiva do sprite,
-    /// que numa pilha de monitores (ou com a barra oculta) já é o primeiro pixel do monitor de baixo;
-    /// o monitor do personagem é o que contém o pixel dos pés.
-    /// </summary>
+    // Um pixel acima da âncora. A âncora é exclusiva: com monitores empilhados (ou barra oculta)
+    // ela já cai no monitor de baixo. O monitor do personagem é o que contém os pés.
     public static PontoPx PixelDosPes(PontoPx ancora) => new(ancora.X, ancora.Y - 1);
 
-    /// <summary>Posição inicial: no chão da área útil do monitor principal, em <see cref="FracaoInicialX"/>.</summary>
     public static Posicionamento Inicial(Topologia topologia, TamanhoDip tamanho)
     {
         ArgumentNullException.ThrowIfNull(topologia);
         return NoMonitor(topologia.Principal, FracaoInicialX, 1.0, tamanho);
     }
 
-    /// <summary>
-    /// Posiciona a âncora na fração dada da área útil do monitor e prende o sprite nela.
-    /// Frações fora de [0, 1] são presas ao intervalo; NaN vira 0,5.
-    /// </summary>
+    // Frações fora de [0, 1] são presas; NaN vira 0,5.
     public static Posicionamento NoMonitor(MonitorDoDesktop monitor, double fracaoX, double fracaoY, TamanhoDip tamanho)
     {
         ArgumentNullException.ThrowIfNull(monitor);
@@ -116,7 +85,6 @@ public static class Posicionador
         return new Posicionamento(monitor, ancora, fisico, RetanguloDoSprite(ancora, fisico));
     }
 
-    /// <summary>Descreve um posicionamento como posição relativa à área útil do seu monitor, com a tela dele.</summary>
     public static PosicaoDoPersonagem Descrever(Posicionamento p)
     {
         ArgumentNullException.ThrowIfNull(p);
@@ -131,14 +99,9 @@ public static class Posicionador
         };
     }
 
-    /// <summary>
-    /// Reacomoda o sprite depois de uma mudança de topologia (ARCHITECTURE.md 2.8).
-    /// Se o monitor da posição ainda existe, mantém a posição relativa na área útil atual
-    /// dele, o que cobre troca de resolução, escala e barra de tarefas; a posição passa a guardar
-    /// a tela atual dele. Se não existe, usa o monitor mais próximo do pixel dos pés da última
-    /// âncora absoluta (<see cref="PixelDosPes"/>), com a mesma posição relativa, e a posição passa
-    /// a ser desse monitor: se o original voltar, o personagem não pula de volta.
-    /// </summary>
+    // Depois de mudar a topologia. Monitor ainda existe: mesma posição relativa na área útil atual
+    // (cobre resolução, escala e barra). Sumiu: vai pro monitor mais próximo dos pés e passa a ser
+    // dele, então não pula de volta se o original voltar.
     public static (Posicionamento Resultado, PosicaoDoPersonagem NovaPosicao) Reacomodar(
         Topologia nova, PosicaoDoPersonagem atual, TamanhoDip tamanho)
     {
@@ -157,15 +120,9 @@ public static class Posicionador
         return (r2, Descrever(r2));
     }
 
-    /// <summary>
-    /// Restaura na partida a posição salva (ARCHITECTURE.md 2.8), nesta ordem: o monitor da chave; se
-    /// ela não existe, o primeiro monitor com a tela da época (<see cref="PosicaoDoPersonagem.TelaDoMonitor"/>);
-    /// senão, o principal. Nos três passos vale a posição relativa salva, com as frações saneadas
-    /// (NaN vira 0,5; fora de [0, 1], presas), e a posição passa a ser do monitor escolhido, com a tela
-    /// atual dele. A âncora absoluta salva não é usada: noutra sessão, com outro principal, ela está
-    /// noutro referencial. Restaurar de novo o resultado, na mesma topologia, não move o personagem.
-    /// Durante a execução vale <see cref="Reacomodar"/>.
-    /// </summary>
+    // Na partida: monitor da chave; senão, o primeiro com a mesma tela; senão, o principal. Sempre
+    // com as frações saneadas. A âncora absoluta salva é ignorada: com outro principal, a origem
+    // mudou. Restaurar o resultado de novo não move nada. Em execução, use Reacomodar.
     public static (Posicionamento Resultado, PosicaoDoPersonagem NovaPosicao, OrigemDaRestauracao Origem) Restaurar(
         Topologia topologia, PosicaoDoPersonagem salva, TamanhoDip tamanho)
     {
@@ -183,17 +140,14 @@ public static class Posicionador
         return (r, nova, origem);
     }
 
-    /// <summary>O primeiro monitor, na ordem da topologia, com exatamente essa tela; nulo se a tela é desconhecida ou não há nenhum.</summary>
     private static MonitorDoDesktop? MonitorComATela(Topologia topologia, RetanguloPx? tela)
         => tela is { } t ? topologia.Monitores.FirstOrDefault(m => m.Tela == t) : null;
 
-    // ---------------------------------------------------------------- topologia em execução (DEC-030)
+    // ---------------------------------------------------------------- topologia em execução
 
-    /// <summary>
-    /// Se <paramref name="depois"/> é <paramref name="antes"/> só transladado no desktop virtual, como num rearranjo ou numa troca
-    /// de principal, em que o Windows move a origem: a tela e a área útil deslocadas pelo mesmo (dx, dy) e o mesmo DPI. A marca
-    /// de principal não conta. Com dx = dy = 0, nada que importe ao personagem mudou nesse monitor.
-    /// </summary>
+    // Monitor só transladado (rearranjo ou troca de principal, quando o Windows move a origem):
+    // tela e área útil deslocadas pelo mesmo (dx, dy), mesmo DPI. Ser principal não conta.
+    // dx = dy = 0 quer dizer que nada relevante mudou.
     public static bool SoTranslacao(MonitorDoDesktop antes, MonitorDoDesktop depois, out int dx, out int dy)
     {
         ArgumentNullException.ThrowIfNull(antes);
@@ -203,12 +157,9 @@ public static class Posicionador
         return depois.Tela == antes.Tela.Deslocado(dx, dy) && depois.AreaUtil == antes.AreaUtil.Deslocado(dx, dy) && depois.Dpi == antes.Dpi;
     }
 
-    /// <summary>
-    /// O monitor da topologia nova que é o da chave na antiga: o da mesma chave; sem ele, o primeiro com a mesma tela cuja chave
-    /// não existia antes, o apelido por retângulo de DEC-008 (a chave passou da reserva <c>gdi:</c> para <c>mon:</c>, ou o
-    /// caminho do dispositivo mudou com o driver). A chave nova é a condição que impede confundir o monitor com o sobrevivente
-    /// que o Windows põe na origem quando o principal é desconectado. Nulo se não há nenhum.
-    /// </summary>
+    // Mesma chave; senão, o primeiro com a mesma tela e chave que não existia antes (a chave passou
+    // de gdi: pra mon:, ou o driver mudou o caminho). Exigir chave nova evita confundir com o
+    // sobrevivente que o Windows põe na origem quando o principal é desconectado.
     public static MonitorDoDesktop? MonitorCorrespondente(Topologia antiga, Topologia nova, string chave, RetanguloPx? tela)
     {
         ArgumentNullException.ThrowIfNull(antiga);
@@ -218,20 +169,12 @@ public static class Posicionador
         return tela is { } t ? nova.Monitores.FirstOrDefault(m => m.Tela == t && antiga.PorChave(m.Chave) is null) : null;
     }
 
-    /// <summary>
-    /// Leva uma posição guardada da topologia antiga para a nova, sem mover nada: vale em qualquer estado, para a posição do
-    /// personagem e para o retorno da tela cheia (ARCHITECTURE.md 2.8).
-    /// <list type="bullet">
-    /// <item>Com o monitor correspondente (<see cref="MonitorCorrespondente"/>), a posição relativa vale na área útil atual dele,
-    /// e a posição passa a ter a chave e a tela dele.</item>
-    /// <item>Sem ele, a posição continua ligada à chave dela, com as mesmas frações e a mesma tela: se o monitor voltar antes de
-    /// ela ser usada, ela vale nele. Só a âncora absoluta anda, junto com o sobrevivente mais próximo do pixel dos pés medido
-    /// nas coordenadas antigas (no empate, o principal; depois, a ordem da topologia nova). Quando o principal é desconectado,
-    /// o Windows move a origem, e o mais próximo nas coordenadas novas seria outro. Sem sobrevivente, nada muda.</item>
-    /// </list>
-    /// A tela guardada nunca é deslocada por cálculo: transladada, ela seria uma tela que nunca existiu, e a partida seguinte
-    /// poderia achar por engano um monitor "pelo retângulo".
-    /// </summary>
+    // Leva uma posição guardada pra topologia nova sem mover nada (posição do personagem e retorno
+    // da tela cheia). Com monitor correspondente, adota chave e tela dele. Sem ele, mantém chave,
+    // frações e tela (se o monitor voltar, vale de novo) e só a âncora absoluta anda junto com o
+    // sobrevivente mais próximo dos pés, medido nas coordenadas ANTIGAS: quando o principal sai, o
+    // Windows move a origem e o mais próximo nas novas seria outro.
+    // A tela nunca é transladada: viraria uma tela que nunca existiu e enganaria o "pelo retângulo".
     public static PosicaoDoPersonagem Rebasear(Topologia antiga, Topologia nova, PosicaoDoPersonagem posicao, TamanhoDip tamanho)
     {
         ArgumentNullException.ThrowIfNull(antiga);
@@ -249,13 +192,9 @@ public static class Posicionador
             : posicao;
     }
 
-    /// <summary>
-    /// Um ponto livre (a âncora de um arraste, do personagem ou de um item na mão do usuário) levado da topologia antiga para a
-    /// nova junto com o monitor em que estava, o do pixel dos pés na antiga: o Windows leva a janela e o cursor com o monitor
-    /// físico quando a origem muda. Se esse monitor continua (<see cref="MonitorCorrespondente"/>), o ponto anda com a tela
-    /// dele; senão, com a do sobrevivente mais próximo do pixel dos pés medido nas coordenadas antigas, como em
-    /// <see cref="Rebasear"/>; sem nenhum, fica onde está. O ponto não é preso a nada: quem solta valida (DEC-030).
-    /// </summary>
+    // Ponto livre (âncora de um arraste) anda junto com o monitor onde estava, porque o Windows leva
+    // janela e cursor com o monitor físico quando a origem muda. Sem correspondente, segue o
+    // sobrevivente mais próximo, como em Rebasear. Não prende nada: quem solta valida.
     public static PontoPx AcompanharPonto(Topologia antiga, Topologia nova, PontoPx ponto)
     {
         ArgumentNullException.ThrowIfNull(antiga);
@@ -268,11 +207,8 @@ public static class Posicionador
         return translacao is (int x, int y) ? new PontoPx(ponto.X + x, ponto.Y + y) : ponto;
     }
 
-    /// <summary>
-    /// A translação da tela do sobrevivente (o monitor da topologia nova cuja chave já existia na antiga) mais próximo de
-    /// <paramref name="pes"/>, medido nas coordenadas antigas; no empate, o principal, depois a ordem da topologia nova. Nula
-    /// se nenhum monitor sobreviveu.
-    /// </summary>
+    // Sobrevivente = monitor novo cuja chave já existia. Distância medida nas coordenadas antigas;
+    // empate: principal, depois a ordem nova. Nulo se ninguém sobreviveu.
     private static (int Dx, int Dy)? TranslacaoDoSobrevivente(Topologia antiga, Topologia nova, PontoPx pes)
     {
         MonitorDoDesktop? sobrevivente = null;
@@ -290,9 +226,6 @@ public static class Posicionador
         return sobrevivente is null || antes is null ? null : (sobrevivente.Tela.Esquerda - antes.Tela.Esquerda, sobrevivente.Tela.Topo - antes.Tela.Topo);
     }
 
-    /// <summary>
-    /// Fração de posição saneada: NaN vira 0,5; o resto, inclusive ±∞, é preso em [0, 1]. A mesma regra vale
-    /// para a posição e para o settings.json (Persistencia.EsquemaDeConfiguracoes).
-    /// </summary>
+    // NaN vira 0,5; o resto (inclusive ±∞) é preso em [0, 1]. O settings.json usa a mesma regra.
     internal static double SanearFracao(double fracao) => double.IsNaN(fracao) ? 0.5 : Math.Clamp(fracao, 0.0, 1.0);
 }

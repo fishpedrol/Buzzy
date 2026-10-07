@@ -8,20 +8,13 @@ using Buzzy.Visual;
 
 namespace Buzzy.Identidade;
 
-/// <summary>
-/// Gera as prévias da identidade visual e confere as fontes.
-/// Uso: dotnet run --project tools/Buzzy.Identidade -c Release
-///   (padrão)     pixel art (DEC-018): assets/identidade/pixel/ — folhas nativas (poses e itens do
-///                tamagotchi, DEC-028) e prévias ampliadas, inclusive as animações de uso, as
-///                sobreposições de efeito, os gestos da onda, a paranoia a 8× e os ícones do menu; confere que nenhuma
-///                pose (as de estado e as dos gestos), quadro de uso (com cada item) ou efeito encosta
-///                na borda do quadro de 64 × 64, que nenhuma cara deixa preenchimento na borda de cima
-///                ou dos lados (o contorno seria cortado) e que cada item pousa na última linha da grade
-///                de 24 × 24, com 1 pixel livre no topo e nas laterais.
-///   --vetorial   direção vetorial arquivada (DEC-017, substituída): assets/identidade/arquivo-vetorial/.
-/// Código de saída: 0 sem problemas; 1 com pose, quadro de uso, efeito ou item na borda/fora do quadro
-/// ou parte ausente.
-/// </summary>
+// Uso: dotnet run --project tools/Buzzy.Identidade -c Release [--vetorial]
+//   padrão: pixel art em assets/identidade/pixel/ (folhas nativas e prévias ampliadas). Confere
+//     que nada encosta na borda do quadro 64×64, que nenhuma cara preenche a borda de cima ou dos
+//     lados (o contorno seria cortado) e que cada item pousa na última linha da grade 24×24, com
+//     1 px livre no topo e nas laterais.
+//   --vetorial: a direção vetorial antiga, em assets/identidade/arquivo-vetorial/.
+// Saída 1 se algo encostar na borda ou faltar parte.
 internal static class Programa
 {
     private static readonly Color Claro = Color.FromRgb(0xF4, 0xF1, 0xEC);
@@ -84,7 +77,7 @@ internal static class Programa
                     const double folga = 0.5;
                     if (r.Left < -folga || r.Top < -folga || r.Right > q.Largura + folga || r.Bottom > q.Altura + folga)
                     {
-                        // Uma linha por pose com a expressão padrão basta para o relatório.
+                        // Uma linha por pose (na expressão padrão) basta.
                         if (expressao == boneco.Definicao.Poses[pose].Expressao)
                         {
                             Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
@@ -209,11 +202,9 @@ internal static class Programa
             Texto(dc, "Buzzy — folha de modelo", m, 20, 34, Tinta, true);
             Texto(dc, "Sagui-acrobata violeta-índigo · topete de três tufos · cauda em espiral com ponta menta · sem roupa nem acessório", m, 64, 16, Tinta, false);
 
-            // Pose principal grande.
             dc.DrawImage(boneco.Renderizar("parado", 96 * 4), new Rect(m, 100, 512, 512));
             Texto(dc, "parado (IDLE), 4×", m, 616, 14, Tinta, false);
 
-            // Paleta.
             for (int i = 0; i < paleta.Length; i++)
             {
                 double x = 580 + (i % 5) * 196, y = 110 + (i / 5) * 70;
@@ -223,7 +214,7 @@ internal static class Programa
                 Texto(dc, paleta[i].Hex, x + 54, y + 24, 13, Tinta, false);
             }
 
-            // Ciclo de caminhada e poses de ação em 2×.
+            // Caminhada e poses de ação.
             string[] acao = ["andando-1", "andando-2", "andando-3", "andando-4", "no-ar"];
             for (int i = 0; i < acao.Length; i++)
             {
@@ -239,7 +230,7 @@ internal static class Programa
                 Texto(dc, acao2[i], x, y + 196, 13, Tinta, false);
             }
 
-            // Expressões (recorte da cabeça).
+            // Expressões, recortando só a cabeça.
             var recorte = new Rect(22, 0, 84, 76);
             const double e = 1.3;
             int cw = (int)(recorte.Width * e), ch = (int)(recorte.Height * e);
@@ -251,7 +242,6 @@ internal static class Programa
                 Texto(dc, expressoes[i], x, y + ch + 4, 11, Tinta, false);
             }
 
-            // Silhuetas.
             string[] sil = ["parado", "andando-1", "pendurado", "escalando-1", "no-ar", "sentado", "reagindo", "segurado"];
             for (int i = 0; i < sil.Length; i++)
             {

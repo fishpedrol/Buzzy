@@ -2,15 +2,11 @@ using Buzzy.Core;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// A carência do foco (Fase 7; DEC-037, item 2): o monitor do primeiro plano só vai ao núcleo depois de ficar o mesmo por
-/// <see cref="Carencia"/>, e só quando muda. Um candidato novo durante a carência recomeça a contagem com ele; o publicado de
-/// novo cancela a carência pendente. Guarda só chaves opacas de monitor, nunca a janela. Nada é periódico: um disparo único
-/// por candidato novo. Só na thread da interface.
-/// </summary>
+// O monitor do primeiro plano só vai pro núcleo depois de ficar o mesmo por 2 s, e
+// só quando muda. Candidato novo recomeça a contagem; voltar pro já publicado cancela.
+// Guarda só a chave do monitor, nunca a janela. Só na thread da interface.
 internal sealed class CarenciaDoFoco
 {
-    /// <summary>Quanto o mesmo monitor precisa ficar com o primeiro plano antes de ir ao núcleo.</summary>
     internal static readonly TimeSpan Carencia = TimeSpan.FromSeconds(2);
 
     private readonly Func<TimeSpan, Action, Action> _agendarUmaVez;
@@ -18,21 +14,18 @@ internal sealed class CarenciaDoFoco
     private Action? _cancelar;
     private bool _parada;
 
-    /// <param name="agendarUmaVez">Agenda um disparo único e devolve o que o cancela.</param>
-    /// <param name="publicar">Recebe a chave do monitor do foco confirmada, a cada mudança.</param>
+    // agendarUmaVez devolve o cancelamento do disparo.
     internal CarenciaDoFoco(Func<TimeSpan, Action, Action> agendarUmaVez, Action<string> publicar)
     {
         _agendarUmaVez = agendarUmaVez ?? throw new ArgumentNullException(nameof(agendarUmaVez));
         _publicar = publicar ?? throw new ArgumentNullException(nameof(publicar));
     }
 
-    /// <summary>A chave publicada por último; nula antes da primeira.</summary>
     internal string? Publicado { get; private set; }
 
-    /// <summary>A chave em carência; nula sem carência pendente.</summary>
+    // Nulo sem carência pendente.
     internal string? Candidato { get; private set; }
 
-    /// <summary>Um candidato da avaliação (<see cref="AgendaDaTelaCheia.MonitorDoFoco"/>).</summary>
     internal void Candidatar(string chave)
     {
         ArgumentNullException.ThrowIfNull(chave);
@@ -50,7 +43,7 @@ internal sealed class CarenciaDoFoco
         });
     }
 
-    /// <summary>O encerramento: cancela a carência pendente; nada mais é publicado.</summary>
+    // Depois de parar, nada mais é publicado.
     internal void Parar()
     {
         _parada = true;

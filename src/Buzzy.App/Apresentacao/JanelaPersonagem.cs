@@ -9,20 +9,14 @@ using Buzzy.Core.Entrada;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// Janela do personagem (ARCHITECTURE.md 2.13.1): sem borda, do tamanho do sprite, com
-/// transparência por pixel (janela layered do WPF, confirmada em P1), sempre no topo, fora da
-/// barra de tarefas e do Alt+Tab (Q-03) e que NÃO ativa ao ser clicada (DEC-009, P3).
-///
-/// Adaptador do ponteiro (Fase 3): converte as mensagens de mouse que o Windows entrega a esta
-/// janela em eventos de ponteiro do núcleo, em pixels físicos do desktop virtual, e segura a
-/// captura do mouse só enquanto a raiz de composição pede (um gesto começado no personagem).
-/// O Windows só entrega aqui cliques em pixels com alfa diferente de 0; fora de um gesto, nada
-/// do mouse de outros aplicativos chega (SECURITY.md 3.1).
-/// </summary>
+// Janela do personagem: sem borda, do tamanho do sprite, transparência por pixel
+// (layered do WPF), sempre no topo, fora da barra e do Alt+Tab, e NÃO ativa no clique.
+// Converte o mouse em eventos de ponteiro do núcleo, em pixels físicos do desktop
+// virtual, e só segura a captura durante um gesto começado no personagem. O Windows
+// só entrega clique em pixel com alfa > 0; fora de um gesto, nada de outros apps chega.
 internal sealed class JanelaPersonagem : Window
 {
-    // Pixel a pixel pelo DPI atual da janela (EncaixeDeDpi, passo P14).
+    // Pixel a pixel pelo DPI atual da janela (ver EncaixeDeDpi).
     private readonly Image _imagem = new()
     {
         Stretch = Stretch.Fill,
@@ -33,12 +27,11 @@ internal sealed class JanelaPersonagem : Window
 
     private bool _capturando;
 
-    // Verdadeiro só durante o ReleaseCapture pedido pela raiz. ReleaseCapture manda
-    // WM_CAPTURECHANGED de forma síncrona; sem esta marca, o fim normal do gesto pareceria uma
-    // captura perdida (a mesma lição do protótipo P3).
+    // Ligado só durante o nosso ReleaseCapture, que manda WM_CAPTURECHANGED de forma
+    // síncrona; sem isso o fim normal do gesto pareceria captura perdida.
     private bool _soltandoPorNos;
 
-    /// <summary>O tamanho lógico da janela, o do passo de escala em vigor (DEC-038, item 9), fixo durante a execução.</summary>
+    // Tamanho lógico da escala em vigor; não muda durante a execução.
     private readonly TamanhoDip _tamanho;
 
     internal JanelaPersonagem() : this(SpriteProvisorio.TamanhoLogico)
@@ -70,8 +63,8 @@ internal sealed class JanelaPersonagem : Window
         StateChanged += AoMudarEstado;
         DpiChanged += (_, e) =>
         {
-            // O WPF também avisa quando só reavaliou o DPI, sem mudança (observado logo depois
-            // de mostrar a janela); isso não é mudança de topologia.
+            // O WPF também avisa quando só reavaliou o DPI sem mudar (logo depois de
+            // mostrar a janela); isso não é mudança de topologia.
             int antes = (int)Math.Round(e.OldDpi.PixelsPerInchX);
             int depois = (int)Math.Round(e.NewDpi.PixelsPerInchX);
             EncaixeDeDpi.AjustarPixelAPixel(_imagem, e.NewDpi.PixelsPerInchX);
@@ -81,16 +74,15 @@ internal sealed class JanelaPersonagem : Window
 
     internal nint Hwnd { get; private set; }
 
-    /// <summary>Evento de ponteiro já normalizado (pixels físicos, relógio monotônico em ms).</summary>
+    // Pixels físicos, relógio monotônico em ms.
     internal event Action<EventoDePonteiro>? Ponteiro;
 
-    /// <summary>O Windows mudou o DPI da janela (troca de escala ou de monitor).</summary>
+    // Troca de escala ou de monitor.
     internal event Action<int>? DpiMudou;
 
-    /// <summary>O Windows tentou minimizar a janela (Q-03: minimizar esconde).</summary>
+    // O Windows tentou minimizar; pra nós, minimizar é esconder.
     internal event Action? Minimizada;
 
-    /// <summary>Se a janela está com a captura do mouse de um gesto em curso.</summary>
     internal bool Capturando => _capturando;
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -113,38 +105,33 @@ internal sealed class JanelaPersonagem : Window
 
     internal BitmapSource? Sprite => _imagem.Source as BitmapSource;
 
-    /// <summary>Posiciona e dimensiona a janela em pixels físicos, sem ativar nem mudar a ordem Z.</summary>
+    // Pixels físicos, sem ativar nem mudar a ordem Z.
     internal void AplicarRetangulo(RetanguloPx r)
         => Win32.SetWindowPos(Hwnd, 0, r.Esquerda, r.Topo, r.Largura, r.Altura, Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
 
-    /// <summary>Onde a janela está de fato, em pixels físicos; nulo se o Windows não informar.</summary>
+    // Pixels físicos; nulo se o Windows não informar.
     internal RetanguloPx? RetanguloReal()
         => Hwnd != 0 && Win32.GetWindowRect(Hwnd, out Win32.RECT r) ? new RetanguloPx(r.Left, r.Top, r.Right, r.Bottom) : null;
 
-    /// <summary>Um peer vazio: a imagem fica fora das árvores de controle e de conteúdo do leitor de tela (DEC-038, item 7).</summary>
+    // Peer vazio: a imagem fica fora das árvores do leitor de tela.
     protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new PeerVazio(this);
 
-    /// <summary>O tamanho lógico da janela (o passo de escala em vigor).</summary>
     internal TamanhoDip Tamanho => _tamanho;
 
-    /// <summary>Se a janela está no grupo "sempre no topo" (Q-03; DEC-038, item 8).</summary>
     internal bool SempreNoTopo => Topmost;
 
-    /// <summary>Liga ou desliga o "sempre no topo", uma vez, por evento (a partida ou o comando do usuário).</summary>
+    // Só por evento (partida ou comando), nunca periódico.
     internal void AplicarSempreNoTopo(bool ligado) => Topmost = ligado;
 
-    /// <summary>
-    /// Recoloca a janela no topo, uma vez, sem ativar: com o "sempre no topo" ligado, no topo do grupo topmost; desligado, acima
-    /// das janelas comuns, sem ficar topmost. Só é chamado por ação explícita do usuário (mostrar, abrir o painel) e no fim da
-    /// tela cheia com o topo ligado, nunca por timer (SECURITY.md 2).
-    /// </summary>
+    // Sobe uma vez, sem ativar: topo do grupo topmost se o "sempre no topo" estiver
+    // ligado, senão acima das janelas comuns. Só por ação explícita (mostrar, abrir o
+    // painel) ou no fim da tela cheia; nunca por timer, pra não brigar por foco.
     internal void AoTopoDaFaixa()
     {
         if (Topmost) Win32.SetWindowPos(Hwnd, Win32.HWND_TOPMOST, 0, 0, 0, 0, Win32.SWP_NOMOVE | Win32.SWP_NOSIZE | Win32.SWP_NOACTIVATE);
         else Win32.AoTopoDaFaixaComum(Hwnd);
     }
 
-    /// <summary>Captura o mouse para o gesto em curso (ARCHITECTURE.md 2.7, passo 1 do ciclo de arraste).</summary>
     internal void Capturar()
     {
         if (_capturando || Hwnd == 0) return;
@@ -152,7 +139,7 @@ internal sealed class JanelaPersonagem : Window
         _capturando = true;
     }
 
-    /// <summary>Solta a captura do gesto, sem que isso conte como captura perdida.</summary>
+    // Não conta como captura perdida.
     internal void SoltarCaptura()
     {
         if (!_capturando) return;
@@ -178,7 +165,7 @@ internal sealed class JanelaPersonagem : Window
                 return Win32.MA_NOACTIVATE;
 
             case Win32.WM_GETDPISCALEDSIZE:
-                // A janela vai mudar de DPI (outro monitor ou outra escala): o tamanho do sprite no DPI novo (EncaixeDeDpi).
+                // Vai mudar de DPI (outro monitor ou escala): responde o tamanho do sprite no DPI novo.
                 if (!EncaixeDeDpi.ResponderTamanhoEscalado(wParam, lParam, _tamanho)) break;
                 tratado = true;
                 return 1;
@@ -221,16 +208,14 @@ internal sealed class JanelaPersonagem : Window
                 return 0;
 
             case Win32.WM_CANCELMODE:
-                // "Cancelar modos, como a captura do mouse": o DefWindowProc solta a captura em nome
-                // da janela. Feito aqui de forma explícita, para não depender do tratamento do WPF;
-                // o WM_CAPTURECHANGED que vem em seguida encerra o gesto como captura perdida.
+                // O DefWindowProc já soltaria a captura; soltamos aqui pra não depender do WPF.
+                // O WM_CAPTURECHANGED seguinte encerra o gesto como captura perdida.
                 if (_capturando) Win32.ReleaseCapture();
                 break;
 
             case Win32.WM_CAPTURECHANGED:
-                // Ponto único de término de um gesto interrompido (ARCHITECTURE.md 2.13.3): Alt+Tab,
-                // tecla Windows, UAC ou outra janela ficou com o mouse. Só o fato é registrado,
-                // nunca qual janela é a nova dona (SECURITY.md 6).
+                // Único ponto de fim de gesto interrompido: Alt+Tab, tecla Windows, UAC ou outra
+                // janela pegou o mouse. Por privacidade, não registra qual janela é a nova dona.
                 if (_capturando && !_soltandoPorNos && lParam != hwnd)
                 {
                     _capturando = false;
@@ -242,10 +227,7 @@ internal sealed class JanelaPersonagem : Window
         return 0;
     }
 
-    /// <summary>
-    /// Métricas de gesto no DPI atual da janela, que é o do monitor em que o personagem foi
-    /// pressionado (ARCHITECTURE.md 2.7: retângulo de arraste "lido para o DPI do monitor").
-    /// </summary>
+    // No DPI atual da janela, que é o do monitor onde o personagem foi pressionado.
     private MetricasDeGesto Metricas()
     {
         uint dpi = (uint)Math.Max(1, Math.Round(VisualTreeHelper.GetDpi(this).PixelsPerInchX));
@@ -257,10 +239,8 @@ internal sealed class JanelaPersonagem : Window
             (int)Math.Min(Win32.GetDoubleClickTime(), int.MaxValue));
     }
 
-    /// <summary>
-    /// Coordenadas da mensagem (cliente, com sinal) em pixels físicos do desktop virtual. A janela
-    /// só se move nesta mesma thread, então ela está onde estava quando a mensagem foi gerada.
-    /// </summary>
+    // Cliente com sinal -> pixels físicos. A janela só se move nesta thread, então
+    // ainda está onde estava quando a mensagem foi gerada.
     private static PontoPx NaTela(nint hwnd, nint lParam)
     {
         var p = new Win32.POINT { X = Win32.XComSinal(lParam), Y = Win32.YComSinal(lParam) };

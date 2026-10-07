@@ -1,10 +1,7 @@
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// De onde vem um evento, da maior para a menor prioridade (ARCHITECTURE.md 2.3): ação direta
-/// do usuário sobre o personagem; menu, bandeja e painel de energia; sistema; relógio e
-/// movimento; comportamento autônomo; troca de expressão.
-/// </summary>
+// Prioridade, da maior pra menor: ação direta sobre o personagem; menu,
+// bandeja e painel; sistema; relógio e movimento; autônomo; troca de expressão.
 public enum Origem
 {
     Expressao = 0,
@@ -15,81 +12,75 @@ public enum Origem
     AcaoDireta = 5,
 }
 
-/// <summary>
-/// Evento normalizado que o núcleo consome (ARCHITECTURE.md 2.6, tabela de eventos). Os nomes
-/// são os da especificação. Coordenadas em pixels físicos do desktop virtual (DEC-008).
-/// </summary>
+// Evento normalizado que o núcleo consome. Coordenadas em px físicos do
+// desktop virtual.
 public abstract record Evento
 {
     public abstract Origem Origem { get; }
 }
 
-// Gestos derivados pela arbitragem de input (ARCHITECTURE.md 2.7). Na Fase 2 os testes os
-// entregam prontos; o reconhecedor de gestos é da Fase 3.
+// Gestos já derivados pelo árbitro de input.
 
-/// <summary><c>PRESS</c>: botão esquerdo pressionado sobre pixel opaco, com o cursor em <paramref name="Cursor"/>.</summary>
+// Botão esquerdo sobre pixel opaco.
 public sealed record Press(PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>CLICK</c>: soltou dentro do retângulo de arraste.</summary>
+// Soltou dentro do retângulo de arraste.
 public sealed record Click : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>DOUBLE_CLICK</c>: segundo clique dentro do tempo e do retângulo do sistema.</summary>
+// Tempo e retângulo de clique duplo do sistema.
 public sealed record DoubleClick : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>DRAG_START</c>: o cursor saiu do retângulo de arraste.</summary>
+// O cursor saiu do retângulo de arraste.
 public sealed record DragStart : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>DRAG_MOVE</c>: posição mais recente do cursor durante o arraste.</summary>
 public sealed record DragMove(PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>DRAG_END</c>: soltou o botão depois de arrastar.</summary>
 public sealed record DragEnd(PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>DRAG_CANCEL</c>: a captura foi perdida (Alt+Tab, UAC, outra captura).</summary>
+// Captura perdida (Alt+Tab, UAC, outra captura).
 public sealed record DragCancel : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>CONTEXT_MENU</c>: botão direito solto sobre o personagem.</summary>
+// Botão direito solto sobre o personagem.
 public sealed record ContextMenu(PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-// Painel de energia (Fase 8).
+// Painel de energia.
 
-/// <summary><c>ENERGY_PANEL_OPEN</c>: pedido explícito de abrir o painel (menu "Energia").</summary>
+// Pedido explícito pelo menu "Energia".
 public sealed record EnergyPanelOpen : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>ENERGY_SELECTED</c>: o usuário escolheu um nível no painel aberto.</summary>
 public sealed record EnergySelected(NivelDeEnergia Nivel) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>ENERGY_PANEL_CLOSE</c>: o painel fechou (Esc, botão de fechar ou perda de foco).</summary>
+// Esc, botão de fechar ou perda de foco.
 public sealed record EnergyPanelClose : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
@@ -97,174 +88,141 @@ public sealed record EnergyPanelClose : Evento
 
 // Bandeja e menu.
 
-/// <summary><c>CMD_HIDE</c>.</summary>
 public sealed record CmdHide : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_SHOW</c>.</summary>
 public sealed record CmdShow : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_PAUSE_AUTONOMY</c>.</summary>
 public sealed record CmdPauseAutonomy : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_RESUME_AUTONOMY</c>.</summary>
 public sealed record CmdResumeAutonomy : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_OPEN_SETTINGS</c> (Fase 8).</summary>
 public sealed record CmdOpenSettings : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_RESET_POSITION</c>: volta à posição inicial.</summary>
+// Volta à posição inicial.
 public sealed record CmdResetPosition : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_EXIT</c>.</summary>
 public sealed record CmdExit : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SET_DOMINANT_EMOTION</c> (DEC-027): a emoção dominante escolhida no menu, uma das 14 caras de humor
-/// (<see cref="Expressoes.DeHumor"/>), ou nula para "Automática". Um valor fora das 14 é ignorado.
-/// </summary>
+// Uma das 14 caras de humor (Expressoes.DeHumor), ou nula pra "Automática".
+// Valor fora das 14 é ignorado.
 public sealed record CmdSetDominantEmotion(Expressao? Emocao) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SET_ADULT_CONTENT</c> (DEC-033): "Conteúdo adulto" no menu, ligado ou desligado. Desligar tira do mundo os itens
-/// adultos, acaba as ondas de substância e o uso de um item adulto; ligar só grava a escolha.
-/// </summary>
+// Desligar tira os itens adultos do mundo e acaba as ondas de substância e o
+// uso de item adulto; ligar só grava a escolha.
 public sealed record CmdSetAdultContent(bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// CMD_SET_SELF_USE_ITEM: liga ou desliga o uso por conta própria de uma das seis drogas ilícitas nas Configurações
-/// (DEC-045). Só vale para as da edição; o resto é ignorado.
-/// </summary>
+// Uso por conta própria de uma das seis drogas ilícitas. Item fora da
+// edição é ignorado.
 public sealed record CmdSetSelfUseItem(Item Item, bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>CMD_SET_ADULT_ITEM: altera a disponibilidade de um item adulto nas Configurações (DEC-041).</summary>
 public sealed record CmdSetAdultItemEnabled(Item Item, bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SET_FULLSCREEN_MODE</c> (DEC-034): "Desviar da tela cheia" no menu, o modo de tela cheia (Q-09) ligado ou
-/// desligado. Grava a escolha nas preferências. Desligar desfaz o efeito temporário, como as preferências; ligar com ele à
-/// vista num monitor já ocupado o tira de lá.
-/// </summary>
+// "Desviar da tela cheia". Desligar desfaz o efeito temporário; ligar com ele
+// visível num monitor já ocupado tira ele de lá.
 public sealed record CmdSetFullscreenMode(bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// CMD_SET_CROSS_MONITORS: liga ou desliga a travessia entre monitores nas Configurações (DEC-046). Grava a escolha; só vale
-/// para as próximas decisões (uma travessia já em curso termina).
-/// </summary>
+// Só vale pras próximas decisões; uma travessia em curso termina.
 public sealed record CmdSetCrossMonitors(bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SET_ENERGY</c> (Fase 8; DEC-038, item 2): a energia escolhida na janela de configurações, sem o painel. Muda só a
-/// preferência e a grava; a próxima decisão da agenda já usa o perfil novo.
-/// </summary>
+// Energia escolhida nas configurações, sem o painel. A próxima decisão da
+// agenda já usa o perfil novo.
 public sealed record CmdSetEnergy(NivelDeEnergia Nivel) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SET_ALWAYS_ON_TOP</c> (Fase 8; DEC-038, item 8): "Sempre no topo" nas configurações. Muda a preferência, a grava e
-/// pede à raiz que a aplique (<see cref="AplicarSempreNoTopo"/>).
-/// </summary>
+// Grava e pede pra raiz aplicar (AplicarSempreNoTopo).
 public sealed record CmdSetAlwaysOnTop(bool Ligado) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SET_SCALE</c> (Fase 8; DEC-038, item 9): o tamanho do Buzzy nas configurações. Só muda a preferência e a grava:
-/// vale na próxima abertura.
-/// </summary>
+// Só grava: vale na próxima abertura.
 public sealed record CmdSetScale(EscalaDoPersonagem Escala) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary>
-/// <c>CMD_SUMMON_ITEM</c> (DEC-028): o usuário invocou um item pelo menu. Ele aparece ao lado do personagem, acima do
-/// chão, e cai. Escondido, antes da carga, fora do enum ou com o tamagotchi desligado, é ignorado.
-/// </summary>
+// Aparece ao lado do personagem, acima do chão, e cai. Ignorado se escondido,
+// antes da carga, fora do enum ou com o tamagotchi desligado.
 public sealed record CmdSummonItem(Item Item) : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-/// <summary><c>CMD_CLEAR_ITEMS</c> (DEC-028): "Recolher itens" do menu; todos os itens somem, inclusive o da mão.</summary>
+// "Recolher itens": somem todos, inclusive o da mão.
 public sealed record CmdClearItems : Evento
 {
     public override Origem Origem => Origem.ComandoDoUsuario;
 }
 
-// Gestos sobre a janela de um item (DEC-028), derivados por um árbitro de gestos próprio da janela: Press, DragStart,
-// DragMove, DragEnd e, para Click, DoubleClick ou DragCancel, ItemRelease. O botão direito no item é o ContextMenu de
+// Gestos sobre a janela de um item, com árbitro próprio: Press, DragStart,
+// DragMove, DragEnd e, pra Click, DoubleClick ou DragCancel, ItemRelease. O botão direito no item é o ContextMenu de
 // sempre. Com o tamagotchi desligado, todos são ignorados.
 
-/// <summary><c>ITEM_PRESS</c>: botão esquerdo pressionado sobre um pixel opaco do item, com o cursor em <paramref name="Cursor"/>.</summary>
+// Botão esquerdo sobre pixel opaco do item.
 public sealed record ItemPress(int Id, PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>ITEM_DRAG_START</c>: o cursor saiu do retângulo de arraste com o item seguro.</summary>
 public sealed record ItemDragStart(int Id) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>ITEM_DRAG_MOVE</c>: posição mais recente do cursor durante o arraste do item.</summary>
 public sealed record ItemDragMove(int Id, PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary><c>ITEM_DRAG_END</c>: soltou o item depois de arrastar; sobre o personagem, num estado que aceita, ele o usa.</summary>
+// Solto sobre o personagem, num estado que aceita, ele usa o item.
 public sealed record ItemDragEnd(int Id, PontoPx Cursor) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
 }
 
-/// <summary>
-/// <c>ITEM_RELEASE</c>: o gesto sobre o item acabou sem arraste até um lugar (clique, clique duplo ou captura perdida):
-/// o item cai de onde está e nunca é usado.
-/// </summary>
+// Gesto acabou sem arrastar até um lugar (clique, clique duplo ou captura
+// perdida): o item cai de onde está e nunca é usado.
 public sealed record ItemRelease(int Id) : Evento
 {
     public override Origem Origem => Origem.AcaoDireta;
@@ -272,79 +230,62 @@ public sealed record ItemRelease(int Id) : Evento
 
 // Sistema.
 
-/// <summary>
-/// Configurações e topologia carregadas (primeira linha da tabela de transições). A posição salva e as
-/// preferências vêm do settings.json (Fase 5, <see cref="Persistencia.EsquemaDeConfiguracoes"/>). A
-/// posição, quando há, é restaurada pela cascata da partida (<see cref="Posicionador.Restaurar"/>); nula, o
-/// personagem começa na posição inicial.
-/// </summary>
+// Configurações e topologia carregadas. Posição e preferências vêm do
+// settings.json; a posição, se houver, passa pela cascata de
+// Posicionador.Restaurar. Nula, começa na posição inicial.
 public sealed record Loaded(Topologia Topologia, PosicaoDoPersonagem? PosicaoSalva, Preferencias Preferencias) : Evento
 {
     public override Origem Origem => Origem.Sistema;
 
-    /// <summary>
-    /// A borda do esconderijo gravada com a posição (DEC-025; esquema v3, DEC-029, item 11): a acomodação da carga o
-    /// devolve escondido no mesmo lado. Só vale com <see cref="PosicaoSalva"/> e com o esconderijo pelo clique duplo
-    /// ligado na configuração; fora do enum, nenhum.
-    /// </summary>
+    // Volta escondido do mesmo lado. Só vale com PosicaoSalva e com o
+    // esconderijo do clique duplo ligado; fora do enum, nenhum.
     public LadoDoEsconderijo Esconderijo { get; init; }
 
-    /// <summary>
-    /// A marca "preso pelo usuário" gravada com a posição (DEC-024; esquema v3): agarrado na carga, ele continua preso
-    /// onde o usuário o deixou. Só vale com <see cref="PosicaoSalva"/>; longe da parede e do cipó, a acomodação a apaga.
-    /// </summary>
+    // Agarrado na carga, continua preso onde o usuário deixou. Só vale com
+    // PosicaoSalva; longe da parede e do cipó, a acomodação apaga.
     public bool PresoPeloUsuario { get; init; }
 }
 
-/// <summary>
-/// <c>TOPOLOGY_CHANGED</c>: nova leitura dos monitores, já agrupada pelo adaptador. Com o monitor do personagem só transladado
-/// ou igual, o estado continua; senão, ele revalida a posição (DEC-030, Maquina.MudarTopologia).
-/// </summary>
+// Monitores já agrupados pelo adaptador. Se o monitor do personagem só
+// transladou ou ficou igual, segue o estado; senão revalida a posição
+// (Maquina.MudarTopologia).
 public sealed record TopologyChanged(Topologia Topologia) : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary><c>SESSION_LOCKED</c>.</summary>
 public sealed record SessionLocked : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary><c>SESSION_UNLOCKED</c>.</summary>
 public sealed record SessionUnlocked : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary><c>SUSPENDING</c>.</summary>
 public sealed record Suspending : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary><c>RESUMED</c>.</summary>
 public sealed record Resumed : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary><c>SESSION_ENDING</c>.</summary>
 public sealed record SessionEnding : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary>
-/// <c>FULLSCREEN_TARGETS_CHANGED</c> (DEC-013): só as chaves dos monitores cobertos pela janela
-/// ativa em tela cheia, sem identidade nem conteúdo de outra janela (invariante 13).
-/// </summary>
+// Só as chaves dos monitores cobertos pela janela ativa em tela cheia; nada
+// sobre a identidade ou o conteúdo da janela.
 public sealed record FullscreenTargetsChanged(MonitoresOcupados Ocupados) : Evento
 {
     public override Origem Origem => Origem.Sistema;
 }
 
-/// <summary><c>SETTINGS_CHANGED</c>.</summary>
 public sealed record SettingsChanged(Preferencias Preferencias) : Evento
 {
     public override Origem Origem => Origem.Sistema;
@@ -352,74 +293,60 @@ public sealed record SettingsChanged(Preferencias Preferencias) : Evento
 
 // Relógio e movimento.
 
-/// <summary><c>TICK</c>: um passo fixo do relógio lógico (1/60 s por padrão).</summary>
+// Um passo fixo (1/60 s por padrão).
 public sealed record Tick : Evento
 {
     public override Origem Origem => Origem.Relogio;
 }
 
-/// <summary>
-/// Sinal do módulo de movimento (parede, passagem, contato com o chão). A partir da Fase 4 sai
-/// do próprio passo físico; na Fase 2 só os testes o injetam.
-/// </summary>
+// Parede, passagem, contato com o chão. Normalmente sai do passo físico;
+// os testes também injetam.
 public sealed record MovementSignal(SinalDeMovimento Sinal) : Evento
 {
     public override Origem Origem => Origem.Relogio;
 }
 
-/// <summary>
-/// <c>AUTONOMY_TIMER</c>: disparo do temporizador único da agenda autônoma. A geração evita que
-/// um disparo antigo, que chegou depois de cancelado, seja tomado pelo atual.
-/// </summary>
+// A geração impede que um disparo velho, chegado depois de cancelado, seja
+// tomado pelo atual.
 public sealed record AutonomyTimer(long Geracao) : Evento
 {
     public override Origem Origem => Origem.Autonomo;
 }
 
-/// <summary>
-/// <c>ITEM_EFFECT_TIMER</c> (DEC-028): disparo do temporizador único da onda de um item, que a máquina agendou com
-/// <see cref="AgendarOnda"/>. A geração evita que um disparo antigo seja tomado pelo atual. Tem a prioridade do
-/// relógio: não é descartado com o usuário no controle e não encerra um gesto. Com o tamagotchi desligado, é ignorado.
-/// </summary>
+// Timer da onda (AgendarOnda), com geração pelo mesmo motivo. Tem prioridade
+// de relógio: não é descartado com o usuário no controle nem encerra gesto.
+// Com o tamagotchi desligado, é ignorado.
 public sealed record ItemEffectTimer(long Geracao) : Evento
 {
     public override Origem Origem => Origem.Relogio;
 }
 
-/// <summary>
-/// FOREGROUND_MONITOR_CHANGED (Fase 7; DEC-037, item 2): a chave opaca do monitor da janela em primeiro plano, confirmada
-/// pelo adaptador depois da carência e só quando muda. Nada da janela vem junto. Abaixo do sistema: não encerra um gesto.
-/// </summary>
+// Chave opaca do monitor da janela em primeiro plano, depois da carência e
+// só quando muda. Nada da janela vem junto. Abaixo do sistema: não encerra gesto.
 public sealed record ForegroundMonitorChanged(string Chave) : Evento
 {
     public override Origem Origem => Origem.Relogio;
 }
 
-/// <summary>
-/// ACTIVE_WINDOW_SPAN (Fase 7; DEC-037, item 2): a resposta ao pedido do vão (<see cref="PedirVaoDaJanelaAtiva"/>), com a
-/// mesma geração; nulo sem janela ou sem trecho no monitor.
-/// </summary>
+// Resposta a PedirVaoDaJanelaAtiva, com a mesma geração. Nulo sem janela ou
+// sem trecho no monitor.
 public sealed record ActiveWindowSpan(long Geracao, VaoDaJanela? Vao) : Evento
 {
     public override Origem Origem => Origem.Relogio;
 }
 
-/// <summary>CURIOSITY_TIMER (Fase 7; DEC-037, item 3): o disparo único da curiosidade, com a geração do agendamento.</summary>
 public sealed record CuriosityTimer(long Geracao) : Evento
 {
     public override Origem Origem => Origem.Relogio;
 }
 
-/// <summary>
-/// Troca de expressão pedida pela personalidade. Vale em qualquer estado e nunca muda estado de
-/// comportamento nem posição (invariante 6).
-/// </summary>
+// Vale em qualquer estado e nunca muda estado de comportamento nem posição.
 public sealed record ExpressionChange(Expressao Expressao) : Evento
 {
     public override Origem Origem => Origem.Expressao;
 }
 
-/// <summary>Conjunto imutável, ordenado e sem repetição de chaves de monitor, com igualdade por valor.</summary>
+// Imutável, ordenado, sem repetição, com igualdade por valor.
 public sealed class MonitoresOcupados : IEquatable<MonitoresOcupados>
 {
     public static readonly MonitoresOcupados Nenhum = new([]);
@@ -454,45 +381,31 @@ public sealed class MonitoresOcupados : IEquatable<MonitoresOcupados>
     public override string ToString() => string.Join(",", _chaves);
 }
 
-/// <summary>
-/// Preferências que o núcleo usa. Desde a Fase 5 são guardadas no settings.json
-/// (<see cref="Persistencia.EsquemaDeConfiguracoes"/>); a Fase 8 acrescenta as demais.
-/// </summary>
-/// <param name="Energia">Nível de energia; padrão Média (DEC-014).</param>
-/// <param name="ModoTelaCheia">Modo automático de tela cheia (Q-09); padrão ligado.</param>
-/// <param name="AtravessarMonitores">
-/// Se o personagem pode passar sozinho de um monitor para outro (Q-05; DEC-032), a escolha do usuário nas Configurações.
-/// O <see cref="Padrao"/> é desligado desde a DEC-046 (pedido do usuário: com ela ligada, quem não tem dois monitores via
-/// o personagem se comportar mal); o padrão deste parâmetro continua ligado, o de antes, para quem constrói à mão.
-/// </param>
+// Preferências gravadas no settings.json.
+// AtravessarMonitores: o Padrao é desligado (sem dois monitores ele parecia
+// se comportar mal), mas o default do parâmetro segue true pra quem constrói
+// na mão.
 public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bool AtravessarMonitores = true)
 {
     public static readonly Preferencias Padrao = new(NivelDeEnergia.Media, true, false);
 
-    /// <summary>
-    /// A emoção dominante (DEC-027): uma das 14 caras de humor (<see cref="Expressoes.DeHumor"/>), que vira a cara
-    /// de base e a mais sorteada nas trocas de expressão; nula, "Automática", como antes. Só muda as caras: nunca as
-    /// ações, os pesos da agenda nem a física. Fica fora do construtor posicional, e o padrão é a automática.
-    /// </summary>
+    // Uma das 14 caras de humor: vira a cara de base e a mais sorteada. Nula
+    // = "Automática". Só mexe nas caras, nunca em ações, pesos ou física.
     public Expressao? EmocaoDominante { get; init; }
 
-    /// <summary>
-    /// A chave geral do conteúdo adulto (DEC-033): desligada por padrão; desligada, nenhum item adulto nem efeito de
-    /// substância aparece ou acontece. Fica separada das escolhas individuais dos itens adultos.
-    /// </summary>
+    // Chave geral, desligada por padrão: desligada, nenhum item adulto nem
+    // efeito de substância acontece. Separada das escolhas por item.
     public bool ConteudoAdulto { get; init; }
 
-    /// <summary>
-    /// Itens adultos permitidos individualmente (DEC-041). O padrão habilita vodka, cerveja e cigarro; baseado fica desmarcado. As caixas
-    /// continuam configuráveis com a chave geral desligada, mas isso não libera o conteúdo enquanto ela estiver desligada.
-    /// </summary>
+    // Dá pra mexer nas caixas com a chave geral desligada, mas isso não libera
+    // nada enquanto ela estiver desligada.
     public ConjuntoDeItens ItensAdultosHabilitados { get; init; } = ItensAdultosPadrao;
 
-    /// <summary>Seleção inicial de conteúdo adulto, conforme DEC-041, item 7.</summary>
+    // Vodka, cerveja e cigarro; o baseado começa desmarcado.
     public static ConjuntoDeItens ItensAdultosPadrao => ConjuntoDeItens.Vazio
         .Com(Item.Vodka).Com(Item.Cerveja).Com(Item.Cigarro);
 
-    /// <summary>Os nove itens adultos (DEC-033 e DEC-041), todos marcados: o que valia antes da DEC-041.</summary>
+    // Os nove adultos marcados.
     public static ConjuntoDeItens TodosOsItensAdultos
     {
         get
@@ -504,14 +417,11 @@ public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bo
         }
     }
 
-    /// <summary>
-    /// As drogas que ele usa por conta própria, quando quer (DEC-045): só as seis ilícitas
-    /// (<see cref="TabelaDoTamagotchi.Ilicitos"/>), e cada uma também precisa estar marcada nos itens adultos, com a chave
-    /// geral ligada. Nenhuma por padrão, inclusive o baseado (antes da DEC-045 ele fumava sempre que podia).
-    /// </summary>
+    // Só as seis ilícitas, e cada uma também precisa estar marcada nos itens
+    // adultos com a chave geral ligada. Nenhuma por padrão, nem o baseado.
     public ConjuntoDeItens ItensPorContaPropria { get; init; } = ConjuntoDeItens.Vazio;
 
-    /// <summary>Deixa só as seis ilícitas num conjunto recebido de arquivo ou preferência externa.</summary>
+    // Filtra o que veio de arquivo ou de fora: só as seis ilícitas.
     public static ConjuntoDeItens NormalizarPorContaPropria(ConjuntoDeItens itens)
     {
         ConjuntoDeItens normalizados = ConjuntoDeItens.Vazio;
@@ -520,7 +430,7 @@ public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bo
         return normalizados;
     }
 
-    /// <summary>Remove itens não adultos de um conjunto recebido de arquivo ou preferência externa.</summary>
+    // Filtra o que veio de arquivo ou de fora: só itens adultos.
     public static ConjuntoDeItens NormalizarItensAdultos(ConjuntoDeItens itens)
     {
         ConjuntoDeItens normalizados = ConjuntoDeItens.Vazio;
@@ -529,16 +439,10 @@ public sealed record Preferencias(NivelDeEnergia Energia, bool ModoTelaCheia, bo
         return normalizados;
     }
 
-    /// <summary>
-    /// Se o personagem e os itens ficam sempre no topo (Q-03; DEC-038, item 8). Ligado por padrão; desligado, a ordem Z só
-    /// muda por pedido do usuário (mostrar pela bandeja ou pelo menu). Quem aplica é a raiz; o núcleo só guarda e grava.
-    /// Fica fora do construtor posicional.
-    /// </summary>
+    // Personagem e itens. Desligado, a ordem Z só muda a pedido do usuário
+    // (mostrar pela bandeja ou menu). Quem aplica é a raiz; aqui só guarda.
     public bool SempreNoTopo { get; init; } = true;
 
-    /// <summary>
-    /// O tamanho do personagem (DEC-038, item 9), que vale na próxima abertura: a raiz cria o núcleo e as janelas com ele.
-    /// O núcleo só guarda e grava. Fica fora do construtor posicional; o padrão é a Média, o tamanho de antes.
-    /// </summary>
+    // Vale na próxima abertura: a raiz cria o núcleo e as janelas com ela.
     public EscalaDoPersonagem Escala { get; init; } = EscalaDoPersonagem.Media;
 }

@@ -4,7 +4,7 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App;
 
-/// <summary>Acesso aos textos de <c>Textos.resx</c> (Q-12: textos fora do código).</summary>
+// Textos da interface ficam no Textos.resx, não no código.
 internal static class Textos
 {
     private static readonly ResourceManager Recursos = new("Buzzy.App.Textos", typeof(Textos).Assembly);
@@ -17,34 +17,29 @@ internal static class Textos
     internal static string DicaDaBandeja => Obter(nameof(DicaDaBandeja));
     internal static string AvisoElevado => Obter(nameof(AvisoElevado));
 
-    /// <summary>O submenu da emoção dominante (DEC-027).</summary>
     internal static string MenuEmocaoDominante => Obter(nameof(MenuEmocaoDominante));
 
-    /// <summary>A opção "Automática" da emoção dominante: o humor varia como antes da escolha.</summary>
+    // "Automática": o humor volta a variar sozinho.
     internal static string MenuEmocaoAutomatica => Obter(nameof(MenuEmocaoAutomatica));
 
-    /// <summary>
-    /// O nome de uma das 14 caras de humor (<see cref="Expressoes.DeHumor"/>) no submenu da emoção dominante, com a
-    /// tecla de acesso. As caras de efeito do tamagotchi não são emoção dominante: pedir uma delas é erro.
-    /// </summary>
+    // Com a tecla de acesso. Só as 14 caras de humor; as caras de efeito do tamagotchi
+    // não são emoção dominante, então pedir uma é erro.
     internal static string Emocao(Expressao emocao)
         => Expressoes.EhDeHumor(emocao)
             ? Obter(ChaveDaEmocao(emocao))
             : throw new ArgumentOutOfRangeException(nameof(emocao), emocao, "A emoção dominante é uma das 14 caras de humor.");
 
-    /// <summary>O submenu dos itens do tamagotchi (DEC-028); só existe com a chave dele ligada.</summary>
+    // Só aparece com o tamagotchi ligado.
     internal static string MenuItens => Obter(nameof(MenuItens));
 
-    /// <summary>"Recolher itens": todos os itens saem da tela (CMD_CLEAR_ITEMS).</summary>
     internal static string MenuRecolherItens => Obter(nameof(MenuRecolherItens));
 
-    /// <summary>"Conteúdo adulto": liga ou desliga os itens adultos, as ondas de substância e a paranoia (DEC-033).</summary>
+    // Liga/desliga itens adultos, ondas de substância e paranoia.
     internal static string MenuConteudoAdulto => Obter(nameof(MenuConteudoAdulto));
 
-    /// <summary>"Desviar da tela cheia": liga ou desliga o modo de tela cheia (Q-09; DEC-034).</summary>
     internal static string MenuModoTelaCheia => Obter(nameof(MenuModoTelaCheia));
 
-    // Fase 8 (DEC-038): o painel de energia, as configurações e as entradas do menu.
+    // Painel de energia e janela de configurações.
     internal static string MenuEnergia => Obter(nameof(MenuEnergia));
     internal static string MenuConfiguracoes => Obter(nameof(MenuConfiguracoes));
     internal static string PainelTitulo => Obter(nameof(PainelTitulo));
@@ -88,22 +83,17 @@ internal static class Textos
     internal static string ConfigInicioSimulado => Obter(nameof(ConfigInicioSimulado));
     internal static string ConfigFechar => Obter(nameof(ConfigFechar));
 
-    /// <summary>
-    /// O nome de um item do tamagotchi (DEC-028) no submenu "Itens", com a tecla de acesso. Só o nome: o menu não descreve
-    /// nada. Um valor fora do enum é erro.
-    /// </summary>
+    // Só o nome, com a tecla de acesso; o menu não descreve o item.
     internal static string Item(Item item)
         => Enum.IsDefined(item)
             ? Obter(ChaveDoItem(item))
             : throw new ArgumentOutOfRangeException(nameof(item), item, "Item fora do enum.");
 
-    /// <summary>
-    /// O nome de um item sem a tecla de acesso do menu Win32 (o "&amp;" de <see cref="Item"/>): o que a janela de
-    /// configurações mostra e o leitor de tela lê (DEC-041). Nenhum nome de item tem um "&amp;" literal.
-    /// </summary>
+    // Sem o "&" da tecla de acesso, pra janela de configurações e o leitor de tela.
+    // Pode tirar todos: nenhum nome de item tem "&" de verdade.
     internal static string NomeDoItem(Item item) => Item(item).Replace("&", "", StringComparison.Ordinal);
 
-    /// <summary>Todas as chaves usadas pelo aplicativo, para o teste que confere se nenhuma falta.</summary>
+    // Pro teste que confere se nenhuma chave falta no .resx.
     internal static IReadOnlyList<string> Chaves { get; } =
     [
         nameof(MenuEsconder), nameof(MenuMostrar), nameof(MenuPausar), nameof(MenuRetomar), nameof(MenuSair), nameof(DicaDaBandeja), nameof(AvisoElevado),
@@ -116,9 +106,9 @@ internal static class Textos
         => Recursos.GetString(chave, CultureInfo.InvariantCulture)
            ?? throw new InvalidOperationException($"Texto ausente em Textos.resx: {chave}");
 
-    /// <summary>A chave do nome de uma cara de humor no .resx: <c>Emocao</c> seguido do nome do valor (<c>EmocaoFeliz</c>).</summary>
+    // Ex.: EmocaoFeliz.
     private static string ChaveDaEmocao(Expressao emocao) => "Emocao" + emocao;
 
-    /// <summary>A chave do nome de um item no .resx: <c>Item</c> seguido do nome do valor (<c>ItemBanana</c>).</summary>
+    // Ex.: ItemBanana.
     private static string ChaveDoItem(Item item) => "Item" + item;
 }

@@ -3,15 +3,10 @@ using System.Security.Principal;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// Instância única (Q-03): abrir o Buzzy de novo revela o existente e não cria outro.
-///
-/// A primeira instância cria um mutex nomeado e um evento nomeado, ambos no espaço da sessão
-/// (<c>Local\</c>) e com o SID do usuário no nome. A segunda encontra o mutex, sinaliza o
-/// evento e sai. A primeira espera o evento com <see cref="ThreadPool.RegisterWaitForSingleObject(WaitHandle, WaitOrTimerCallback, object?, int, bool)"/>,
-/// que bloqueia no kernel sem nenhuma consulta periódica (DEC-011). O evento não carrega
-/// dado nenhum: o único efeito possível de sinalizá-lo é o Buzzy aparecer.
-/// </summary>
+// Abrir de novo só faz o Buzzy aberto aparecer. Mutex + evento nomeados em Local\ com o
+// SID no nome; a segunda sinaliza o evento e sai. A primeira espera com
+// RegisterWaitForSingleObject, que bloqueia no kernel sem polling. O evento não leva
+// dado: sinalizar só pode fazer o Buzzy aparecer.
 internal sealed class InstanciaUnica : IDisposable
 {
     private readonly Mutex _mutex;
@@ -41,10 +36,7 @@ internal sealed class InstanciaUnica : IDisposable
 
     private static string NomeDoEvento(string sufixo) => $@"Local\Buzzy.Mostrar.{sufixo}";
 
-    /// <summary>
-    /// Na segunda instância: pede para a primeira aparecer. Tenta por até 3 s, cobrindo o
-    /// instante em que a primeira já criou o mutex mas ainda não o evento.
-    /// </summary>
+    // Tenta por até 3 s: cobre a janela em que a primeira já criou o mutex mas não o evento.
     internal bool PedirParaAPrimeiraAparecer(out string? erro)
     {
         erro = null;
@@ -64,8 +56,8 @@ internal sealed class InstanciaUnica : IDisposable
             }
             catch (Exception e) when (e is UnauthorizedAccessException or WaitHandleCannotBeOpenedException or IOException)
             {
-                // Por exemplo, a primeira instância rodando com outro nível de acesso. Só o tipo e o código, que vão
-                // para o log: a mensagem traz o nome do evento, com o SID da conta (SECURITY.md 6).
+                // Ex.: a primeira rodando com outro nível de acesso. Só tipo + código pro log,
+                // porque a mensagem traz o nome do evento com o SID.
                 erro = $"{e.GetType().Name} 0x{e.HResult:X8}";
                 return false;
             }
@@ -75,7 +67,7 @@ internal sealed class InstanciaUnica : IDisposable
         return false;
     }
 
-    /// <summary>Na primeira instância: chama <paramref name="aoPedido"/> (em outra thread) a cada pedido.</summary>
+    // aoPedido roda em thread do pool, não na da UI.
     internal void EscutarPedidos(Action aoPedido)
     {
         if (_evento is null) throw new InvalidOperationException("Só a primeira instância escuta pedidos.");

@@ -3,11 +3,8 @@ using Buzzy.Core;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// Ícone da bandeja (Q-03), pela API da Shell, sem biblioteca de terceiros
-/// (ARCHITECTURE.md 2.13.3): versão 4 das notificações, identificado por janela e número,
-/// sem GUID, e recriado quando a barra de tarefas reinicia ou o DPI do principal muda.
-/// </summary>
+// Ícone da bandeja direto na API da Shell. Notificações versão 4, identificado por
+// hwnd + id (sem GUID). Recriado quando a barra reinicia ou o DPI do principal muda.
 internal sealed class Bandeja : IDisposable
 {
     internal const uint IdDoIcone = 1;
@@ -17,8 +14,7 @@ internal sealed class Bandeja : IDisposable
     private nint _icone;
     private bool _adicionado;
 
-    /// <param name="hwndServico">Janela que recebe as notificações do ícone.</param>
-    /// <param name="icone">HICON do ícone; esta classe passa a ser dona dele e o destrói no fim.</param>
+    // Passa a ser dona do HICON e o destrói no fim.
     internal Bandeja(nint hwndServico, nint icone)
     {
         _hwnd = hwndServico;
@@ -27,10 +23,9 @@ internal sealed class Bandeja : IDisposable
 
     internal bool Adicionado => _adicionado;
 
-    /// <summary>Se a Shell aceitou a versão 4 das notificações (coordenadas da âncora no wParam).</summary>
+    // Com a versão 4, as coordenadas da âncora vêm no wParam.
     internal bool Versao4 { get; private set; }
 
-    /// <summary>Adiciona o ícone e pede a versão 4 das notificações.</summary>
     internal bool Adicionar()
     {
         Win32.NOTIFYICONDATA dados = Dados(Win32.NIF_MESSAGE | Win32.NIF_ICON | Win32.NIF_TIP | Win32.NIF_SHOWTIP);
@@ -47,11 +42,8 @@ internal sealed class Bandeja : IDisposable
         return adicionou;
     }
 
-    /// <summary>
-    /// Recria o ícone depois de "TaskbarCreated". Remove antes, ignorando falha: numa
-    /// reinicialização real o ícone antigo já sumiu com a barra; se a mensagem chegar com o
-    /// ícone ainda lá (mudança de DPI), o NIM_ADD sozinho falharia.
-    /// </summary>
+    // Depois de "TaskbarCreated". Remove antes, ignorando falha: se a mensagem vier com
+    // o ícone ainda lá (mudança de DPI), o NIM_ADD sozinho falharia.
     internal bool Recriar()
     {
         Win32.NOTIFYICONDATA dados = Dados(0);
@@ -60,10 +52,7 @@ internal sealed class Bandeja : IDisposable
         return Adicionar();
     }
 
-    /// <summary>
-    /// Troca o HICON (por exemplo, para o tamanho de um DPI novo). Com <paramref name="aplicar"/>,
-    /// atualiza o ícone já presente na bandeja. O HICON antigo só é destruído depois.
-    /// </summary>
+    // O HICON antigo só é destruído depois de trocar.
     internal void TrocarIcone(nint novo, bool aplicar)
     {
         if (novo == 0) return;
@@ -77,7 +66,7 @@ internal sealed class Bandeja : IDisposable
         if (antigo != 0) Win32.DestroyIcon(antigo);
     }
 
-    /// <summary>Devolve o foco do teclado à área de notificação (documentação da Shell).</summary>
+    // Devolve o foco do teclado à área de notificação, como a Shell pede.
     internal void DevolverFoco()
     {
         if (!_adicionado) return;
@@ -85,7 +74,7 @@ internal sealed class Bandeja : IDisposable
         Win32.Shell_NotifyIcon(Win32.NIM_SETFOCUS, ref dados);
     }
 
-    /// <summary>Remove o ícone. NIM_DELETE é idempotente: é enviado mesmo sem confirmação de que o ícone existe.</summary>
+    // NIM_DELETE é idempotente, então manda mesmo sem saber se o ícone existe.
     internal void Remover()
     {
         Win32.NOTIFYICONDATA dados = Dados(0);
@@ -95,7 +84,7 @@ internal sealed class Bandeja : IDisposable
         if (estava || removeu) Diagnostico.Evento("BANDEJA", ("removido", removeu));
     }
 
-    /// <summary>Retângulo do ícone na barra, se a Shell informar (pode ser o da área de ícones ocultos).</summary>
+    // Pode vir o retângulo da área de ícones ocultos.
     internal RetanguloPx? Retangulo()
     {
         var id = new Win32.NOTIFYICONIDENTIFIER

@@ -5,23 +5,16 @@ using Buzzy.Core;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// O que as janelas do personagem e dos itens fazem igual na troca de DPI (Fase 5, passo P14; protótipo P6), num lugar só:
-/// <list type="bullet">
-/// <item>no <c>WM_GETDPISCALEDSIZE</c>, o tamanho certo é o do sprite no DPI novo, e não o pedido escalado linearmente pelo
-/// Windows, que já é o do DPI novo e ficaria com a escala aplicada duas vezes (<see cref="ResponderTamanhoEscalado"/>);</item>
-/// <item>a imagem tem o tamanho, em DIP, que põe cada pixel do bitmap num pixel da janela pelo DPI atual dela
-/// (<see cref="AjustarPixelAPixel"/>): no instante em que a janela já trocou de DPI e o sprite do DPI novo ainda não chegou,
-/// ou com ela montada entre monitores de escala diferente, a pixel art não é redimensionada pela metade.</item>
-/// </list>
-/// O <c>WM_DPICHANGED</c> continua com o WPF, que aplica o retângulo sugerido (ARCHITECTURE.md 2.13.3).
-/// </summary>
+// Troca de DPI comum às janelas do personagem e dos itens:
+// - no WM_GETDPISCALEDSIZE responde o tamanho do sprite no DPI novo; o escalado
+//   linear do Windows aplicaria a escala duas vezes;
+// - a imagem é dimensionada em DIP pra cada pixel do bitmap cair num pixel da
+//   janela, mesmo antes do sprite novo chegar ou entre monitores de escala diferente.
+// O WM_DPICHANGED fica com o WPF, que aplica o retângulo sugerido.
 internal static class EncaixeDeDpi
 {
-    /// <summary>
-    /// Responde o <c>WM_GETDPISCALEDSIZE</c>: escreve em <paramref name="lParam"/> (um SIZE) o <paramref name="tamanho"/> no
-    /// DPI novo, que vem em <paramref name="wParam"/>. Devolve falso, sem escrever, com um DPI inválido: o Windows decide.
-    /// </summary>
+    // wParam traz o DPI novo; lParam aponta um SIZE. DPI inválido: devolve falso
+    // sem escrever e o Windows decide.
     internal static bool ResponderTamanhoEscalado(nint wParam, nint lParam, TamanhoDip tamanho)
     {
         int dpiNovo = (int)(long)wParam;
@@ -32,18 +25,14 @@ internal static class EncaixeDeDpi
         return true;
     }
 
-    /// <summary>O tamanho, em DIP, que leva um bitmap de <paramref name="larguraPx"/> × <paramref name="alturaPx"/> pixel a pixel
-    /// numa janela de <paramref name="dpiDaJanela"/>: pixels × 96 / DPI.</summary>
+    // DIP = pixels × 96 / DPI.
     internal static (double Largura, double Altura) TamanhoPixelAPixel(int larguraPx, int alturaPx, double dpiDaJanela)
     {
         if (dpiDaJanela <= 0) throw new ArgumentOutOfRangeException(nameof(dpiDaJanela), dpiDaJanela, "O DPI é positivo.");
         return (larguraPx * 96.0 / dpiDaJanela, alturaPx * 96.0 / dpiDaJanela);
     }
 
-    /// <summary>
-    /// Dimensiona a <paramref name="imagem"/> (com <c>Stretch.Fill</c>) para o bitmap dela preencher a janela pixel a pixel,
-    /// pelo <paramref name="dpiDaJanela"/>. Sem bitmap ou com um DPI inválido, nada muda.
-    /// </summary>
+    // A imagem usa Stretch.Fill. Sem bitmap ou com DPI inválido, nada muda.
     internal static void AjustarPixelAPixel(Image imagem, double dpiDaJanela)
     {
         ArgumentNullException.ThrowIfNull(imagem);

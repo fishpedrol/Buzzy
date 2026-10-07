@@ -5,36 +5,25 @@ using Buzzy.Visual.Pixel;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// O sprite da janela de um item do tamagotchi (DEC-028; crítica, C11 e C27): o desenho do chão da pixel art
-/// (<see cref="ItensPixel.Desenhar"/>, 24 × 24 pixels de arte) ampliado por vizinho mais próximo até o tamanho do item
-/// no DPI do monitor (2×, 3× e 4× exatos em 100%, 150% e 200%), sem achatar nem esticar. Alfa só 0 ou 255: só os pixels
-/// opacos recebem clique, como no personagem (ARCHITECTURE.md 2.13.7, item 7). Os desenhos ficam num cache limitado,
-/// por item e DPI; os limites opacos e os pontos de teste vão para o log de diagnóstico.
-/// </summary>
+// Sprite da janela de um item: o desenho de chão da arte (24 × 24 px) ampliado por
+// vizinho mais próximo até o tamanho do item no DPI (2×, 3×, 4× exatos em 100%, 150%,
+// 200%). Alfa só 0 ou 255, então só os pixels opacos recebem clique.
 internal static class SpriteDoItem
 {
-    /// <summary>
-    /// Tamanho lógico do item: o do núcleo do aplicativo (<see cref="ConfiguracaoDoNucleo.TamanhoDoItem"/>, 48 × 48 DIP),
-    /// a mesma fonte que dá o retângulo da janela.
-    /// </summary>
+    // 48 × 48 DIP, da mesma fonte que dá o retângulo da janela.
     internal static readonly TamanhoDip TamanhoLogico = new ConfiguracaoDoNucleo().TamanhoDoItem;
 
-    /// <summary>
-    /// Orçamento do cache (crítica, C28): 4 MiB. São 13 itens por DPI; a 100% cada desenho tem 9 KiB e, a 300%, 81 KiB:
-    /// os 13 cabem em vários DPIs ao mesmo tempo.
-    /// </summary>
+    // 4 MiB. 13 itens por DPI, de 9 KiB (100%) a 81 KiB (300%) cada: cabem vários DPIs.
     internal const long OrcamentoDoCache = 4L * 1024 * 1024;
 
     private static readonly CacheDeQuadros<(Item Item, int Dpi)> Cache = new(OrcamentoDoCache);
 
-    /// <summary>Quantos bytes de pixels os desenhos do cache ocupam.</summary>
     internal static long BytesEmCache => Cache.Bytes;
 
-    /// <summary>Quantos desenhos já foram feitos, por não estarem no cache.</summary>
+    // Conta só os que não estavam no cache.
     internal static long QuadrosRenderizados { get; private set; }
 
-    /// <summary>O item no DPI do monitor (tamanho físico = <see cref="TamanhoLogico"/> no DPI dado), congelado e do cache.</summary>
+    // Congelado e vindo do cache quando dá.
     internal static BitmapSource Renderizar(Item item, int dpi)
     {
         if (!Enum.IsDefined(item)) throw new ArgumentOutOfRangeException(nameof(item), item, "Item fora do enum.");
@@ -46,10 +35,8 @@ internal static class SpriteDoItem
         return bmp;
     }
 
-    /// <summary>
-    /// O menor retângulo com os pixels opacos do sprite, em coordenadas da janela (pixels físicos): onde o item recebe
-    /// clique. Lido dos pixels do próprio bitmap, que é o que o Windows usa para decidir o clique.
-    /// </summary>
+    // Menor retângulo com os pixels opacos, em px da janela: onde o item recebe clique.
+    // Lido do próprio bitmap, que é o que o Windows usa pra decidir o clique.
     internal static RetanguloPx LimitesOpacos(Item item, int dpi)
     {
         BitmapSource bmp = Renderizar(item, dpi);
@@ -71,11 +58,8 @@ internal static class SpriteDoItem
         return d == 0 ? default : new RetanguloPx(e, t, d, b);
     }
 
-    /// <summary>
-    /// Pontos de teste em coordenadas da janela (pixels físicos), para as verificações clicarem no item: um opaco, no
-    /// corpo do desenho (o de <see cref="ItensPixel.PontosDeTeste"/>, no centro do pixel de arte ampliado), e um
-    /// transparente, no canto de cima à esquerda. Conferidos contra os pixels do bitmap.
-    /// </summary>
+    // Onde as verificações clicam, em px da janela: um opaco no centro do pixel de arte
+    // de ItensPixel.PontosDeTeste e um transparente no canto. Conferidos no bitmap.
     internal static (PontoPx Opaco, PontoPx Transparente) PontosDeTeste(Item item, int dpi)
     {
         BitmapSource bmp = Renderizar(item, dpi);

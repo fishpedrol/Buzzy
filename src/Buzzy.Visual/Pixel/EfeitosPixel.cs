@@ -1,6 +1,6 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>Sobreposições de desenho animado por cima do boneco (DEC-028).</summary>
+// Sobreposições de desenho animado por cima do boneco.
 public enum EfeitoVisual
 {
     Nenhum,
@@ -13,39 +13,26 @@ public enum EfeitoVisual
     Poeira,
     Borrifo,
 
-    /// <summary>Gotas de suor saltando da cabeça: a onda Paranoico (adicional de 2026-10-01).</summary>
+    // Gotas saltando da cabeça (paranoia).
     Suor,
 }
 
-/// <summary>
-/// Sobreposições de efeito do tamagotchi (DEC-028) em <see cref="Fases"/> fases, desenhadas por
-/// <see cref="BonecoPixel.Desenhar"/> depois do corpo e antes do contorno: carimbos pequenos em volta
-/// da cabeça (ou entre as mãos, no borrifo), com uma linha de contorno onde passam por cima do corpo.
-/// Nunca cobrem olhos, sobrancelhas, nariz, rubor e boca (<see cref="AreaDoRosto"/>) e ficam a 2 pixels
-/// das bordas do quadro, para o contorno caber. A fase 0 é a parada: sem relógio, vale sempre ela
-/// (DEC-011); com o relógio ligado, a apresentação troca a fase a cada 12 passos.
-/// <para>
-/// A apresentação escolhe a sobreposição pela onda do núcleo (crítica, L12): Bebado → <see cref="EfeitoVisual.Bolhas"/>;
-/// Chapado → <see cref="EfeitoVisual.Fumaca"/>; Eletrico → <see cref="EfeitoVisual.Brilhos"/>; Tonto →
-/// <see cref="EfeitoVisual.Estrelinhas"/>; Euforico → <see cref="EfeitoVisual.Coracoes"/>; Viajando →
-/// <see cref="EfeitoVisual.Cores"/>; Satisfeito, Alegre, Relaxado e Ligado → nenhuma; Paranoico (adicional de
-/// 2026-10-01) → <see cref="EfeitoVisual.Suor"/>. <see cref="EfeitoVisual.Poeira"/>
-/// e <see cref="EfeitoVisual.Borrifo"/> são das poses de uso (cheirar e inalar); a poeira também é o espirro e
-/// a fumaça, a tosse. Os seis gestos da onda (L11) têm poses provisórias em <see cref="PosesPixel.DosGestos"/>:
-/// a dança é o "brincando", a gargalhada o "reagindo", a tremedeira o parado deslocado 1 pixel, e o soluço, a
-/// tosse e o espirro o parado com a cara e o efeito do gesto, com a sobreposição da onda por cima. Os dois da
-/// paranoia, "olharproteto" e "agachar", têm desenho próprio.
-/// </para>
-/// </summary>
+// Carimbos pequenos em volta da cabeça (ou entre as mãos, no borrifo), desenhados depois do corpo
+// e antes do contorno. Nunca cobrem olhos, sobrancelhas, nariz, rubor e boca, e ficam a 2 px da
+// borda pro contorno caber. A fase 0 é a parada (sem relógio fica nela); com relógio, troca a cada
+// 12 passos.
+// Onda -> efeito: Bebado = Bolhas, Chapado = Fumaca, Eletrico = Brilhos, Tonto = Estrelinhas,
+// Euforico = Coracoes, Viajando = Cores, Paranoico = Suor; Satisfeito, Alegre, Relaxado e Ligado,
+// nenhum. Poeira e Borrifo são das poses de uso (cheirar, inalar); a poeira também serve pro
+// espirro e a fumaça pra tosse.
 public static class EfeitosPixel
 {
-    /// <summary>Quantas fases cada sobreposição tem.</summary>
     public const int Fases = 3;
 
-    /// <summary>Distância mínima de um carimbo de efeito às bordas do quadro: o contorno fica a 1 pixel.</summary>
+    // Distância mínima à borda do quadro; o contorno fica a 1 px.
     private const int Margem = 2;
 
-    /// <summary>Os efeitos que desenham alguma coisa, na ordem do enum.</summary>
+    // Só os que desenham algo, na ordem do enum.
     public static readonly IReadOnlyList<EfeitoVisual> Todos =
     [
         EfeitoVisual.Fumaca, EfeitoVisual.Bolhas, EfeitoVisual.Brilhos, EfeitoVisual.Estrelinhas,
@@ -116,14 +103,14 @@ public static class EfeitosPixel
         "A.",
         "Aa");
 
-    // Gotas de suor (paranoia): a grande é a mesma da têmpora da cara paranoica; a pequena, a ponta e um corpo de 3.
+    // A gota grande é a mesma da têmpora da cara paranoica.
     private static readonly Carimbo SuorG = BonecoPixel.GotaDeSuor;
     private static readonly Carimbo SuorP = new(
         ".A.",
         "AWa",
         "Aaa");
 
-    /// <summary>Um losango de cor, para o viajando.</summary>
+    // Pro viajando.
     private static Carimbo Losango(char letra) => new(
         $"..{letra}..",
         $".{letra}{letra}{letra}.",
@@ -133,23 +120,15 @@ public static class EfeitosPixel
 
     private static readonly Carimbo Rosa = Losango('R'), Lilas = Losango('V'), Verde = Losango('N'), Azul = Losango('a');
 
-    /// <summary>
-    /// Os pixels do rosto que as sobreposições nunca cobrem, na vista da pose e com a cara da própria pose, em
-    /// pixels do quadro sem espelho: os carimbos dos olhos, das sobrancelhas, do nariz, do rubor e da boca. É uma
-    /// máscara só dos traços, não um retângulo: assim a fumaça e as bolhas podem sair do canto da boca (revisão da
-    /// arte, achado 7).
-    /// </summary>
+    // Pixels que os efeitos nunca cobrem (olhos, sobrancelhas, nariz, rubor, boca), no quadro sem
+    // espelho. É máscara dos traços e não um retângulo, pra fumaça e bolhas poderem sair do canto da boca.
     public static IReadOnlySet<(int X, int Y)> AreaDoRosto(PosePixel pose)
     {
         ArgumentNullException.ThrowIfNull(pose);
         return AreaDoRosto(pose, pose.Expressao);
     }
 
-    /// <summary>
-    /// A área do rosto com a cara <paramref name="expressao"/>: a de sempre e, na cara com gota de suor
-    /// (<see cref="Rosto.Gota"/>, a paranoica), também a gota com o contorno dela. Para as outras caras, é a mesma
-    /// área em qualquer cara.
-    /// </summary>
+    // Só muda pra cara com gota de suor, que protege também a gota e o contorno dela.
     public static IReadOnlySet<(int X, int Y)> AreaDoRosto(PosePixel pose, string expressao)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -160,7 +139,7 @@ public static class EfeitosPixel
 
     private static HashSet<(int X, int Y)> AreaDoRosto(PontosDoEsqueleto p, Vista vista, bool gota)
     {
-        // Os carimbos do rosto partem do centro arredondado da cabeça (BonecoPixel.DesenharCabeca...).
+        // Mesma origem dos carimbos do rosto em BonecoPixel: centro arredondado da cabeça.
         int ex = (int)Math.Round(p.Cabeca.X), ey = (int)Math.Round(p.Cabeca.Y);
         var area = new HashSet<(int X, int Y)>();
         void Retangulo(int x0, int y0, int x1, int y1)
@@ -171,35 +150,30 @@ public static class EfeitosPixel
         }
         if (vista == Vista.Frente)
         {
-            Retangulo(ex - 9, ey - 4, ex - 3, ey + 3);   // olho da esquerda (7 × 8)
-            Retangulo(ex + 2, ey - 4, ex + 8, ey + 3);   // olho da direita
-            Retangulo(ex - 8, ey - 7, ex + 6, ey - 5);   // sobrancelhas (15 × 3)
-            Retangulo(ex - 9, ey + 4, ex + 8, ey + 5);   // nariz e bochechas (o rubor pequeno e o grande)
-            Retangulo(ex - 5, ey + 6, ex + 3, ey + 9);   // boca (9 × 4)
+            Retangulo(ex - 9, ey - 4, ex - 3, ey + 3);   // olho esquerdo
+            Retangulo(ex + 2, ey - 4, ex + 8, ey + 3);   // olho direito
+            Retangulo(ex - 8, ey - 7, ex + 6, ey - 5);   // sobrancelhas
+            Retangulo(ex - 9, ey + 4, ex + 8, ey + 5);   // nariz e rubor (pequeno e grande)
+            Retangulo(ex - 5, ey + 6, ex + 3, ey + 9);   // boca
         }
         else
         {
-            Retangulo(ex + 3, ey - 8, ex + 7, ey + 2);   // sobrancelha e olho (5 × 8)
+            Retangulo(ex + 3, ey - 8, ex + 7, ey + 2);   // sobrancelha e olho
             Retangulo(ex + 3, ey + 3, ex + 5, ey + 4);   // rubor
             Retangulo(ex + 11, ey + 2, ex + 12, ey + 3); // nariz
-            // Boca (5 × 4) com 1 pixel em volta: de perfil, a boca aberta passa do focinho e ganha contorno.
+            // Boca com 1 px de folga: de perfil, a boca aberta passa do focinho e ganha contorno.
             Retangulo(ex + 6, ey + 4, ex + 12, ey + 9);
         }
         if (gota)
         {
-            // A gota de suor da cara paranoica, com o contorno em volta.
             (int gx, int gy) = BonecoPixel.CantoDaGota(vista, ex, ey);
             Retangulo(gx - 1, gy - 1, gx + BonecoPixel.GotaDeSuor.Largura, gy + BonecoPixel.GotaDeSuor.Altura);
         }
         return area;
     }
 
-    /// <summary>
-    /// Desenha a sobreposição na <paramref name="fase"/> (qualquer inteiro; vale o resto por
-    /// <see cref="Fases"/>). <see cref="EfeitoVisual.Nenhum"/> não desenha nada. Com <paramref name="cipo"/>
-    /// (a pose pendurada no cipó), nenhum carimbo cobre o cipó, as folhas ou a mão que o segura (a gota de suor que
-    /// cairia ali salta do outro lado da cabeça). Com <paramref name="gota"/> (a cara tem gota de suor), nenhum cobre a gota.
-    /// </summary>
+    // fase pode ser qualquer inteiro (usa o resto). No cipó, nada cobre o cipó, as folhas ou a mão
+    // que segura. Com gota, nada cobre a gota de suor do rosto.
     internal static void Desenhar(Tela tela, PontosDoEsqueleto pontos, Vista vista, EfeitoVisual efeito, int fase, bool cipo = false, bool gota = false)
     {
         if (efeito == EfeitoVisual.Nenhum) return;
@@ -209,26 +183,25 @@ public static class EfeitosPixel
         (double X, double Y)? maoNoCipo = cipo ? pontos.MaoB : null;
         foreach ((Carimbo c, double x, double y) in Carimbos(efeito, f, ex, ey, pontos, vista))
         {
-            // Pendurado no cipó, a gota de suor que cairia sobre ele ou sobre a mão que o segura salta do outro lado da
-            // cabeça, no espelho da posição dela: o suor continua com 2 ou 3 gotas (revisão da paranoia, achado 6). Nos
-            // outros efeitos, o carimbo só some, como antes.
+            // No cipó, a gota de suor que cairia em cima dele vai pro lado espelhado da cabeça, pra
+            // continuar com 2 ou 3 gotas. Nos outros efeitos o carimbo só some.
             if (!Carimbar(tela, c, x, y, rosto, maoNoCipo) && efeito == EfeitoVisual.Suor)
                 Carimbar(tela, c, 2 * ex - x - 1, y, rosto, maoNoCipo);
         }
     }
 
-    /// <summary>Raio, em pixels, em volta do centro da mão que segura o cipó, onde nenhum carimbo entra.</summary>
+    // Px em volta do centro da mão no cipó onde nenhum carimbo entra.
     private const double RaioDaMaoNoCipo = 4;
 
-    /// <summary>Os carimbos de cada efeito e fase, com o centro de cada um.</summary>
+    // X, Y = centro de cada carimbo.
     private static IEnumerable<(Carimbo Carimbo, double X, double Y)> Carimbos(EfeitoVisual efeito, int fase, int ex, int ey, PontosDoEsqueleto p, Vista vista)
     {
         bool frente = vista == Vista.Frente;
         switch (efeito)
         {
             case EfeitoVisual.Fumaca:
-                // Fumaça que sai da boca e sobe, crescendo: de frente, do canto da boca para a direita, por
-                // fora da bochecha (do lado da orelha, lia como vapor de raiva); de perfil, da boca para a frente.
+                // Sai da boca e sobe crescendo. De frente, pela direita por fora da bochecha (perto da
+                // orelha parecia vapor de raiva); de perfil, pra frente.
                 (Carimbo, double, double)[][] fumaca = frente
                     ?
                     [
@@ -244,8 +217,7 @@ public static class EfeitosPixel
                     ];
                 return fumaca[fase];
             case EfeitoVisual.Bolhas:
-                // Bolhas de soluço que saem da boca e sobem: de frente, do canto da boca (do lado da orelha,
-                // liam como gotas de suor); de perfil, da boca para a frente.
+                // Bolhas de soluço saindo do canto da boca (perto da orelha pareciam suor).
                 (Carimbo, double, double)[][] bolhas = frente
                     ?
                     [
@@ -269,7 +241,7 @@ public static class EfeitosPixel
                 ];
                 return brilhos[fase];
             case EfeitoVisual.Estrelinhas:
-                // Estrelinhas girando em volta da cabeça, na altura da aba do chapéu.
+                // Girando na altura da aba do chapéu.
                 (Carimbo, double, double)[][] estrelas =
                 [
                     [(Estrela, ex - 18, ey - 7), (Estrela, ex + 17, ey - 3)],
@@ -294,8 +266,7 @@ public static class EfeitosPixel
                 ];
                 return cores[fase];
             case EfeitoVisual.Poeira:
-                // Nuvenzinhas que saem do nariz, subindo: de frente, dos dois lados; de perfil, à frente do
-                // focinho (atrás da cabeça, liam como saindo da nuca).
+                // Nuvenzinhas subindo do nariz. De perfil, na frente do focinho (atrás parecia sair da nuca).
                 (Carimbo, double, double)[][] poeira = frente
                     ?
                     [
@@ -311,17 +282,15 @@ public static class EfeitosPixel
                     ];
                 return poeira[fase];
             case EfeitoVisual.Borrifo:
-                // Gotinhas do frasco (mão A, a válvula 9 pixels acima) para o lenço (mão B).
+                // Do frasco (mão A, válvula 9 px acima) pro lenço (mão B).
                 (double X, double Y) de = (p.MaoA.X + 2, p.MaoA.Y - 9), ate = (p.MaoB.X - 3, p.MaoB.Y - 5);
                 (double X, double Y) Em(double k) => (de.X + (ate.X - de.X) * k, de.Y + (ate.Y - de.Y) * k);
                 double[][] trechos = [[0.3, 0.7], [0.5, 0.15], [0.85, 0.45]];
                 return trechos[fase].Select((k, i) => (i == 0 ? Gota : GotaP, Em(k).X, Em(k).Y));
             case EfeitoVisual.Suor:
-                // Gotas de suor saltando da cabeça (paranoia): de frente, da têmpora da esquerda, para fora, e por cima
-                // da ponta direita da aba, longe do braço que aponta para o teto e da gota da têmpora; de perfil, da
-                // nuca e por cima da aba, à frente. Cada gota sobe e cai num arco, e na fase 2 uma nova sai da têmpora.
-                // A da direita cai sobre a ponta da aba, e não para fora dela, onde pousava no dedo que aponta para o
-                // teto (revisão da paranoia, achado 3).
+                // De frente: da têmpora esquerda pra fora e por cima da ponta direita da aba (longe do
+                // dedo que aponta pro teto; mais pra fora ela pousava nele). De perfil: da nuca e por cima
+                // da aba. Cada gota faz um arco; na fase 2 sai uma nova da têmpora.
                 (Carimbo, double, double)[][] suor = frente
                     ?
                     [
@@ -341,13 +310,9 @@ public static class EfeitosPixel
         }
     }
 
-    /// <summary>
-    /// Carimba centrado em (<paramref name="cx"/>, <paramref name="cy"/>), puxado para dentro do quadro,
-    /// sem tocar a área do rosto, com uma linha de contorno onde passa por cima do que já está desenhado.
-    /// Pendurado no cipó (<paramref name="maoNoCipo"/> é o centro da mão que o segura), um carimbo que
-    /// cairia sobre o cipó, as folhas ou essa mão (ou encostado neles) não é desenhado: a mão agarrada ao
-    /// cipó fica sempre à vista (revisão da arte, achado 7). Devolve falso só nesse caso.
-    /// </summary>
+    // Centrado em (cx, cy), puxado pra dentro do quadro, fora do rosto, com contorno onde passa por
+    // cima do desenho. No cipó, se encostar no cipó, nas folhas ou na mão, não desenha e devolve
+    // falso: a mão agarrada tem que ficar à vista.
     private static bool Carimbar(Tela tela, Carimbo c, double cx, double cy, HashSet<(int X, int Y)> rosto, (double X, double Y)? maoNoCipo)
     {
         int lado = tela.Largura;
@@ -365,7 +330,7 @@ public static class EfeitosPixel
             }
         }
         bool NoRosto(int x, int y) => rosto.Contains((x, y));
-        // O carimbo guarda 1 pixel de folga do rosto: o contorno dele não entra na área protegida.
+        // 1 px de folga do rosto pro contorno não invadir a área protegida.
         bool PertoDoRosto(int x, int y)
         {
             for (int dy = -1; dy <= 1; dy++)
@@ -386,23 +351,17 @@ public static class EfeitosPixel
         return true;
     }
 
-    /// <summary>
-    /// O modificador de pose do efeito, sem pose nova: o bêbado balança o tronco e a cabeça, o chapado
-    /// abaixa a cabeça, o tonto a gira, o elétrico treme de lado e o apaixonado balança, os dois com a cauda erguida,
-    /// quem viaja balança a cabeça e o paranoico dá um tremidinho de 1 pixel, sem mexer na cauda. Vale no chão: parado,
-    /// andando, descansando e nos gestos; na parede, no cipó (que já balança), no ar, segurado, no esconderijo, no
-    /// espiar e nas poses de uso, a pose fica como está. <see cref="EfeitoVisual.Poeira"/> e
-    /// <see cref="EfeitoVisual.Borrifo"/> não mudam a pose.
-    /// </summary>
+    // Mexe na pose sem criar pose nova: bêbado balança tronco e cabeça, chapado baixa a cabeça, tonto
+    // gira, elétrico treme de lado e apaixonado balança (os dois com a cauda erguida), viajando balança
+    // a cabeça, paranoico treme 1 px. Só vale no chão (ver Modificavel).
     public static PosePixel Modificar(PosePixel pose, EfeitoVisual efeito, int fase)
     {
         ArgumentNullException.ThrowIfNull(pose);
         if (!Modificavel(pose)) return pose;
         int f = (fase % Fases + Fases) % Fases;
         Cauda alta = pose.Vista == Vista.Frente ? Cauda.Alta : Cauda.PerfilAlta;
-        // Cada balanço passa um terço do tempo de cada lado e um no meio (revisão da arte, achado 10: com
-        // +6, −6, +6, o bêbado ficava dois terços do tempo do mesmo lado, mancando). A zonzeira do tonto
-        // dá uma volta (esquerda, direita, cabeça baixa) sem saltar mais de 10° de uma fase para a outra.
+        // Balanço: um terço de cada lado e um no meio (com +6, -6, +6 o bêbado parecia mancar).
+        // O tonto dá a volta (esquerda, direita, cabeça baixa) sem pular mais de 10° por fase.
         return efeito switch
         {
             EfeitoVisual.Bolhas => pose with { Tronco = pose.Tronco + (1 - f) * 6, Cabeca = pose.Cabeca + (1 - f) * 4 },
@@ -411,16 +370,14 @@ public static class EfeitosPixel
             EfeitoVisual.Brilhos => pose with { QuadrilX = pose.QuadrilX + f switch { 0 => 0, 1 => 1, _ => -1 }, Cauda = alta },
             EfeitoVisual.Coracoes => pose with { Tronco = pose.Tronco + f switch { 0 => -3, 1 => 0, _ => 3 }, Cauda = alta },
             EfeitoVisual.Cores => pose with { Cabeca = pose.Cabeca + f switch { 0 => -4, 1 => 4, _ => 0 } },
-            // Paranoia: o corpo inteiro treme 1 pixel de lado (a fase 0, a parada, fica no lugar).
+            // Treme 1 px de lado; a fase 0 fica no lugar.
             EfeitoVisual.Suor => pose with { QuadrilX = pose.QuadrilX + f switch { 0 => 0, 1 => -1, _ => 1 } },
             _ => pose,
         };
     }
 
-    /// <summary>
-    /// Se os modificadores valem na pose: no chão, parado, andando, descansando e nos gestos, fora do
-    /// esconderijo, do espiar e do cipó; nunca nas poses de uso.
-    /// </summary>
+    // No chão (parado, andando, descansando, gestos), fora do esconderijo, do espiar e do cipó (que já
+    // balança). Nunca nas poses de uso.
     public static bool Modificavel(PosePixel pose)
     {
         ArgumentNullException.ThrowIfNull(pose);

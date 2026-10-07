@@ -1,10 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!--
-    Núcleo puro do Buzzy (DEC-007, ARCHITECTURE.md 2.1 e 2.2): sem WPF, sem Windows Forms e
-    sem nenhuma chamada ao sistema operacional. Recebe geometria e tempo como dados e pode
-    ser testado sem abrir janelas.
-  -->
+  <!-- Núcleo puro: sem WPF, WinForms nem chamadas ao sistema. Geometria e tempo
+       entram como dados, então dá pra testar sem abrir janela. -->
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>

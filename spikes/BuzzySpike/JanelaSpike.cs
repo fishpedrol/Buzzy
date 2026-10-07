@@ -19,12 +19,8 @@ internal enum Modo
     Receptor,
 }
 
-/// <summary>
-/// Elemento que conta as próprias passagens de desenho. Em repouso, o WPF só chama
-/// OnRender quando o elemento é invalidado, então o contador é uma prova interna e de
-/// custo zero de que nada está sendo redesenhado. Não serve para isso um assinante de
-/// CompositionTarget.Rendering, porque assinar já força quadros contínuos.
-/// </summary>
+// Conta os OnRender: em repouso o WPF só chama quando invalida, então é uma prova de graça de
+// que nada redesenha. Assinar CompositionTarget.Rendering não serve, porque já força quadros.
 internal sealed class SuperficieContada : FrameworkElement
 {
     private BitmapSource? _fonte;
@@ -48,10 +44,8 @@ internal sealed class SuperficieContada : FrameworkElement
     }
 }
 
-/// <summary>
-/// Janela única dos protótipos P1, P3 e P2. O modo escolhe o comportamento; a janela em si
-/// é sempre a mesma, para que a medição de P2 valha para a mesma janela que P1 e P3 testam.
-/// </summary>
+// A mesma janela pra todos os modos, assim a medição de desempenho vale pra janela que os
+// testes de clique e arraste usam.
 internal sealed class JanelaSpike : Window
 {
     private readonly Modo _modo;
@@ -66,26 +60,25 @@ internal sealed class JanelaSpike : Window
     private nint _hwnd;
     private uint _dpi = 96;
 
-    // Posição física autoritativa da janela, em pixels do desktop virtual.
+    // Fonte da verdade da posição, em px físicos do desktop virtual.
     private int _posX;
     private int _posY;
 
-    // ---- estado do gesto (P3) ----
+    // ---- gesto ----
     private bool _pressionado;
     private bool _arrastando;
-    private int _agarreX, _agarreY;      // ponto de agarre, em coordenadas de cliente
+    private int _agarreX, _agarreY;      // coordenadas de cliente
     private int _limiarX, _limiarY;
     private readonly List<double> _latenciasMs = [];
     private int _movimentos;
     private nint _foregroundNoPressionar;
 
-    // Verdadeiro só durante o ReleaseCapture do próprio SOLTAR. ReleaseCapture envia
-    // WM_CAPTURECHANGED de forma síncrona; sem esta marca, o gesto era encerrado duas vezes
-    // (uma como "captura perdida", outra como "soltou"), e o log não distinguia uma perda
-    // de captura real, como a de Alt+Tab, da liberação normal ao soltar.
+    // Ligado só durante o nosso ReleaseCapture. Ele manda WM_CAPTURECHANGED na hora, e sem
+    // isso o gesto encerrava duas vezes e não dava pra separar soltar normal de perda real
+    // de captura (Alt+Tab).
     private bool _soltandoPorNos;
 
-    // ---- animação (P2) ----
+    // ---- animação ----
     private DispatcherTimer? _timer;
     private int _quadroAtual;
     private long _ticks;
@@ -102,8 +95,7 @@ internal sealed class JanelaSpike : Window
         _xPedido = x;
         _yPedido = y;
 
-        // Janela do tamanho do sprite, transparente por pixel, que não ativa e não
-        // aparece na barra de tarefas. ARCHITECTURE.md 2.13.1 e decisão Q-03.
+        // Do tamanho do sprite, transparente por pixel, sem ativar e fora da barra de tarefas.
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
@@ -132,7 +124,7 @@ internal sealed class JanelaSpike : Window
         _dpi = Interop.GetDpiForWindow(_hwnd);
         if (_dpi == 0) _dpi = 96;
 
-        // Não ativar ao ser clicada, e ficar fora da barra de tarefas e do Alt+Tab.
+        // Não ativa no clique e fica fora da barra de tarefas e do Alt+Tab.
         nint ex = Interop.GetWindowLongPtr(_hwnd, Interop.GWL_EXSTYLE);
         Interop.SetWindowLongPtr(_hwnd, Interop.GWL_EXSTYLE,
             (nint)((long)ex | Interop.WS_EX_NOACTIVATE | Interop.WS_EX_TOOLWINDOW));
@@ -148,9 +140,7 @@ internal sealed class JanelaSpike : Window
         _figuraParada = FiguraTeste.Criar();
         _figuraComMargem = FiguraTeste.Criar(margemAlfa1: true);
 
-        // A janela tem exatamente o tamanho da figura em pixels físicos. Em 96 DPI a conta
-        // é neutra; num monitor com escala diferente, a escala compensa para manter 1:1,
-        // porque P1 exige que cada pixel da figura caia num pixel da tela.
+        // Compensa o DPI pra cada pixel da figura cair num pixel físico da tela (1:1).
         double fator = 96.0 / _dpi;
         _superficie.LayoutTransform = new ScaleTransform(fator, fator);
 
@@ -192,7 +182,6 @@ internal sealed class JanelaSpike : Window
         }
         else
         {
-            // Centro da área útil do monitor primário.
             var mi = new Interop.MONITORINFOEX { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Interop.MONITORINFOEX>() };
             nint mon = Interop.MonitorFromPoint(new Interop.POINT(0, 0), Interop.MONITOR_DEFAULTTONEAREST);
             if (Interop.GetMonitorInfo(mon, ref mi))
@@ -232,7 +221,7 @@ internal sealed class JanelaSpike : Window
             $"Monitor da janela   : {DescreverMonitorDaJanela()}",
         ]);
 
-        // Linhas legíveis por máquina, consumidas por ferramentas/sonda-p1.ps1.
+        // Linhas pra máquina, lidas por ferramentas/sonda-p1.ps1.
         Diagnostico.Linha($"SONDA|HWND|{_hwnd}");
         Diagnostico.Linha($"SONDA|RECT|{r.Left}|{r.Top}|{r.Right}|{r.Bottom}");
         foreach (Banda b in FiguraTeste.Bandas)
@@ -270,11 +259,7 @@ internal sealed class JanelaSpike : Window
         return $"{mi.szDevice} {(primario ? "[primário]" : "[secundário]")} tela {mi.rcMonitor} útil {mi.rcWork} dpi {dx}x{dy}";
     }
 
-    /// <summary>
-    /// Verdadeiro quando a janela em primeiro plano é a nossa, ou seja, quando o protótipo
-    /// roubou o foco. Só compara identificadores; não lê título nem conteúdo de janela
-    /// alheia, o que SECURITY.md 3.2 proíbe.
-    /// </summary>
+    // Só compara HWND; não lê título nem conteúdo da janela alheia.
     private bool RoubamosOFoco() => Interop.GetForegroundWindow() == _hwnd;
 
     // ------------------------------------------------------------------ mensagens
@@ -284,7 +269,7 @@ internal sealed class JanelaSpike : Window
         switch (msg)
         {
             case Interop.WM_MOUSEACTIVATE:
-                // Não ativar por clique: o aplicativo de baixo mantém o foco.
+                // O app de baixo continua com o foco.
                 tratado = true;
                 return Interop.MA_NOACTIVATE;
 
@@ -301,7 +286,7 @@ internal sealed class JanelaSpike : Window
                 break;
 
             case Interop.WM_CAPTURECHANGED:
-                // Ponto único de término do gesto, conforme ARCHITECTURE.md 2.7.
+                // Único ponto onde o gesto termina.
                 if (_soltandoPorNos)
                 {
                     Diagnostico.Linha($"WM_CAPTURECHANGED: captura liberada por nós ao soltar (esperado), nova dona {lParam}.");
@@ -331,7 +316,7 @@ internal sealed class JanelaSpike : Window
         int cx = Interop.XComSinal(lParam);
         int cy = Interop.YComSinal(lParam);
 
-        // Qual faixa da figura recebeu o clique. Este registro é o resultado de P1.
+        // Qual faixa recebeu o clique: é o resultado do teste de clique.
         Banda? faixa = FiguraTeste.Bandas.FirstOrDefault(b =>
             cx >= b.Interior.Left && cx < b.Interior.Right &&
             cy >= b.Interior.Top && cy < b.Interior.Bottom);
@@ -388,7 +373,7 @@ internal sealed class JanelaSpike : Window
         double ms = (Stopwatch.GetTimestamp() - inicio) * 1000.0 / Stopwatch.Frequency;
         _latenciasMs.Add(ms);
 
-        // Amostragem esparsa do log: registrar todo movimento distorceria a medição.
+        // Loga só de vez em quando; logar tudo distorceria a medição.
         if (_movimentos % 60 == 0)
         {
             Diagnostico.Linha($"ARRASTE em curso: {_movimentos} movimentos. Cliente ({cx},{cy}) — "
@@ -402,10 +387,8 @@ internal sealed class JanelaSpike : Window
         int cx = Interop.XComSinal(lParam);
         int cy = Interop.YComSinal(lParam);
 
-        // ARCHITECTURE.md 2.7, passo 3: só é clique se o botão for solto DENTRO do
-        // retângulo de arraste. Num gesto muito rápido, o soltar pode chegar fora dele sem
-        // nenhum WM_MOUSEMOVE intermediário; nesse caso o gesto é arraste e a janela vai
-        // para o ponto em que o botão foi solto.
+        // Só é clique se soltar DENTRO do limiar. Num gesto rápido o soltar pode chegar fora
+        // sem nenhum WM_MOUSEMOVE antes; aí é arraste e a janela vai pra onde soltou.
         if (!_arrastando)
         {
             int dx = cx - _agarreX;
@@ -461,16 +444,15 @@ internal sealed class JanelaSpike : Window
         Diagnostico.Bloco("Fim do gesto", linhas);
     }
 
-    // ------------------------------------------------------------------ animação P2
+    // ------------------------------------------------------------------ animação
 
     private void IniciarAnimacao(int fps)
     {
         _fpsPedido = fps;
         double intervaloMs = 1000.0 / fps;
 
-        // DispatcherTimer usa o timer comum do Windows. De propósito, nada aqui chama
-        // timeBeginPeriod: DEC-011 exige que o Buzzy nunca eleve a resolução global do
-        // timer. Se 60 qps não for alcançado por isso, o número medido é o resultado.
+        // Timer comum do Windows, sem timeBeginPeriod de propósito: o Buzzy nunca mexe na
+        // resolução global. Se não der 60 qps por causa disso, o número medido é o resultado.
         _timer = new DispatcherTimer(DispatcherPriority.Render)
         {
             Interval = TimeSpan.FromMilliseconds(intervaloMs),
@@ -494,18 +476,11 @@ internal sealed class JanelaSpike : Window
         ]);
     }
 
-    /// <summary>
-    /// Segunda via para 60 quadros por segundo, usando o relógio do compositor do WPF em
-    /// vez do timer do Windows. Existe porque, medido, DispatcherTimer pedindo 60 qps
-    /// entregou ~39, mesmo com a resolução global do timer já em 1 ms por outro processo.
-    /// A causa não foi isolada: desde o Windows 10 2004, a resolução pedida por outro
-    /// processo não vale para os timers de quem não a pediu.
-    ///
-    /// Custo deste caminho: o evento do compositor dispara mais vezes do que o quadro é
-    /// trocado. Medido nesta máquina: ~85 eventos por segundo, com monitor de 180 Hz. O
-    /// disparo abaixo zera a referência a cada quadro e por isso entregou ~40 qps; um
-    /// disparo por acumulador poderia chegar perto de 60, mas não foi medido.
-    /// </summary>
+    // 60 qps pelo relógio do compositor em vez do timer. DispatcherTimer pedindo 60 entregou
+    // ~39, mesmo com o timer global em 1 ms por outro processo (desde o Windows 10 2004 isso
+    // não vale pra quem não pediu).
+    // Custo: o compositor dispara mais que a troca de quadro (~85/s num monitor de 180 Hz).
+    // Zerando a referência a cada quadro deu ~40 qps; com acumulador talvez chegue a 60, não medi.
     private void IniciarAnimacaoPeloCompositor(int fps)
     {
         _fpsPedido = fps;
@@ -532,8 +507,7 @@ internal sealed class JanelaSpike : Window
         long agora = Stopwatch.GetTimestamp();
         double decorridoMs = (agora - _marcaUltimoQuadro) * 1000.0 / Stopwatch.Frequency;
 
-        // Meia janela de tolerância: sem ela, um evento que chega pouco antes do alvo
-        // atrasaria o quadro para o ciclo seguinte e derrubaria a taxa alcançada.
+        // Tolerância de 0,5 ms: sem ela, evento um pouco adiantado empurra o quadro pro ciclo seguinte.
         if (decorridoMs + 0.5 < _alvoQuadroMs) return;
 
         _marcaUltimoQuadro = agora;

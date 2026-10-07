@@ -2,14 +2,12 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// Ordena os eventos de sessão com a releitura da topologia (Fase 5, passo P10; DEC-031).
-/// Bloqueio e suspensão chegam ao núcleo na hora; desbloqueio e retomada esperam uma leitura
-/// publicada para que o núcleo reapareça usando a topologia atual. Só vive na thread da interface.
-/// </summary>
+// Ordena os eventos de sessão com a releitura dos monitores. Bloqueio e suspensão
+// vão pro núcleo na hora; desbloqueio e retomada esperam uma leitura publicada, pro
+// personagem reaparecer já na topologia atual. Só na thread da interface.
 internal sealed class ArbitroDeEventosDoSistema
 {
-    /// <summary>Espera mínima provisória após retomar o Windows, até a calibração do protótipo P5.</summary>
+    // Valor provisório, ainda não calibrado.
     internal static readonly TimeSpan EsperaMinimaDaRetomada = TimeSpan.FromMilliseconds(1500);
 
     private readonly Action<Evento> _enviar;
@@ -23,10 +21,7 @@ internal sealed class ArbitroDeEventosDoSistema
         _enviar = enviar;
     }
 
-    /// <summary>
-    /// Recebe um evento do sistema. Devolve o prazo mínimo para a agenda da topologia; somente
-    /// <see cref="Resumed"/> pede 1,5 s. Desbloqueio e retomada ficam retidos até a leitura publicada.
-    /// </summary>
+    // Devolve a espera mínima pra agenda da topologia (só Resumed pede 1,5 s).
     internal TimeSpan Sinalizar(Evento evento)
     {
         ArgumentNullException.ThrowIfNull(evento);
@@ -59,14 +54,14 @@ internal sealed class ArbitroDeEventosDoSistema
         }
     }
 
-    /// <summary>Marca a mensagem de topologia entre o log MENSAGEM e o pedido à agenda.</summary>
+    // Chamado entre o log MENSAGEM e o pedido à agenda.
     internal TimeSpan SinalizarMudancaDeTopologia()
     {
         if (!_parado) _releituraSinalizada = true;
         return TimeSpan.Zero;
     }
 
-    /// <summary>Libera os eventos retidos, na ordem recebida, somente depois de uma leitura coerente e publicada.</summary>
+    // Solta os eventos retidos, na ordem em que chegaram.
     internal void TopologiaRelida(bool publicada)
     {
         if (_parado || !publicada) return;
@@ -78,7 +73,7 @@ internal sealed class ArbitroDeEventosDoSistema
         foreach (Evento evento in liberar) _enviar(evento);
     }
 
-    /// <summary>Encerra o árbitro e descarta eventos ainda não liberados.</summary>
+    // Descarta o que ainda estava retido.
     internal void Parar()
     {
         _parado = true;

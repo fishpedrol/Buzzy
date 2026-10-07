@@ -4,18 +4,11 @@ using System.Xml;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>Linha de comando ou pasta inválida, arquivo ausente: código de saída 2.</summary>
+// Sai com código 2.
 internal sealed class ErroDeUso(string mensagem) : Exception(mensagem);
 
-/// <summary>Opções da linha de comando, com os caminhos já completos.</summary>
-/// <param name="Binarios">A pasta de saída do build; com --pacote, o próprio executável de arquivo único.</param>
-/// <param name="Aplicativo">
-/// Nome do aplicativo, sem extensão: define &lt;nome&gt;.dll, &lt;nome&gt;.*.dll e &lt;nome&gt;.exe.
-/// O padrão é Buzzy; outro nome serve para testar o portão num protótipo (--aplicativo BuzzySpike).
-/// </param>
-/// <param name="Runtimes">Pastas dos pacotes de runtime da Microsoft para a procedência (F9-P10); vazia no build comum.</param>
-/// <param name="Pacote">O executável de arquivo único a verificar por dentro (F9-P10); nulo no modo de pasta.</param>
-/// <param name="HostDeArquivoUnico">O singlefilehost.exe do pacote de host que o SDK usou; obrigatório com --pacote.</param>
+// Caminhos já completos. Com --pacote, Binarios é o próprio exe. Aplicativo define <nome>.dll,
+// <nome>.*.dll e <nome>.exe; trocar o nome serve pra testar o portão no spike (BuzzySpike).
 internal sealed record Opcoes(string Binarios, IReadOnlyList<string> Fontes, string? Manifesto, string Aplicativo)
 {
     public IReadOnlyList<string> Runtimes { get; init; } = [];
@@ -39,7 +32,7 @@ internal sealed record Opcoes(string Binarios, IReadOnlyList<string> Fontes, str
         Código de saída: 0 sem violações; 1 com violações; 2 erro de uso ou de leitura.
         """;
 
-    /// <summary>Interpreta os argumentos; nulo quando foi pedida a ajuda.</summary>
+    // Nulo quando pediram a ajuda.
     public static Opcoes? Interpretar(IReadOnlyList<string> argumentos)
     {
         ArgumentNullException.ThrowIfNull(argumentos);
@@ -118,21 +111,16 @@ internal sealed record Opcoes(string Binarios, IReadOnlyList<string> Fontes, str
 
     private static string Caminho(string valor)
     {
-        // Um caminho entre aspas que termina em barra invertida ("C:\pasta\") faz a barra escapar
-        // a aspa, e o resto da linha de comando cola no caminho.
+        // Em "C:\pasta\" a barra final escapa a aspa e o resto da linha cola no caminho.
         if (valor.Contains('"', StringComparison.Ordinal))
             throw new ErroDeUso($"Caminho com aspas: {valor}. Uma barra invertida antes da aspa final a escapa; tire a barra final ou escreva \"$(OutDir).\".");
         return Path.GetFullPath(valor.Trim());
     }
 }
 
-/// <summary>Um binário do produto e o que o portão viu nele.</summary>
 internal sealed record BinarioVerificado(string Caminho, string Tipo, string Resumo);
 
-/// <summary>Tudo o que uma execução do portão verificou e encontrou.</summary>
-/// <param name="Fontes">Cada --fonte com o número de arquivos .cs encontrados nela.</param>
-/// <param name="ArquivosDeFonte">Arquivos .cs verificados, cada um uma vez, mesmo com pastas repetidas ou aninhadas.</param>
-/// <param name="UsosRestritos">P/Invokes permitidos só no lugar de um uso restrito (<see cref="PortaoApis.UsosRestritos"/>).</param>
+// ArquivosDeFonte conta cada .cs uma vez, mesmo com pastas repetidas ou aninhadas.
 internal sealed record ResultadoDoPortao(
     Opcoes Opcoes,
     IReadOnlyList<BinarioVerificado> Binarios,
@@ -143,21 +131,15 @@ internal sealed record ResultadoDoPortao(
     IReadOnlyList<Permitida> Permitidas,
     IReadOnlyList<UsoRestritoVisto> UsosRestritos)
 {
-    /// <summary>Binários de fora do produto aceitos por procedência dos pacotes de runtime (F9-P10).</summary>
+    // Binários de fora aceitos por serem idênticos aos dos pacotes de runtime.
     public int DoRuntime { get; init; }
 
-    /// <summary>Com --pacote: o que o pacote tem e o que se conferiu nele (nulo no modo de pasta).</summary>
+    // Só com --pacote.
     public string? ResumoDoPacote { get; init; }
 }
 
-/// <summary>
-/// Portão de APIs proibidas do build (SECURITY.md 3.2 e 8, item 1). Verifica, nesta ordem:
-/// os assemblies gerenciados do produto (&lt;aplicativo&gt;.dll e &lt;aplicativo&gt;.*.dll que não
-/// sejam de teste), a tabela de importação nativa de cada binário do produto, o código-fonte de
-/// cada --fonte e o manifesto. Com --pacote (F9-P10), lê o executável de arquivo único por dentro:
-/// a procedência do host, os assemblies do produto empacotados, a procedência de todo o resto e o
-/// manifesto embutido. Só lê arquivos.
-/// </summary>
+// Ordem: assemblies do produto (sem os de teste), importações nativas, fonte e manifesto.
+// Com --pacote, abre o exe de arquivo único e confere host, assemblies, o resto e o manifesto embutido.
 internal static class Portao
 {
     public const int SemViolacoes = 0;
@@ -195,8 +177,7 @@ internal static class Portao
         }
         catch (Exception e)
         {
-            // Um portão que falha sem conseguir verificar reprova o build do mesmo jeito, com
-            // o código de erro de leitura em vez de uma queda sem explicação.
+            // Se não deu pra verificar, reprova do mesmo jeito, com mensagem em vez de queda muda.
             Relatorio.EscreverErro($"erro inesperado ao verificar ({e.GetType().Name}): {e.Message}", erros);
             erros.WriteLine(e.ToString());
             return ErroDeUsoOuLeitura;
@@ -238,9 +219,8 @@ internal static class Portao
         {
             (string principal, List<string> bibliotecas, string executavel, List<string> fora) = Localizar(opcoes);
             naoVerificados = [];
-            // DEC-040, item 6: um binário na pasta que não é do produto nem de teste não foi revisado (nenhuma dependência de
-            // terceiros foi aceita): reprova, em vez de só aparecer no relatório como fora do portão. Num build autocontido
-            // (F9-P10), o do runtime da Microsoft passa por procedência: mesmo nome e mesmo SHA-256 do pacote de runtime.
+            // Nenhuma dependência de terceiros foi aceita: binário estranho na pasta reprova. No build
+            // autocontido, o do runtime da Microsoft passa se tiver mesmo nome e SHA-256 do pacote.
             foreach (string nome in fora)
             {
                 if (nome.Contains("Teste", StringComparison.OrdinalIgnoreCase)) { naoVerificados.Add(nome); continue; }
@@ -258,7 +238,7 @@ internal static class Portao
             binarios.Add(VerificarBinario(executavel, File.ReadAllBytes(executavel), ListaDePermissoes.Apphost, violacoes, permitidas, usosRestritos, referencias));
             produtoPresente = nome => File.Exists(Path.Combine(opcoes.Binarios, nome));
 
-            // O runtimeconfig.json e o deps.json da pasta, quando existem (revisão adversarial do F9-P10).
+            // runtimeconfig.json e deps.json, se existirem.
             string runtimeconfig = Path.Combine(opcoes.Binarios, opcoes.Aplicativo + ".runtimeconfig.json");
             string deps = Path.Combine(opcoes.Binarios, opcoes.Aplicativo + ".deps.json");
             if (File.Exists(runtimeconfig)) violacoes.AddRange(VerificadorDeConfiguracaoDoRuntime.VerificarRuntimeConfig(runtimeconfig, File.ReadAllBytes(runtimeconfig)));
@@ -270,7 +250,7 @@ internal static class Portao
                 VerificarPacote(opcoes, procedencia!, binarios, violacoes, permitidas, usosRestritos, referencias);
         }
 
-        // Dependências do produto que não estão na pasta (ou no pacote) não teriam sido verificadas.
+        // Dependência do produto que não está aqui escaparia da verificação.
         string prefixo = opcoes.Aplicativo + ".";
         foreach ((string assembly, string referencia) in referencias)
         {
@@ -284,7 +264,7 @@ internal static class Portao
         {
             IReadOnlyList<string> arquivos = VerificadorDeFonte.ListarArquivos(pasta);
             if (arquivos.Count == 0) throw new ErroDeUso($"Nenhum arquivo .cs em {pasta} (bin/ e obj/ não contam).");
-            // Pastas repetidas ou aninhadas não acusam o mesmo arquivo duas vezes.
+            // Pasta repetida ou aninhada não acusa o mesmo arquivo duas vezes.
             foreach (string arquivo in arquivos.Where(verificados.Add))
                 violacoes.AddRange(VerificadorDeFonte.VerificarArquivo(arquivo));
             fontes.Add((pasta, arquivos.Count));
@@ -299,13 +279,10 @@ internal static class Portao
         };
     }
 
-    /// <summary>
-    /// O executável de arquivo único por dentro (F9-P10, DEC-042): o host é o singlefilehost.exe da Microsoft
-    /// (<see cref="ProcedenciaDoHost"/>), com as importações da lista revisada (<see cref="PermissoesDoHostDeArquivoUnico"/>);
-    /// o manifesto embutido passa pelas mesmas regras do app.manifest; os assemblies do produto, lidos do pacote, passam
-    /// pelas regras de sempre; todo o resto é, com o mesmo nome e SHA-256, dos pacotes de runtime; deps.json e
-    /// runtimeconfig.json são os únicos arquivos de dados aceitos. Qualquer outra coisa reprova (BZP006 ou BZP007).
-    /// </summary>
+    // O host tem que ser o singlefilehost.exe da Microsoft; o manifesto embutido segue as regras do
+    // app.manifest; os assemblies do produto passam pelas regras de sempre; o resto tem que bater
+    // nome e SHA-256 com o runtime; deps.json e runtimeconfig.json são os únicos dados aceitos.
+    // Qualquer outra coisa reprova (BZP006 ou BZP007).
     private static (List<string> NaoVerificados, int DoRuntime, string Resumo, Func<string, bool> ProdutoPresente) VerificarPacote(
         Opcoes opcoes,
         ProcedenciaDoRuntime procedencia,
@@ -329,14 +306,13 @@ internal static class Portao
         string principal = opcoes.Aplicativo + ".dll";
         string prefixo = opcoes.Aplicativo + ".";
 
-        // O host: procedência e importações.
         foreach (string diferenca in ProcedenciaDoHost.Comparar(exe, opcoes.HostDeArquivoUnico!, pacote, principal))
             violacoes.Add(new Violacao(exe, 0, 0, Codigos.HostDeArquivoUnico, Categoria.CodigoDinamico, Path.GetFileName(exe),
                 $"o host não é o singlefilehost.exe do pacote da Microsoft: {diferenca}", null));
         binarios.Add(VerificarBinario(exe, File.ReadAllBytes(exe), ListaDePermissoes.HostDeArquivoUnico, violacoes, permitidas, usosRestritos, referencias,
             tipo: "host de arquivo único"));
 
-        // O manifesto embutido: o mesmo que o app.manifest exige (sem elevação, PerMonitorV2).
+        // Manifesto embutido: mesmas exigências do app.manifest (sem elevação, PerMonitorV2).
         string? manifesto = ProcedenciaDoHost.Manifesto(exe);
         if (manifesto is null)
             violacoes.Add(new Violacao(exe, 0, 0, Codigos.Manifesto, Categoria.Manifesto, "RT_MANIFEST", "o pacote não tem o manifesto do aplicativo embutido", null));
@@ -362,7 +338,7 @@ internal static class Portao
                 bool ehConfiguracao = entrada.Tipo == TipoNoPacote.RuntimeConfigJson && naRaiz && nome.Equals(opcoes.Aplicativo + ".runtimeconfig.json", StringComparison.OrdinalIgnoreCase);
                 if (ehDeps || ehConfiguracao)
                 {
-                    // O conteúdo, que o host lê antes do Main, por lista fechada (revisão adversarial do F9-P10, achado de alta).
+                    // O host lê isso antes do Main, então o conteúdo passa por lista fechada.
                     byte[] conteudo = LeitorDePacote.Conteudo(exe, entrada);
                     violacoes.AddRange(ehDeps
                         ? VerificadorDeConfiguracaoDoRuntime.VerificarDeps(rotulo, conteudo, opcoes.Aplicativo)
@@ -420,7 +396,6 @@ internal static class Portao
 
             bool doProduto = extensao.Equals(".dll", StringComparison.OrdinalIgnoreCase)
                 && nome.StartsWith(prefixo, StringComparison.OrdinalIgnoreCase);
-            // Assemblies de teste ficam de fora (Buzzy.App.Testes.dll e afins).
             bool deTeste = nome.Contains("Teste", StringComparison.OrdinalIgnoreCase);
             if (doProduto && !deTeste) bibliotecas.Add(arquivo);
             else naoVerificados.Add(nome + (doProduto ? " (teste)" : ""));
@@ -448,7 +423,7 @@ internal static class Portao
             violacoes.AddRange(analise.Violacoes);
             usosRestritos.AddRange(analise.UsosRestritos);
             referencias.AddRange(analise.AssembliesReferenciados.Select(r => (caminho, r)));
-            // Um .exe gerenciado não é o apphost: não recebe a lista de permissões.
+            // Exe gerenciado não é o apphost, então sem lista de permissões.
             AnaliseDeImportacoes nativas = VerificadorDeImportacoesNativas.Avaliar(caminho, importacoes, ListaDePermissoes.Nenhuma);
             violacoes.AddRange(nativas.Violacoes);
             return new BinarioVerificado(caminho, "assembly gerenciado",

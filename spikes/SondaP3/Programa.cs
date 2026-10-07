@@ -5,21 +5,12 @@ using System.Text;
 
 namespace SondaP3;
 
-/// <summary>Opções da linha de comando, já validadas.</summary>
 internal sealed record Opcoes(int Repeticoes, int OciosoS, int EsperaOciosoS);
 
-/// <summary>
-/// SondaP3 — P3 SINTÉTICO com receptor controlado pelo spike.
-///
-/// Substitui o Bloco de Notas de auto-p3.ps1 por um receptor do próprio spike
-/// (BuzzySpike --modo receptor), para provar automaticamente, sem ler outro aplicativo:
-/// que o input continua chegando ao aplicativo em foco depois de cada gesto, que o foco
-/// nunca sai dele durante clique e arraste, e os resultados B7, B2, B3, B6 (com controle),
-/// B5 e B4. Todo input é injetado por SendInput e rotulado como sintético.
-///
-/// Só abre janelas e injeta input com a opção explícita --injetar-input-na-tela; sem ela,
-/// imprime o uso (<see cref="Uso"/>) e sai com 2 sem abrir, gravar nem injetar nada.
-/// </summary>
+// Teste de arraste com um receptor nosso (BuzzySpike --modo receptor) no lugar do Bloco de
+// Notas. Prova, sem ler app alheio, que o input continua chegando ao app em foco depois de cada
+// gesto e que o foco nunca sai dele. Tudo via SendInput.
+// Sem --injetar-input-na-tela só mostra o uso e sai com 2, sem abrir nem injetar nada.
 internal static class Programa
 {
     internal static volatile bool Cancelado;
@@ -58,8 +49,7 @@ internal static class Programa
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        // A linha de comando é conferida antes de qualquer outra coisa: sem a opção explícita,
-        // nenhuma janela é aberta, nenhum arquivo é gravado e nenhum input é injetado.
+        // Primeiro de tudo: sem a opção explícita não abre, não grava e não injeta nada.
         if (Interpretar(args, out string? erro) is not { } opcoes)
         {
             Console.Error.WriteLine(erro);
@@ -69,7 +59,7 @@ internal static class Programa
         }
         int repeticoes = opcoes.Repeticoes, ociosoS = opcoes.OciosoS, esperaOciosoS = opcoes.EsperaOciosoS;
 
-        // Per-Monitor V2 (-4): todas as coordenadas deste harness são pixels físicos.
+        // Per-Monitor V2 (-4): tudo aqui é em px físicos.
         Nativo.SetProcessDpiAwarenessContext(-4);
 
         string? spikes = LocalizarSpikes();
@@ -120,8 +110,8 @@ internal static class Programa
         var todas = new List<IReadOnlyList<Veredito>>();
         for (int r = 1; r <= repeticoes && !Cancelado; r++)
         {
-            // Uma rodada invalidada por interferência humana não conta: espera o usuário
-            // parar de novo e repete, no máximo quatro vezes. Falha real nunca é repetida aqui.
+            // Interferência humana invalida a rodada: espera ficar ocioso e repete, até 4 vezes.
+            // Falha de verdade nunca é repetida.
             for (int tentativa = 1; ; tentativa++)
             {
                 if (EsperarOcioso(rel, ociosoS, esperaOciosoS) is not uint ultimoInput) return 3;
@@ -150,10 +140,7 @@ internal static class Programa
         return aprovadas == todas.Count && todas.Count == repeticoes ? 0 : 1;
     }
 
-    /// <summary>
-    /// Interpreta a linha de comando, sem nenhum efeito colateral. Devolve as opções ou, com
-    /// <paramref name="erro"/> preenchido, null. Sem <see cref="OpcaoInjetar"/> é sempre erro.
-    /// </summary>
+    // Sem efeito colateral. Null com erro preenchido; sem OpcaoInjetar é sempre erro.
     internal static Opcoes? Interpretar(string[] args, out string? erro)
     {
         bool injetar = false;
@@ -175,7 +162,7 @@ internal static class Programa
         return erro is null ? new Opcoes(repeticoes, ociosoS, esperaOciosoS) : null;
     }
 
-    /// <summary>Lê um inteiro decimal sem sinal dentro da faixa; devolve a mensagem de erro, ou null.</summary>
+    // Devolve a mensagem de erro, ou null.
     private static string? LerInteiro(string opcao, string texto, int minimo, int maximo, ref int valor)
     {
         if (int.TryParse(texto, NumberStyles.None, CultureInfo.InvariantCulture, out int lido) && lido >= minimo && lido <= maximo)
@@ -186,13 +173,9 @@ internal static class Programa
         return $"Valor inválido para {opcao}: '{texto}' (esperado um inteiro de {minimo} a {maximo}).";
     }
 
-    /// <summary>
-    /// Não começar enquanto alguém estiver usando o computador: o teste move o cursor e
-    /// envia cliques e teclas. Espera <paramref name="ociosoS"/> s seguidos sem input e devolve
-    /// o instante do último input (relógio de GetTickCount): a partir dele, qualquer input que
-    /// não venha da sonda é interferência. Devolve null se desistir. Depois de uma rodada, o
-    /// próprio input injetado zera o contador, e a espera recomeça.
-    /// </summary>
+    // O teste mexe no cursor e no teclado, então espera ociosoS segundos sem input. Devolve o
+    // último input (relógio do GetTickCount): dali em diante, input que não é da sonda é
+    // interferência. Null se desistir. O input injetado zera o contador, então a espera recomeça.
     private static uint? EsperarOcioso(Relatorio rel, int ociosoS, int esperaOciosoS)
     {
         var espera = Stopwatch.StartNew();

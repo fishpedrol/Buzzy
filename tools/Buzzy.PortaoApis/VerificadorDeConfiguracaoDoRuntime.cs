@@ -2,23 +2,19 @@ using System.Text.Json;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// O &lt;aplicativo&gt;.runtimeconfig.json e o &lt;aplicativo&gt;.deps.json, por lista fechada (revisão adversarial do F9-P10,
-/// achado de alta): o runtime os lê antes do Main e carrega o que eles mandam. Um STARTUP_HOOKS nas configProperties,
-/// additionalProbingPaths, um framework de fora ou uma dependência de pacote fariam o runtime carregar código que não é
-/// do produto nem do runtime conferido, sem passar pelas regras do IL. Vale na pasta de saída e dentro do pacote.
-///
-/// Levantamento de 2026-10-05 (SDK 10.0.401): o runtimeconfig.json tem só runtimeOptions com tfm, frameworks (dependente
-/// do framework) ou includedFrameworks (autocontido), dos dois frameworks da Microsoft, e três configProperties, todas
-/// false; o deps.json tem runtimeTarget, compilationOptions, targets, libraries e, no autocontido, runtimes; as
-/// bibliotecas são os projetos do Buzzy e, no autocontido, os dois pacotes de runtime (runtimepack). Qualquer outra
-/// chave, propriedade, valor ou tipo de biblioteca reprova (BZP008) até alguém revisar e acrescentar aqui.
-/// </summary>
+// runtimeconfig.json e deps.json por lista fechada. O runtime lê os dois antes do Main e carrega
+// o que mandam: STARTUP_HOOKS, additionalProbingPaths, framework de fora ou pacote extra trariam
+// código que nunca passou pelas regras do IL. Vale na pasta e dentro do pacote.
+//
+// O que o SDK 10.0.401 grava: runtimeconfig com runtimeOptions (tfm, frameworks ou
+// includedFrameworks dos dois frameworks da Microsoft, três configProperties false); deps.json com
+// runtimeTarget, compilationOptions, targets, libraries e, no autocontido, runtimes. Bibliotecas:
+// projetos do Buzzy e os dois runtimepacks. Qualquer outra coisa reprova (BZP008) até ser revisada.
 internal static class VerificadorDeConfiguracaoDoRuntime
 {
     private static readonly string[] Frameworks = ["Microsoft.NETCore.App", "Microsoft.WindowsDesktop.App"];
 
-    /// <summary>As configProperties revisadas e o único valor aceito de cada uma.</summary>
+    // Único valor aceito de cada uma.
     private static readonly Dictionary<string, bool> PropriedadesRevisadas = new(StringComparer.Ordinal)
     {
         ["System.Reflection.Metadata.MetadataUpdater.IsSupported"] = false,

@@ -7,23 +7,20 @@ using System.Windows.Input;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// Uma caixa de marcar só por intenção (Fase 8; DEC-038, item 6): o mouse, o Espaço, a tecla de acesso, as teclas + e - e o
-/// Toggle da UIA (o Narrador) levantam <see cref="Pedido"/> com o valor desejado e nunca mudam a marca. A marca só muda pelo
-/// código (<see cref="Marcar"/>), a partir do núcleo ou da leitura do início com o Windows, e isso nunca levanta pedido.
-/// </summary>
+// Caixa de marcar que só pede: clique, Espaço, tecla de acesso, + e - e o Toggle
+// da UIA (Narrador) levantam Pedido e nunca mudam a marca. A marca só muda por
+// Marcar, vinda do núcleo, e isso não levanta pedido.
 internal sealed class CaixaDeComando : CheckBox
 {
-    /// <summary>O usuário pediu este valor; quem ouve decide e, depois, marca.</summary>
+    // Quem ouve decide e depois chama Marcar.
     internal event Action<bool>? Pedido;
 
-    /// <summary>Marca pelo código, sem pedido.</summary>
     internal void Marcar(bool marcada) => IsChecked = marcada;
 
-    /// <summary>O clique, o Espaço, a tecla de acesso e o Toggle da UIA chegam aqui: só o pedido, sem mudar a marca.</summary>
+    // Clique, Espaço, tecla de acesso e Toggle da UIA passam por aqui.
     protected override void OnToggle() => Pedido?.Invoke(IsChecked != true);
 
-    /// <summary>As teclas + e - da caixa marcariam direto; aqui viram pedido.</summary>
+    // O CheckBox marcaria direto com + e -.
     protected override void OnKeyDown(KeyEventArgs e)
     {
         ArgumentNullException.ThrowIfNull(e);
@@ -35,7 +32,7 @@ internal sealed class CaixaDeComando : CheckBox
         base.OnKeyDown(e);
     }
 
-    /// <summary>As teclas + e - viram pedido (só quando mudam algo); devolve se a tecla foi tratada.</summary>
+    // + e - só pedem quando mudariam algo; devolve se a tecla foi tratada.
     internal bool Teclar(Key tecla)
     {
         bool? pedido = tecla switch
@@ -50,20 +47,15 @@ internal sealed class CaixaDeComando : CheckBox
     }
 }
 
-/// <summary>
-/// Um botão de opção só por intenção (Fase 8; DEC-038, item 6): o clique, o Espaço, a tecla de acesso e o Select da UIA (o
-/// Narrador, pelo <see cref="RadioDeComandoPeer"/>) levantam <see cref="Pedido"/> e nunca mudam a marca; ela só muda pelo
-/// código. As setas são do <see cref="Seletor{T}"/>.
-/// </summary>
+// Botão de opção que só pede, como a CaixaDeComando. O Select da UIA vem pelo
+// RadioDeComandoPeer; as setas ficam com o Seletor.
 internal sealed class RadioDeComando : RadioButton
 {
-    /// <summary>O usuário pediu esta opção.</summary>
     internal event Action? Pedido;
 
-    /// <summary>Marca pelo código, sem pedido.</summary>
     internal void Marcar(bool marcada) => IsChecked = marcada;
 
-    /// <summary>O caminho único do pedido, também do peer da UIA.</summary>
+    // Caminho único do pedido, usado também pelo peer.
     internal void Pedir() => Pedido?.Invoke();
 
     protected override void OnToggle() => Pedir();
@@ -71,10 +63,7 @@ internal sealed class RadioDeComando : RadioButton
     protected override AutomationPeer OnCreateAutomationPeer() => new RadioDeComandoPeer(this);
 }
 
-/// <summary>
-/// O peer do <see cref="RadioDeComando"/>: o <c>Select</c> da UIA vira o mesmo pedido do clique, em vez de marcar direto, como o
-/// peer do WPF faria; o resto do padrão SelectionItem segue o do botão de opção.
-/// </summary>
+// O peer padrão do WPF marcaria direto no Select; aqui vira o mesmo pedido do clique.
 internal sealed class RadioDeComandoPeer(RadioDeComando dono) : RadioButtonAutomationPeer(dono), ISelectionItemProvider
 {
     private readonly RadioDeComando _dono = dono;
@@ -100,19 +89,14 @@ internal sealed class RadioDeComandoPeer(RadioDeComando dono) : RadioButtonAutom
     }
 }
 
-/// <summary>
-/// Um grupo de opções com nome (Fase 8; DEC-038, item 7): um <see cref="GroupBox"/>, que a UIA expõe como Group com o título
-/// como nome, com um <see cref="RadioDeComando"/> por opção, cada um com o texto de ajuda. O grupo é uma parada só do Tab, na
-/// opção marcada, e as setas escolhem a vizinha (como nos grupos do Win32) e levantam <see cref="Escolheu"/>; a marca só muda
-/// por <see cref="Marcar"/>.
-/// </summary>
+// Grupo de opções: GroupBox (a UIA usa o título como nome) com um RadioDeComando
+// por opção. Como nos grupos do Win32, o Tab para só na marcada e as setas escolhem
+// a vizinha, levantando Escolheu; a marca só muda por Marcar.
 internal sealed class Seletor<T> : GroupBox where T : struct
 {
     private readonly IReadOnlyList<(T Valor, RadioDeComando Radio)> _opcoes;
 
-    /// <param name="titulo">O título do grupo, que é o nome dele na UIA.</param>
-    /// <param name="opcoes">O valor, o rótulo (com a tecla de acesso) e o texto de ajuda de cada opção, na ordem.</param>
-    /// <param name="ajuda">O texto de ajuda do grupo.</param>
+    // O rótulo de cada opção traz a tecla de acesso (_).
     internal Seletor(string titulo, IReadOnlyList<(T Valor, string Rotulo, string? Ajuda)> opcoes, string? ajuda = null)
     {
         ArgumentNullException.ThrowIfNull(opcoes);
@@ -138,20 +122,19 @@ internal sealed class Seletor<T> : GroupBox where T : struct
         Content = painel;
     }
 
-    /// <summary>O usuário escolheu esta opção (clique, Espaço, tecla de acesso, setas ou a UIA).</summary>
+    // Clique, Espaço, tecla de acesso, setas ou UIA.
     internal event Action<T>? Escolheu;
 
-    /// <summary>Os botões, na ordem (para os testes e para dar o foco).</summary>
     internal IReadOnlyList<RadioDeComando> Botoes => [.. _opcoes.Select(o => o.Radio)];
 
-    /// <summary>Marca a opção do valor pelo código, sem levantar nada.</summary>
+    // Não levanta Escolheu.
     internal void Marcar(T valor)
     {
         foreach ((T v, RadioDeComando radio) in _opcoes) radio.Marcar(EqualityComparer<T>.Default.Equals(v, valor));
         AjustarParadaDoTab();
     }
 
-    /// <summary>As opções onde o Tab para: só a marcada (ou a primeira, sem marca), como nos grupos do Win32.</summary>
+    // Só a marcada, ou a primeira se nenhuma estiver.
     internal IReadOnlyList<RadioDeComando> ParadasDoTab => [.. _opcoes.Select(o => o.Radio).Where(r => r.IsTabStop)];
 
     private void AjustarParadaDoTab()
@@ -160,7 +143,6 @@ internal sealed class Seletor<T> : GroupBox where T : struct
         foreach ((_, RadioDeComando radio) in _opcoes) radio.IsTabStop = ReferenceEquals(radio, parada);
     }
 
-    /// <summary>Dá o foco à opção marcada (ou à primeira).</summary>
     internal void Focar() => (_opcoes.FirstOrDefault(o => o.Radio.IsChecked == true).Radio ?? _opcoes[0].Radio).Focus();
 
     private void AoTeclar(object sender, KeyEventArgs e)
@@ -173,10 +155,7 @@ internal sealed class Seletor<T> : GroupBox where T : struct
         if (Teclar(e.Key, atual)) e.Handled = true;
     }
 
-    /// <summary>
-    /// As setas a partir da opção <paramref name="atual"/> (a do foco): a vizinha recebe o foco e é escolhida, sem dar a
-    /// volta; devolve se a tecla foi tratada.
-    /// </summary>
+    // A vizinha da opção com foco ganha o foco e é escolhida, sem dar a volta.
     internal bool Teclar(Key tecla, int atual)
     {
         int passo = tecla switch

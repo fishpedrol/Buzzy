@@ -1,22 +1,15 @@
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// As tabelas do tamagotchi adulto (DEC-028; desenho do núcleo, tabelas 4.1 a 4.4), só dados: os itens na ordem do
-/// menu, o verbo e a duração do uso de cada um, e as ondas, com precedência, tempos, caras e perfis por fase. A classe de
-/// cada item (pedidos do usuário de 2026-10-01) também é dado: o item de alívio (a comida e a bebida sem álcool), a droga
-/// sintética e as outras substâncias; e a onda de substância. A paranoia (outro pedido do mesmo dia) é a última onda, que
-/// nenhum item começa. Tudo é de desenho animado: os números e as classes são regra de jogo, escolhidos para o
-/// comportamento se ler na tela, sem relação com nada real. A configuração do núcleo aponta para cá
-/// (<see cref="ConfiguracaoDoNucleo.TabelaDeItens"/> e <see cref="ConfiguracaoDoNucleo.TabelaDeOndas"/>), e os testes podem
-/// trocar as tabelas por outras.
-/// </summary>
+// Só dados: itens na ordem do menu, verbo e duração do uso, classe de cada
+// item (alívio, substância, sintética) e as ondas com precedência, tempos,
+// caras e perfis por fase. A paranoia é a última onda e nenhum item começa
+// ela. Tudo de desenho animado: números e classes são regra de jogo pra ler
+// bem na tela, sem relação com nada real. Os testes podem trocar as tabelas.
 public static class TabelaDoTamagotchi
 {
-    /// <summary>
-    /// Os itens que existem na edição (DEC-044, item 2): a completa tem os treze; a pública, a do download do site, não tem
-    /// as seis drogas ilícitas (baseado, cocaína, MD, lança-perfume, cogumelo e bala), e com elas some o que só nasce delas
-    /// (o baseado por conta própria e a paranoia, que precisa de uma sintética).
-    /// </summary>
+    // Completa: os treze. Pública (download do site): sem as seis ilícitas, e
+    // com elas somem o baseado por conta própria e a paranoia (que precisa de
+    // uma sintética).
     public static ConjuntoDeItens ItensDaEdicao(EdicaoDoBuzzy edicao)
     {
         ConjuntoDeItens itens = ConjuntoDeItens.Vazio;
@@ -25,24 +18,19 @@ public static class TabelaDoTamagotchi
         return itens;
     }
 
-    /// <summary>
-    /// As seis drogas ilícitas de desenho animado (DEC-044 e DEC-045): fora da edição pública, e as únicas que ele pode usar
-    /// por conta própria.
-    /// </summary>
+    // Fora da edição pública, e as únicas que ele pode usar por conta própria.
     public static ConjuntoDeItens Ilicitos { get; } = ConjuntoDeItens.Vazio
         .Com(Item.Baseado).Com(Item.Cocaina).Com(Item.Md).Com(Item.LancaPerfume).Com(Item.Cogumelo).Com(Item.Bala);
 
-    /// <summary>Os itens na ordem do menu, a da resposta do usuário.</summary>
+    // Ordem do menu.
     public static IReadOnlyList<Item> Itens { get; } =
     [
         Item.Banana, Item.Agua, Item.Vodka, Item.Cerveja, Item.Baseado, Item.Cigarro, Item.Cocaina,
         Item.Md, Item.LancaPerfume, Item.Cafe, Item.Energetico, Item.Cogumelo, Item.Bala,
     ];
 
-    /// <summary>
-    /// Quanto dura o uso, em passos do relógio (60 por segundo), pelo verbo: a mesma soma dos quadros da animação de
-    /// cada verbo na arte, para os dois lados concordarem.
-    /// </summary>
+    // Em passos (60/s). Tem que bater com a soma dos quadros da animação do
+    // verbo na arte.
     public static int PassosDoUso(VerboDeUso verbo) => verbo switch
     {
         VerboDeUso.Comer => 150,
@@ -54,29 +42,23 @@ public static class TabelaDoTamagotchi
         _ => throw new ArgumentOutOfRangeException(nameof(verbo), verbo, "Verbo de uso desconhecido."),
     };
 
-    /// <summary>O que a tabela diz do item (4.1). Fora do enum, lança.</summary>
+    // Fora do enum, lança.
     public static DadosDoItem DoItem(Item item)
         => (uint)item < (uint)DadosDosItens.Length
             ? DadosDosItens[(int)item]
             : throw new ArgumentOutOfRangeException(nameof(item), item, "Item desconhecido.");
 
-    /// <summary>
-    /// Se o item é conteúdo adulto (DEC-033): todo item que não é de alívio, ou seja, as substâncias e as drogas sintéticas.
-    /// A banana, a água, o café e o energético não são. Com a chave desligada, o menu esconde os adultos e o núcleo os
-    /// recusa. Fora do enum, lança.
-    /// </summary>
+    // Adulto = tudo que não é alívio (banana, água, café, energético). Com a
+    // chave desligada, o menu esconde e o núcleo recusa. Fora do enum, lança.
     public static bool Adulto(Item item) => !DoItem(item).Alivio;
 
-    /// <summary>O que a tabela diz da onda (4.2 a 4.4). Fora do enum, lança.</summary>
+    // Fora do enum, lança.
     public static DadosDaOnda DaOnda(Onda onda)
         => (uint)onda < (uint)DadosDasOndas.Length
             ? DadosDasOndas[(int)onda]
             : throw new ArgumentOutOfRangeException(nameof(onda), onda, "Onda desconhecida.");
 
-    /// <summary>
-    /// A classe do item (pedidos do usuário de 2026-10-01), regra de jogo: o alívio (a comida e a bebida sem álcool), a
-    /// droga sintética ("como bala, md, coca e lança") e as outras substâncias.
-    /// </summary>
+    // Alívio = comida e bebida sem álcool. Sintética = bala, MD, coca e lança.
     private enum Classe
     {
         Alivio,
@@ -84,8 +66,8 @@ public static class TabelaDoTamagotchi
         Sintetica,
     }
 
-    // 4.1, na ordem do enum: verbo, cara durante o uso, onda, intensidade e a classe. A bala é droga sintética desde
-    // 2026-10-01 (palavras do usuário): começa o eufórico no nível 1 (o MD, no 2), e a arte dela não muda.
+    // Na ordem do enum: verbo, cara durante o uso, onda, intensidade, classe.
+    // A bala começa o eufórico no nível 1 (o MD, no 2).
     private static readonly DadosDoItem[] DadosDosItens =
     [
         DeItem(Item.Banana, VerboDeUso.Comer, Expressao.Feliz, Onda.Satisfeito, 1, Classe.Alivio),
@@ -103,7 +85,7 @@ public static class TabelaDoTamagotchi
         DeItem(Item.Bala, VerboDeUso.Engolir, Expressao.Feliz, Onda.Euforico, 1, Classe.Sintetica),
     ];
 
-    // 4.2 a 4.4, na ordem do enum.
+    // Na ordem do enum.
     private static readonly DadosDaOnda[] DadosDasOndas =
     [
         Satisfeito(), Alegre(), Relaxado(), Ligado(), Bebado(), Chapado(), Eletrico(), Euforico(), Tonto(), Viajando(), Paranoico(),
@@ -114,7 +96,7 @@ public static class TabelaDoTamagotchi
 
     private static TimeSpan S(int segundos) => TimeSpan.FromSeconds(segundos);
 
-    /// <summary>Um perfil de fase, com as colunas na ordem da tabela 4.3 e os conjuntos da 4.4; foguete nulo = o do perfil.</summary>
+    // Atalho pra montar um perfil de fase. Foguete nulo = o do perfil de energia.
     private static PerfilDaOnda P(
         int intervalo, int descanso, int andar, int escalar, int pular, int descansar, int gesticular, int trocarCara,
         int velocidade, int cambaleio, int? foguete, int alturaDoPulo, (Gesto, int)[] gestos, (Expressao, int)[] caras)
@@ -128,7 +110,7 @@ public static class TabelaDoTamagotchi
         return new(Onda.Satisfeito, 1, S(3), S(60), TimeSpan.Zero, Expressao.Feliz, Expressao.Feliz, null, [pico, pico, pico], null, DeSubstancia: false);
     }
 
-    /// <summary>O alegre, sem item desde 2026-10-01 (a bala passou ao eufórico); continua na tabela, sem mexer em ordinais.</summary>
+    // Nenhum item começa mais o alegre, mas ele fica pra não mexer nos ordinais.
     private static DadosDaOnda Alegre()
     {
         (Gesto, int)[] gestos = [(Gesto.Brincar, 2), (Gesto.Danca, 2), (Gesto.Gargalhada, 1)];
@@ -232,12 +214,11 @@ public static class TabelaDoTamagotchi
         return new(Onda.Viajando, 3, S(20), S(140), S(60), Expressao.Curioso, Expressao.Viajando, Expressao.Pensativo, [pico, pico, pico], queda, DeSubstancia: true);
     }
 
-    /// <summary>
-    /// A paranoia (pedido do usuário de 2026-10-01), de desenho animado: "tem alguém no teto". Precedência 4, maior que a
-    /// de todas, e de substância (comer e beber algo sem álcool a acalmam um passo, como as outras). No pico, igual nos três
-    /// níveis, ele fica quieto e desconfiado: decide mais vezes, gesticula muito (olha pro teto, se agacha, treme), anda
-    /// devagar e nunca escala, pula ou descansa, nem dispara o foguete. Na queda, o cansaço depois do susto.
-    /// </summary>
+    // "Tem alguém no teto." Precedência 4, a maior de todas, e conta como
+    // substância (comer ou beber sem álcool acalma um passo). No pico, igual nos
+    // três níveis: quieto e desconfiado, decide mais vezes, gesticula muito,
+    // anda devagar e nunca escala, pula, descansa nem solta foguete. Na queda,
+    // o cansaço depois do susto.
     private static DadosDaOnda Paranoico()
     {
         PerfilDaOnda pico = P(60, 30, 50, 0, 0, 0, 300, 150, 70, 0, 0, 100,
@@ -250,7 +231,7 @@ public static class TabelaDoTamagotchi
     }
 }
 
-/// <summary>A edição do Buzzy (DEC-044, item 2): a completa, com os treze itens, e a pública, a do download do site.</summary>
+// Pública é a do download do site.
 public enum EdicaoDoBuzzy
 {
     Completa,

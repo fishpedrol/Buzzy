@@ -1,11 +1,7 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Relatório legível do portão. Cada violação sai numa linha no formato de erro que o MSBuild
-/// reconhece ("arquivo(linha,coluna): error CODIGO: texto"), para aparecer como erro do build,
-/// com arquivo e linha, também no registrador de terminal do dotnet build. As demais linhas
-/// evitam esse formato de propósito.
-/// </summary>
+// Violação sai no formato de erro do MSBuild ("arquivo(linha,coluna): error CODIGO: texto") pra
+// aparecer como erro do build com arquivo e linha. As outras linhas fogem desse formato de propósito.
 internal static class Relatorio
 {
     public static void Escrever(ResultadoDoPortao resultado, TextWriter saida)
@@ -67,7 +63,6 @@ internal static class Relatorio
         saida.WriteLine(Resumo(resultado));
     }
 
-    /// <summary>Uma violação no formato de erro do MSBuild.</summary>
     public static string LinhaDeErro(Violacao v)
     {
         ArgumentNullException.ThrowIfNull(v);
@@ -90,10 +85,9 @@ internal static class Relatorio
         return $"Resumo: REPROVADO - {resultado.Violacoes.Count} violação(ões) em {arquivos} arquivo(s) ({porCategoria}); {permitidas}.";
     }
 
-    /// <summary>Onde valem as permissões: o apphost (pasta) ou o host de arquivo único (pacote).</summary>
     private static string Onde(ResultadoDoPortao resultado) => resultado.Opcoes.Pacote is null ? "apphost" : "host de arquivo único";
 
-    /// <summary>Erro de uso ou de leitura, também no formato do MSBuild.</summary>
+    // Também no formato do MSBuild.
     public static void EscreverErro(string mensagem, TextWriter erros)
     {
         ArgumentNullException.ThrowIfNull(erros);

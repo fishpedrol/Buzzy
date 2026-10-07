@@ -1,9 +1,6 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>
-/// Grade de pixels com índices da <see cref="Paleta"/>. Coordenadas inteiras: (0,0) no canto
-/// superior esquerdo. Escrever fora da grade é ignorado.
-/// </summary>
+// Grade de índices da Paleta, (0,0) no canto de cima à esquerda. Escrever fora é ignorado.
 public sealed class Tela
 {
     private readonly Cor[] _pixels;
@@ -33,11 +30,8 @@ public sealed class Tela
 
     public bool Opaco(int x, int y) => this[x, y] != Cor.Nada;
 
-    /// <summary>
-    /// Pinta uma parte: cor-base na máscara, sombra na borda de baixo e da direita (luz vinda de
-    /// cima e da esquerda), realce opcional na borda oposta e, onde a parte encosta em algo já
-    /// desenhado, uma linha interna que separa as duas.
-    /// </summary>
+// Luz de cima e da esquerda: sombra embaixo e à direita, realce opcional no lado oposto. Onde
+// encosta em algo já desenhado, linhaInterna separa as duas partes.
     public void Pintar(Mascara m, Cor cor, Cor sombra, Cor? realce = null, Cor? linhaInterna = null, int larguraDaSombra = 1)
     {
         ArgumentNullException.ThrowIfNull(m);
@@ -64,7 +58,7 @@ public sealed class Tela
         }
     }
 
-    /// <summary>Pinta a máscara inteira de uma cor, sem sombra nem linhas.</summary>
+    // Cor chapada, sem sombra nem linhas.
     public void Preencher(Mascara m, Cor cor)
     {
         ArgumentNullException.ThrowIfNull(m);
@@ -73,7 +67,7 @@ public sealed class Tela
                 if (m[x, y]) this[x, y] = cor;
     }
 
-    /// <summary>Contorno externo de um pixel em volta de tudo (vizinhança de 4), na cor dada.</summary>
+    // 1 px por fora de tudo, vizinhança de 4.
     public void Contornar(Cor contorno)
     {
         var novos = new List<(int X, int Y)>();
@@ -84,11 +78,7 @@ public sealed class Tela
         foreach ((int x, int y) in novos) this[x, y] = contorno;
     }
 
-    /// <summary>
-    /// Aplica um carimbo com o canto superior esquerdo em (x, y). Com <paramref name="linhaInterna"/>,
-    /// antes pinta dessa cor os pixels já desenhados que encostam no carimbo (vizinhança de 4) sem
-    /// fazer parte dele, como em <see cref="Pintar"/>: a linha separa o carimbo do que fica atrás.
-    /// </summary>
+    // (x, y) = canto de cima à esquerda. linhaInterna funciona como em Pintar.
     public void Carimbar(Carimbo carimbo, int x, int y, bool espelhar = false, Cor? linhaInterna = null)
     {
         ArgumentNullException.ThrowIfNull(carimbo);
@@ -112,11 +102,7 @@ public sealed class Tela
         }
     }
 
-    /// <summary>
-    /// Uma tela nova com o retângulo de <paramref name="largura"/> × <paramref name="altura"/> a partir
-    /// de (x, y), pixel a pixel; o que cai fora desta tela fica transparente. É o recorte único das
-    /// caras em expressoes.png e dos rostos do menu (DEC-027).
-    /// </summary>
+// O que cai fora fica transparente. Mesmo recorte usado em expressoes.png e nos rostos do menu.
     public Tela Recortada(int x, int y, int largura, int altura)
     {
         var r = new Tela(largura, altura);
@@ -126,7 +112,6 @@ public sealed class Tela
         return r;
     }
 
-    /// <summary>Espelho horizontal da tela inteira.</summary>
     public Tela Espelhada()
     {
         var t = new Tela(Largura, Altura);
@@ -136,10 +121,8 @@ public sealed class Tela
         return t;
     }
 
-    /// <summary>
-    /// A tela girada 90° (DEC-025), sem perda: <paramref name="horario"/> leva a linha de baixo para
-    /// a coluna da esquerda (esconderijo na lateral esquerda); anti-horário, para a da direita.
-    /// </summary>
+    // 90° sem perda. Horário: linha de baixo vira a coluna da esquerda (esconderijo na lateral
+    // esquerda); anti-horário, a da direita.
     public Tela Girada(bool horario)
     {
         if (Largura != Altura) throw new InvalidOperationException("Só telas quadradas giram sem mudar de tamanho.");
@@ -151,16 +134,12 @@ public sealed class Tela
         return t;
     }
 
-    /// <summary>Margem livre, em pixels, que a deformação deixa até as bordas de cima e dos lados.</summary>
+    // Px livres até as bordas de cima e dos lados.
     public const int MargemDaDeformacao = 3;
 
-    /// <summary>
-    /// Esticar e achatar de desenho animado (toon force, DEC-023): redimensiona o desenho por
-    /// vizinho mais próximo em torno do centro da base dos pixels opacos, que fica no mesmo lugar
-    /// (os pés não saem do chão). As escalas são reduzidas o necessário para o desenho ficar a
-    /// <see cref="MargemDaDeformacao"/> pixels das bordas de cima e dos lados, sem cortar o
-    /// contorno. Nenhuma cor nova aparece: pixels só se repetem ou somem.
-    /// </summary>
+    // Esticar/achatar (toon force) por vizinho mais próximo em volta do centro da base, que não sai
+    // do lugar (pés no chão). A escala é reduzida o quanto precisar pra manter a margem sem cortar
+    // o contorno. Não cria cor nova: pixels só se repetem ou somem.
     public Tela Deformada(double escalaX, double escalaY)
     {
         if (!(escalaX > 0) || !(escalaY > 0) || double.IsInfinity(escalaX) || double.IsInfinity(escalaY))
@@ -173,7 +152,7 @@ public sealed class Tela
         const int m = MargemDaDeformacao;
         double cabeX = Math.Min((centro - m) / (centro - l.Esquerda), (Largura - m - centro) / (l.Direita - centro));
         double cabeY = (baseY - m) / (baseY - l.Topo);
-        // Nunca encolhe por falta de espaço: um desenho que já passa da margem fica como está.
+        // Nunca encolhe por falta de espaço: se já passa da margem, fica como está.
         escalaX = Math.Min(escalaX, Math.Max(1, cabeX));
         escalaY = Math.Min(escalaY, Math.Max(1, cabeY));
         for (int y = 0; y < Altura; y++)
@@ -185,7 +164,6 @@ public sealed class Tela
         return nova;
     }
 
-    /// <summary>Pixels em ARGB, linha a linha.</summary>
     public uint[] ParaArgb()
     {
         var saida = new uint[_pixels.Length];
@@ -193,7 +171,7 @@ public sealed class Tela
         return saida;
     }
 
-    /// <summary>Menor retângulo com pixels opacos: (esquerda, topo, direita exclusiva, base exclusiva); nulo se vazia.</summary>
+    // Caixa dos pixels opacos, direita e base exclusivas; nulo se vazia.
     public (int Esquerda, int Topo, int Direita, int Base)? Limites()
     {
         int e = int.MaxValue, t = int.MaxValue, d = int.MinValue, b = int.MinValue;
@@ -212,10 +190,7 @@ public sealed class Tela
     }
 }
 
-/// <summary>
-/// Máscara de pixels de uma parte. Um pixel pertence a uma forma quando o centro dele
-/// (x + 0,5; y + 0,5) está dentro dela: formas serrilhadas, sem meio-tom, como a pixel art pede.
-/// </summary>
+// Pixel entra na forma se o centro (x + 0,5; y + 0,5) está dentro: serrilhado, sem meio-tom.
 public sealed class Mascara
 {
     private readonly bool[] _m;
@@ -244,7 +219,7 @@ public sealed class Mascara
 
     public Mascara Circulo(double cx, double cy, double r) => Elipse(cx, cy, r, r);
 
-    /// <summary>Elipse com semieixos rx e ry, girada por <paramref name="graus"/> (sentido horário na tela).</summary>
+    // graus no sentido horário da tela.
     public Mascara Elipse(double cx, double cy, double rx, double ry, double graus = 0)
     {
         double a = graus * Math.PI / 180, cos = Math.Cos(a), sin = Math.Sin(a);
@@ -258,7 +233,7 @@ public sealed class Mascara
         return this;
     }
 
-    /// <summary>Segmento grosso com pontas redondas; o raio varia linearmente de r1 a r2.</summary>
+    // Pontas redondas; raio vai de r1 a r2 linearmente.
     public Mascara Capsula(double x1, double y1, double x2, double y2, double r1, double r2)
     {
         double r = Math.Max(r1, r2) + 1;
@@ -273,7 +248,7 @@ public sealed class Mascara
         return this;
     }
 
-    /// <summary>Polígono preenchido (regra par-ímpar).</summary>
+    // Regra par-ímpar.
     public Mascara Poligono(params (double X, double Y)[] pontos)
     {
         ArgumentNullException.ThrowIfNull(pontos);
@@ -293,10 +268,7 @@ public sealed class Mascara
         return this;
     }
 
-    /// <summary>
-    /// Traço grosso ao longo de uma poligonal suave (curvas de Bézier cúbicas encadeadas), do trecho
-    /// <paramref name="t0"/> a <paramref name="t1"/> do comprimento, com raio de r1 a r2.
-    /// </summary>
+    // Ao longo de Béziers cúbicas encadeadas, só do trecho t0..t1, raio de r1 a r2.
     public Mascara Traco(IReadOnlyList<(double X, double Y)> caminho, double r1, double r2, double t0 = 0, double t1 = 1)
     {
         ArgumentNullException.ThrowIfNull(caminho);
@@ -354,7 +326,7 @@ public sealed class Mascara
     }
 }
 
-/// <summary>Curvas de Bézier cúbicas encadeadas: P0, C1, C2, P1, C1, C2, P2...</summary>
+// Béziers cúbicas encadeadas: P0, C1, C2, P1, C1, C2, P2...
 public static class Curvas
 {
     public static List<(double X, double Y)> Amostrar(IReadOnlyList<(double X, double Y)> caminho, int passosPorSegmento = 24)

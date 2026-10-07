@@ -9,31 +9,26 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// A janela de configurações (Fase 8; DEC-038, itens 5 a 8; critérios 7 a 10): uma coluna em três grupos — Comportamento
-/// (energia, desviar da tela cheia, conteúdo adulto e seleção individual dos itens, DEC-041), Aparência (tamanho, sempre no topo) e Windows (o início com o Windows) —
-/// e o botão Fechar (Esc). Cada controle aplica na hora pelo pedido dele, sem OK nem Cancelar,
-/// sem campo de texto; a marca só muda pela raiz (<see cref="Atualizar"/>), a partir do que o núcleo gravou. Janela comum,
-/// nunca topmost, com a fonte do sistema e o tema "chapéu de palha" (<see cref="TemaDoBuzzy"/>, DEC-039; no alto contraste, as
-/// cores do sistema), largura máxima de 420 DIP e textos de ajuda com quebra. Nada periódico.
-/// </summary>
+// Configurações numa coluna: Comportamento, Aparência e Windows, mais Fechar (Esc).
+// Cada controle aplica na hora, sem OK/Cancelar nem campo de texto; a marca só muda
+// por Atualizar, com o que o núcleo gravou. Janela comum (nunca topmost), tema
+// chapéu de palha (cores do sistema no alto contraste). Nada periódico.
 internal sealed class JanelaDeConfiguracoes : Window
 {
-    /// <summary>A largura máxima do conteúdo, em DIP (os textos de ajuda quebram dentro dela).</summary>
+    // DIP; os textos de ajuda quebram dentro dela.
     internal const double LarguraMaxima = 420;
 
     private readonly EscalaDoPersonagem _escalaEmVigor;
     private readonly TextBlock _proximaVez;
     private readonly Dictionary<Item, CaixaDeComando> _caixasDosItensAdultos = [];
-    // Só os itens adultos desta edição ganham caixa (DEC-044, item 2).
+    // Só os itens adultos desta edição ganham caixa.
     private readonly ConjuntoDeItens _itensDaEdicao;
     private readonly Dictionary<Item, Image> _iconesDosItensAdultos = [];
-    // Ao lado de cada droga ilícita da edição, o uso por conta própria (DEC-045).
+    // Ao lado de cada droga ilícita da edição, o uso por conta própria.
     private readonly Dictionary<Item, CaixaDeComando> _caixasPorContaPropria = [];
 
-    /// <param name="preferencias">As preferências do núcleo na abertura.</param>
-    /// <param name="escalaEmVigor">O tamanho com que o Buzzy abriu, para o aviso de "próxima vez".</param>
-    /// <param name="comConteudoAdulto">Se a caixa do conteúdo adulto existe (só com o tamagotchi).</param>
+    // escalaEmVigor é o tamanho com que o Buzzy abriu, pro aviso de "próxima vez".
+    // A caixa do conteúdo adulto só existe com o tamagotchi.
     internal JanelaDeConfiguracoes(Preferencias preferencias, EscalaDoPersonagem escalaEmVigor, bool comConteudoAdulto, ConjuntoDeItens? itensDaEdicao = null)
     {
         _itensDaEdicao = itensDaEdicao ?? TabelaDoTamagotchi.ItensDaEdicao(EdicaoDoBuzzy.Completa);
@@ -104,7 +99,7 @@ internal sealed class JanelaDeConfiguracoes : Window
         FrameworkElement cabecalho = TemaDoBuzzy.Cabecalho(Textos.ConfigTitulo, 18);
         DockPanel.SetDock(cabecalho, Dock.Top);
         pagina.Children.Add(cabecalho);
-        // Numa área útil baixa (DPI alto, tela pequena), a coluna rola; o foco do teclado a leva até o controle.
+        // Com área útil baixa (DPI alto, tela pequena) a coluna rola até o controle com foco.
         Rolagem = new ScrollViewer
         {
             Content = coluna,
@@ -145,51 +140,47 @@ internal sealed class JanelaDeConfiguracoes : Window
     internal event Action<EscalaDoPersonagem>? PediuEscala;
     internal event Action<bool>? PediuTopo;
 
-    /// <summary>A janela foi ativada (para reler o estado do início com o Windows, DEC-038, item 7).</summary>
+    // Pra reler o estado do início com o Windows, que pode mudar por fora.
     internal event Action? Ativada;
 
     internal Seletor<NivelDeEnergia> Energia { get; }
     internal CaixaDeComando TelaCheia { get; }
 
-    /// <summary>"Atravessar entre monitores" (DEC-046), desligada por padrão.</summary>
+    // Desligada por padrão.
     internal CaixaDeComando Travessia { get; }
     internal CaixaDeComando? Adulto { get; }
     internal IReadOnlyDictionary<Item, CaixaDeComando> CaixasDosItensAdultos => _caixasDosItensAdultos;
 
-    /// <summary>As caixas "por conta própria", uma por droga ilícita da edição (DEC-045); nenhuma na pública.</summary>
+    // Uma por droga ilícita da edição; vazio na edição pública.
     internal IReadOnlyDictionary<Item, CaixaDeComando> CaixasPorContaPropria => _caixasPorContaPropria;
     internal Seletor<EscalaDoPersonagem> Tamanho { get; }
     internal CaixaDeComando Topo { get; }
     internal Button Fechar { get; }
 
-    /// <summary>O grupo "Windows", com o início com o Windows.</summary>
     internal StackPanel Windows { get; }
 
-    /// <summary>"Iniciar com o Windows": quem a liga à porta é o <see cref="Composicao.ControleDoInicio"/>.</summary>
+    // Quem liga essa caixa ao registro é o Composicao.ControleDoInicio.
     internal CaixaDeComando Inicio { get; }
 
-    /// <summary>A linha de estado do início, só quando há algo a dizer (região viva).</summary>
+    // Só aparece quando há algo a dizer (região viva).
     internal TextBlock EstadoDoInicio { get; }
 
-    /// <summary>Se o aviso de "próxima vez" está à vista.</summary>
     internal bool AvisoDaProximaVez => _proximaVez.Visibility == Visibility.Visible;
 
-    /// <summary>A rolagem da coluna (abaixo da faixa de cima).</summary>
     internal ScrollViewer Rolagem { get; }
 
-    /// <summary>Limita a altura da janela, em DIP, à área útil do monitor (a coluna rola no que passar).</summary>
+    // DIP, a área útil do monitor; a coluna rola no que passar.
     internal void LimitarAltura(double alturaDip)
     {
         if (alturaDip > 0 && !double.IsNaN(alturaDip) && MaxHeight != alturaDip) MaxHeight = alturaDip;
     }
 
-    /// <summary>O HWND, depois de criado.</summary>
     internal nint Hwnd => new WindowInteropHelper(this).Handle;
 
-    /// <summary>O retângulo da própria janela, em pixels físicos; nulo antes de criada.</summary>
+    // Pixels físicos; nulo antes de a janela existir.
     internal RetanguloPx? RetanguloNaTela() => Win32.GetWindowRect(Hwnd, out Win32.RECT r) ? new RetanguloPx(r.Left, r.Top, r.Right, r.Bottom) : null;
 
-    /// <summary>As marcas a partir das preferências do núcleo, sem pedido; o aviso do tamanho acompanha.</summary>
+    // Marca tudo pelo núcleo, sem levantar pedido.
     internal void Atualizar(Preferencias preferencias)
     {
         ArgumentNullException.ThrowIfNull(preferencias);
@@ -253,7 +244,7 @@ internal sealed class JanelaDeConfiguracoes : Window
                 grupo.Children.Add(caixa);
                 continue;
             }
-            // A droga ilícita ganha, na mesma linha, a caixa do uso por conta própria (DEC-045).
+            // Droga ilícita: a caixa do uso por conta própria vai na mesma linha.
             string nomeProprio = string.Format(System.Globalization.CultureInfo.InvariantCulture, Textos.ConfigPorContaPropriaNome, nome);
             var propria = new CaixaDeComando { Content = Textos.ConfigPorContaPropria, Margin = new Thickness(12, 3, 6, 2), VerticalContentAlignment = VerticalAlignment.Center };
             AutomationProperties.SetName(propria, nomeProprio);
@@ -275,7 +266,7 @@ internal sealed class JanelaDeConfiguracoes : Window
             icone.Source = SpriteDoItem.Renderizar(item, dpi);
     }
 
-    /// <summary>O ícone de um item na caixa: enfeite, sem peer de automação (o nome da caixa já diz o item ao leitor de tela).</summary>
+    // Ícone só enfeita: sem peer, o nome da caixa já diz o item ao leitor de tela.
     private sealed class IconeDecorativo : Image
     {
         protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => null!;

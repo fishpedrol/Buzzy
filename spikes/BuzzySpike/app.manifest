@@ -3,7 +3,7 @@
 
   <assemblyIdentity version="0.0.1.0" name="BuzzySpike.app" />
 
-  <!-- Sem elevação. SECURITY.md 2: nenhum item do Buzzy exige administrador. -->
+  <!-- Sem elevação: nada no Buzzy precisa de administrador. -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
@@ -20,8 +20,8 @@
   </compatibility>
 
   <!--
-    ARCHITECTURE.md 2.13.3 exige declarar Per-Monitor V2 no manifesto, não por chamada
-    de função. dpiAware fica como recuo para quem só entende o esquema antigo.
+    Per-Monitor V2 declarado aqui, não por chamada de função. dpiAware é o recuo pro
+    esquema antigo.
   -->
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>

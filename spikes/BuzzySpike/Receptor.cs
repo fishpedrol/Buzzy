@@ -7,23 +7,12 @@ using System.Windows.Media;
 
 namespace BuzzySpike;
 
-/// <summary>
-/// Receptor de teste de P3: faz o papel do "aplicativo do usuário" que está com o foco
-/// enquanto o Buzzy é clicado e arrastado. É uma janela comum, ativável, com uma caixa de
-/// texto, e roda num PROCESSO SEPARADO do protótipo (outra instância do BuzzySpike com
-/// --modo receptor), como um aplicativo real estaria.
-///
-/// Existe para substituir o Bloco de Notas nos testes automáticos. O Bloco de Notas é de
-/// outro aplicativo: o harness não pode ler o que foi digitado nele (SECURITY.md proíbe),
-/// e o Bloco de Notas do Windows 11 pode restaurar abas de sessões anteriores, o que faria
-/// o teste digitar em documentos do usuário. Este receptor pertence ao próprio spike, então
-/// registrar o que ele recebe não lê nada de terceiros.
-///
-/// Registra, em resultados/receptor.log, apenas eventos da própria janela: ativação,
-/// foco de teclado, cada texto recebido e cliques nela. Nada é consultado periodicamente.
-/// O texto vai para o log mascarado: só letras ASCII, dígitos, ';' e '-' (o alfabeto dos
-/// marcadores da sonda); qualquer outro caractere vira '?'.
-/// </summary>
+// Faz o papel do app do usuário que está com o foco enquanto o Buzzy é arrastado. Roda em
+// outro processo (BuzzySpike --modo receptor), como um app de verdade.
+// Substitui o Bloco de Notas: não dá pra ler o que foi digitado em app alheio, e o Bloco de
+// Notas do Windows 11 pode reabrir abas antigas e o teste acabaria digitando em documento do
+// usuário. Aqui a janela é nossa, então registrar o que ela recebe não lê nada de terceiros.
+// Loga só eventos da própria janela em resultados/receptor.log, com o texto mascarado.
 internal sealed class JanelaReceptor : Window
 {
     internal const int LarguraPx = 900;
@@ -77,8 +66,7 @@ internal sealed class JanelaReceptor : Window
 
     private void AoCarregar(object? remetente, RoutedEventArgs e)
     {
-        // Posição e tamanho em pixels físicos, como o protótipo, para o harness trabalhar
-        // no mesmo sistema de coordenadas sem conversão por DPI.
+        // Px físicos, como o protótipo, pro harness não ter que converter DPI.
         if (_xPedido is int x && _yPedido is int y)
         {
             Interop.SetWindowPos(_hwnd, 0, x, y, LarguraPx, AlturaPx,
@@ -89,8 +77,7 @@ internal sealed class JanelaReceptor : Window
 
         Interop.GetWindowRect(_hwnd, out Interop.RECT r);
 
-        // Ponto de ativação: dentro da caixa de texto, perto do canto superior esquerdo,
-        // longe de onde o harness coloca o protótipo.
+        // Ponto pra ativar: dentro da caixa, longe de onde o harness põe o protótipo.
         int alvoX = r.Left + 60;
         int alvoY = r.Top + 90;
 
@@ -102,9 +89,8 @@ internal sealed class JanelaReceptor : Window
 
     private void AoReceberTexto(object remetente, TextCompositionEventArgs e)
     {
-        // PreviewTextInput vem antes da inserção. O clique de ativação pode ter posto o cursor
-        // de texto no meio do que já foi digitado; com ele no fim (o que também desfaz qualquer
-        // seleção), cada texto é acrescentado e o conteúdo final é a concatenação, na ordem.
+        // O clique de ativação pode ter posto o cursor no meio do texto. Jogando pro fim (antes
+        // da inserção), o conteúdo final é tudo concatenado na ordem.
         _caixa.CaretIndex = _caixa.Text.Length;
         Diagnostico.Linha($"RECEPTOR|TEXTO|{Mascarar(e.Text)}|ativa={IsActive}|foco={_caixa.IsKeyboardFocused}");
     }
@@ -115,11 +101,8 @@ internal sealed class JanelaReceptor : Window
         Diagnostico.Linha($"RECEPTOR|CLIQUE|{e.ChangedButton}|tela ({p.X:0},{p.Y:0})|ativa={IsActive}");
     }
 
-    /// <summary>
-    /// Mantém só letras ASCII, dígitos, ';' e '-'; qualquer outro caractere (espaço, acento,
-    /// pontuação, quebra de linha, separador '|', controle) vira '?'. O log fica numa linha só,
-    /// sem nada a desescapar, e não guarda o que fugir do alfabeto dos marcadores.
-    /// </summary>
+    // Só ASCII alfanumérico, ';' e '-' (o alfabeto dos marcadores); o resto vira '?'. Assim o log
+    // fica numa linha, sem escape, e não guarda nada fora dos marcadores.
     private static string Mascarar(string texto)
     {
         var sb = new StringBuilder(texto.Length);

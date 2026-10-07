@@ -7,14 +7,10 @@ using Buzzy.App.Plataforma;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// A caixa "Iniciar com o Windows" das configurações (Q-04; DEC-038, itens 6, 7 e 10): o único caminho até
-/// <see cref="IInicioComOWindows.Ligar"/> e <see cref="IInicioComOWindows.Desligar"/> é o pedido da caixa
-/// (<see cref="CaixaDeComando.Pedido"/>), pela regra <see cref="RegrasDoInicio.AcaoDoPedido"/>; depois de cada ação, o estado
-/// é lido de novo. A marca e a linha de estado vêm só da leitura (<see cref="Atualizar"/>): a caixa nunca mente sobre o
-/// registro. A linha de estado é uma região viva para o Narrador; uma ação que falha é dita nela até a próxima leitura sem
-/// ação, e o código do Windows (só o número) vai ao log. Nada aqui grava sem o pedido.
-/// </summary>
+// Caixa "Iniciar com o Windows". Só o clique na caixa liga ou desliga, e depois
+// de cada ação o estado é relido: a marca vem sempre da leitura, nunca mente sobre
+// o registro. A linha de estado é região viva pro Narrador; falha fica nela até a
+// próxima leitura, e só o número do erro do Windows vai pro log.
 internal sealed class ControleDoInicio
 {
     private readonly CaixaDeComando _caixa;
@@ -32,13 +28,11 @@ internal sealed class ControleDoInicio
         _caixa.Pedido += AoPedido;
     }
 
-    /// <summary>O estado lido por último.</summary>
     internal EstadoDoInicio Estado { get; private set; } = EstadoDoInicio.Indisponivel;
 
-    /// <summary>Se a última ação falhou (dito na linha de estado até a próxima leitura sem ação).</summary>
     internal bool Falhou { get; private set; }
 
-    /// <summary>Lê o estado e mostra (na abertura, na ativação da janela e depois de cada ação).</summary>
+    // Chamado na abertura, na ativação da janela e depois de cada ação.
     internal void Atualizar(string motivo) => Ler(motivo, falhou: false);
 
     private void Ler(string motivo, bool falhou)
@@ -58,7 +52,6 @@ internal sealed class ControleDoInicio
         Ler("depois da ação", falhou: resultado is ResultadoDoInicio.Erro or ResultadoDoInicio.NaoEDestaCopia);
     }
 
-    /// <summary>Os campos, com o código do Windows quando houver (só o número).</summary>
     private (string Campo, object? Valor)[] ComCodigo((string Campo, object? Valor)[] campos)
         => _porta.UltimoErro is { } codigo ? [.. campos, ("codigo", codigo)] : campos;
 

@@ -2,35 +2,25 @@ using System.Runtime.InteropServices;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// Resultado de uma consulta da configuração de vídeo: os alvos ativos (nome GDI da fonte e caminho do dispositivo
-/// do monitor) e, se a consulta inteira falhou, o motivo, só com o nome da função e o código do Windows, ou o tipo e o
-/// código de uma exceção (SECURITY.md 6). Um alvo cujo nome ou caminho não pôde ser lido fica de fora e conta em
-/// <see cref="CaminhosSemNome"/>, sem invalidar os outros.
-/// </summary>
+// Erro só leva nome da função + código do Windows (ou tipo + HResult), nada que
+// identifique a máquina. Alvo sem nome ou caminho fica de fora e conta em CaminhosSemNome.
 internal sealed record ConsultaDeVideo(IReadOnlyList<AlvoAtivo> Alvos, string? Erro, int CaminhosSemNome);
 
-/// <summary>
-/// Leitura da configuração de vídeo para a chave estável do monitor (DEC-030, ARCHITECTURE.md 2.13.3): os caminhos
-/// ativos, o nome GDI da fonte de cada um e o caminho do dispositivo do alvo. Só lê, nunca muda a configuração. O
-/// caminho sai daqui só dentro de <see cref="AlvoAtivo"/>, e só <see cref="ChavesDeMonitor"/> o usa, para o resumo.
-/// Na thread da interface, como o resto da leitura da topologia.
-/// </summary>
+// Lê (nunca muda) a configuração de vídeo pra montar a chave estável do monitor.
+// O caminho do dispositivo só sai daqui dentro de AlvoAtivo, e só ChavesDeMonitor usa.
+// Roda na thread da UI, como o resto da topologia.
 internal static class ConfiguracaoDeVideo
 {
-    /// <summary>Tentativas completas quando a configuração muda entre medir e ler (ERROR_INSUFFICIENT_BUFFER).</summary>
+    // Pra quando a configuração muda entre medir e ler (ERROR_INSUFFICIENT_BUFFER).
     private const int Tentativas = 3;
 
-    /// <summary>Limites de sanidade dos tamanhos que o Windows informa, antes de reservar memória.</summary>
+    // Sanidade nos tamanhos que o Windows devolve, antes de alocar.
     private const uint MaximoDeCaminhos = 1024;
 
     private const uint MaximoDeModos = 2048;
 
-    /// <summary>
-    /// Os alvos ativos agora. Nunca lança por causa do Windows: uma falha vira <see cref="ConsultaDeVideo.Erro"/>, e a
-    /// leitura da topologia segue com o cache ou a reserva (a consulta pode ser negada numa sessão remota ou sem acesso
-    /// ao console).
-    /// </summary>
+    // Não lança por falha do Windows (sessão remota ou sem console nega a consulta):
+    // vira Erro e a topologia segue com cache ou reserva.
     internal static ConsultaDeVideo Consultar()
     {
         try
@@ -41,7 +31,7 @@ internal static class ConfiguracaoDeVideo
                 if (r != Win32.ERROR_SUCCESS) return Falha($"GetDisplayConfigBufferSizes {r}");
                 if (caminhos > MaximoDeCaminhos || modos > MaximoDeModos) return Falha("GetDisplayConfigBufferSizes fora dos limites");
 
-                // Pelo menos um elemento em cada vetor: um vetor vazio iria ao Windows como ponteiro nulo.
+                // Mínimo 1: vetor vazio iria pro Windows como ponteiro nulo.
                 var vetorDeCaminhos = new Win32.DISPLAYCONFIG_PATH_INFO[Math.Max(caminhos, 1)];
                 var vetorDeModos = new Win32.DISPLAYCONFIG_MODE_INFO[Math.Max(modos, 1)];
                 uint lidos = (uint)vetorDeCaminhos.Length, modosLidos = (uint)vetorDeModos.Length;
@@ -54,18 +44,14 @@ internal static class ConfiguracaoDeVideo
         }
         catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException)
         {
-            // Só o tipo e o código (SECURITY.md 6).
             return Falha($"{e.GetType().Name} 0x{e.HResult:X8}");
         }
     }
 
     private static ConsultaDeVideo Falha(string motivo) => new([], motivo, 0);
 
-    /// <summary>
-    /// De cada caminho ativo com o alvo disponível: o nome GDI da fonte (lido uma vez por fonte, o que serve aos
-    /// clones) e o caminho do dispositivo do alvo. Um alvo marcado como indisponível é o de um monitor que acabou de
-    /// sair, e o Windows ainda não tirou o caminho; fica de fora sem contar como falha.
-    /// </summary>
+    // Nome GDI lido uma vez por fonte (serve pros clones). Alvo indisponível é monitor
+    // que acabou de sair e o Windows ainda não tirou: pula sem contar como falha.
     private static ConsultaDeVideo Alvos(ReadOnlySpan<Win32.DISPLAYCONFIG_PATH_INFO> caminhos)
     {
         var fontes = new Dictionary<(uint, int, uint), string?>();
@@ -99,7 +85,6 @@ internal static class ConfiguracaoDeVideo
             : null;
     }
 
-    /// <summary>Só o caminho do dispositivo; o resto do pacote do alvo não é lido.</summary>
     private static string? CaminhoDoAlvo(Win32.LUID adaptador, uint id)
     {
         var pacote = new Win32.DISPLAYCONFIG_TARGET_DEVICE_NAME

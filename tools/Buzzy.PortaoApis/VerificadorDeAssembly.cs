@@ -4,9 +4,6 @@ using System.Reflection.PortableExecutable;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>O que a leitura de um assembly gerenciado encontrou.</summary>
-/// <param name="AssembliesReferenciados">Nomes da tabela AssemblyRef, para conferir dependências do produto.</param>
-/// <param name="UsosRestritos">P/Invokes da lista proibida permitidos por <see cref="PortaoApis.UsosRestritos"/>.</param>
 internal sealed record AnaliseDeAssembly(
     IReadOnlyList<Violacao> Violacoes,
     int PInvokes,
@@ -15,14 +12,8 @@ internal sealed record AnaliseDeAssembly(
     IReadOnlyList<string> AssembliesReferenciados,
     IReadOnlyList<UsoRestritoVisto> UsosRestritos);
 
-/// <summary>
-/// Confere os metadados de um assembly gerenciado com a lista proibida, sem carregá-lo:
-/// declarações P/Invoke (tabela ImplMap), referências a tipos (TypeRef) e a membros (MemberRef),
-/// e métodos de interfaces COM declaradas no próprio assembly. Chamadas por reflexão com nomes
-/// em texto não são rastreadas aqui; a verificação do código-fonte cobre esses textos. Um
-/// P/Invoke da lista proibida declarado no lugar de um uso restrito (<see cref="PortaoApis.UsosRestritos"/>)
-/// não é violação: vai para o relatório como uso restrito.
-/// </summary>
+// Lê os metadados sem carregar: P/Invokes (ImplMap), TypeRef, MemberRef e métodos de interfaces
+// COM do próprio assembly. Reflexão por nome em texto não aparece aqui; o verificador de fonte cobre.
 internal static class VerificadorDeAssembly
 {
     private const int ProfundidadeMaxima = 64;
@@ -94,8 +85,7 @@ internal static class VerificadorDeAssembly
         {
             tipos++;
             TypeReference tipo = md.GetTypeReference(h);
-            // Um tipo aninhado aponta para o tipo externo, que também está na tabela e é
-            // conferido por conta própria.
+            // Aninhado aponta pro tipo externo, que já é conferido na própria linha.
             if (tipo.ResolutionScope.Kind == HandleKind.TypeReference) continue;
 
             string nomeDoNamespace = md.GetString(tipo.Namespace);
@@ -127,10 +117,7 @@ internal static class VerificadorDeAssembly
         return new AnaliseDeAssembly(violacoes, pinvokes, tipos, membros, referenciados, usosRestritos);
     }
 
-    /// <summary>
-    /// Nome completo do tipo que declara um membro referenciado; nulo quando o pai não é um
-    /// tipo (função global de um módulo, assinatura vararg de um método).
-    /// </summary>
+    // Nulo quando o pai não é tipo (função global de módulo, assinatura vararg).
     private static string? NomeDoTipo(MetadataReader md, EntityHandle pai, int profundidade)
     {
         if (profundidade > ProfundidadeMaxima)

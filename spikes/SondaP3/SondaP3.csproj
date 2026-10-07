@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Harness DESCARTÁVEL de P3 (Etapa 0B). Não é código de produto e não segue para a Fase 1.
-    Injeta input sintético (SendInput), o que SECURITY.md 3.2 permite apenas em ferramentas
-    de teste fora do executável. O protótipo BuzzySpike continua sem SendInput.
-    Nenhum pacote NuGet.
+    Harness descartável do teste de arraste, fora do produto. Usa SendInput, que só é
+    aceito em ferramenta de teste; o BuzzySpike em si não usa. Sem pacote NuGet.
   -->
 
   <PropertyGroup>

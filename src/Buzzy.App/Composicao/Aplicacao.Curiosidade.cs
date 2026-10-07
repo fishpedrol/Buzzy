@@ -2,14 +2,10 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// A ligação da curiosidade da Fase 7 (DEC-037): a avaliação da tela cheia candidata o monitor do primeiro plano, a carência
-/// (<see cref="CarenciaDoFoco"/>) o confirma depois de 2 s e o publica ao núcleo (FOREGROUND_MONITOR_CHANGED), só quando
-/// muda; o disparo da curiosidade é um temporizador único com geração, adiado enquanto o menu de contexto está aberto; e o
-/// vão é lido uma vez por pedido do núcleo (ACTIVE_WINDOW_SPAN), sem guardar nada. Nenhuma linha de log por troca de foco:
-/// o log só leva as decisões do núcleo e, no fim, quantos vãos foram pedidos. Sem o observador (<c>--sem-tela-cheia</c>),
-/// nenhum foco chega, e a curiosidade não age.
-/// </summary>
+// Curiosidade: a agenda da tela cheia sugere o monitor do foco, a carência confirma
+// depois de 2 s e manda pro núcleo só quando muda. O disparo espera o menu de contexto
+// fechar. O vão da janela ativa é lido uma vez por pedido, sem guardar. Nada vai pro
+// log a cada troca de foco. Com --sem-tela-cheia não chega foco e ela não age.
 internal sealed partial class Aplicacao
 {
     private CarenciaDoFoco? _carenciaDoFoco;
@@ -17,10 +13,7 @@ internal sealed partial class Aplicacao
     private bool _menuAberto;
     private long? _curiosidadeAdiada;
 
-    /// <summary>
-    /// O receptor do candidato a foco para a agenda da tela cheia, com a curiosidade ligada; nulo sem ela. Cria a carência e o
-    /// temporizador da curiosidade.
-    /// </summary>
+    // Nulo com a curiosidade desligada.
     private Action<string>? IniciarCuriosidade()
     {
         if (_nucleo?.Configuracao.Curiosidade != true) return null;
@@ -30,7 +23,6 @@ internal sealed partial class Aplicacao
         return chave => _carenciaDoFoco?.Candidatar(chave);
     }
 
-    /// <summary>Os efeitos da curiosidade: o disparo único e o pedido do vão, respondido depois do processamento.</summary>
     private void ExecutarEfeitoDaCuriosidade(Efeito efeito)
     {
         switch (efeito)
@@ -43,7 +35,7 @@ internal sealed partial class Aplicacao
                 _curiosidadeAdiada = null;
                 break;
             case PedirVaoDaJanelaAtiva pedido:
-                // Uma leitura, convertida na hora pela agenda; o vão só vive no evento.
+                // Lido e convertido na hora; o vão só existe dentro do evento.
                 Adiar(() => Enviar(new ActiveWindowSpan(pedido.Geracao, _telaCheia?.LerVao(pedido.Chave)), "vão"));
                 break;
             default:
@@ -51,7 +43,7 @@ internal sealed partial class Aplicacao
         }
     }
 
-    /// <summary>O disparo da curiosidade: com o menu de contexto aberto, espera ele fechar (DEC-037, item 6).</summary>
+    // Com o menu de contexto aberto, espera ele fechar.
     private void AoDispararCuriosidade(long geracao)
     {
         if (_menuAberto)
@@ -62,7 +54,7 @@ internal sealed partial class Aplicacao
         Enviar(new CuriosityTimer(geracao), "curiosidade");
     }
 
-    /// <summary>Depois do menu: o disparo que chegou com ele aberto sai agora, depois do comando escolhido.</summary>
+    // Sai depois do comando escolhido no menu.
     private void EntregarCuriosidadeAdiada()
     {
         if (_menuAberto || _curiosidadeAdiada is not { } geracao || _encerrando) return;
@@ -70,7 +62,6 @@ internal sealed partial class Aplicacao
         Enviar(new CuriosityTimer(geracao), "curiosidade (depois do menu)");
     }
 
-    /// <summary>Encerramento: a carência e o disparo param; nada mais chega ao núcleo.</summary>
     private void PararCuriosidade()
     {
         _carenciaDoFoco?.Parar();

@@ -1,6 +1,5 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>Códigos das linhas de erro, no formato que o MSBuild reconhece.</summary>
 internal static class Codigos
 {
     public const string ErroDeUso = "BZP000";
@@ -11,22 +10,14 @@ internal static class Codigos
     public const string Manifesto = "BZP005";
     public const string BinarioDeTerceiro = "BZP006";
 
-    /// <summary>O host de um pacote de arquivo único que não é o singlefilehost.exe da Microsoft (F9-P10).</summary>
+    // Host do pacote que não é o singlefilehost.exe da Microsoft.
     public const string HostDeArquivoUnico = "BZP007";
 
-    /// <summary>runtimeconfig.json ou deps.json fora da lista revisada (F9-P10): o runtime carregaria código de fora.</summary>
+    // runtimeconfig.json ou deps.json fora do revisado: o runtime carregaria código de fora.
     public const string ConfiguracaoDoRuntime = "BZP008";
 }
 
-/// <summary>Uma capacidade proibida encontrada.</summary>
-/// <param name="Arquivo">Caminho completo do arquivo onde foi encontrada.</param>
-/// <param name="Linha">Linha, a partir de 1; 0 quando o achado não tem linha (binários).</param>
-/// <param name="Coluna">Coluna, a partir de 1; 0 quando não tem linha.</param>
-/// <param name="Codigo">Um dos <see cref="Codigos"/>.</param>
-/// <param name="Categoria">Linha de SECURITY.md 3.2, ou <see cref="Categoria.Manifesto"/>.</param>
-/// <param name="Api">O que foi encontrado, como aparece no arquivo: <c>user32.dll!SendInput</c>.</param>
-/// <param name="Detalhe">Onde e por quê, em uma frase.</param>
-/// <param name="Regra">Regra da lista proibida que acusou; nulo para ordinal e manifesto.</param>
+// Linha e Coluna começam em 1; 0 em binário. Regra é nula pra ordinal e manifesto.
 internal sealed record Violacao(
     string Arquivo,
     int Linha,
@@ -37,5 +28,5 @@ internal sealed record Violacao(
     string Detalhe,
     Regra? Regra);
 
-/// <summary>Importação do apphost que coincide com a lista proibida e está na lista de permissões.</summary>
+// Importação proibida do host que está na lista de permissões.
 internal sealed record Permitida(string Arquivo, string Api, Categoria Categoria, PermissaoDoApphost Permissao);

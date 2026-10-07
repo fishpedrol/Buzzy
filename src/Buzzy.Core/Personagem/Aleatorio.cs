@@ -2,14 +2,10 @@ using System.Globalization;
 
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// Gerador pseudoaleatório determinístico (SplitMix64) guardado como valor no estado do núcleo:
-/// com a mesma semente e a mesma sequência de eventos, as escolhas se repetem (invariante 7).
-/// Não é criptográfico e não precisa ser.
-/// </summary>
+// SplitMix64 guardado como valor no estado: mesma semente + mesmos eventos
+// = mesmas escolhas. Não é criptográfico e não precisa ser.
 public readonly record struct Aleatorio(ulong Estado)
 {
-    /// <summary>Próximo valor de 64 bits e o gerador avançado.</summary>
     public (ulong Valor, Aleatorio Proximo) Sortear()
     {
         unchecked
@@ -22,10 +18,8 @@ public readonly record struct Aleatorio(ulong Estado)
         }
     }
 
-    /// <summary>
-    /// Inteiro uniforme em [<paramref name="minimo"/>, <paramref name="maximo"/>]. O viés do resto
-    /// com 64 bits sobre faixas de até 2³¹ é menor que 2⁻³², irrelevante para comportamento.
-    /// </summary>
+    // Inteiro em [minimo, maximo], inclusive. O viés do resto (64 bits sobre
+    // faixas de até 2³¹) fica abaixo de 2⁻³², então tanto faz.
     public (int Valor, Aleatorio Proximo) Entre(int minimo, int maximo)
     {
         if (maximo < minimo) throw new ArgumentOutOfRangeException(nameof(maximo), maximo, $"Máximo menor que o mínimo {minimo}.");
@@ -34,7 +28,7 @@ public readonly record struct Aleatorio(ulong Estado)
         return ((int)((long)minimo + (long)(v % faixa)), proximo);
     }
 
-    /// <summary>Índice escolhido com probabilidade proporcional ao peso; pesos negativos contam como zero.</summary>
+    // Peso negativo conta como zero.
     public (int Indice, Aleatorio Proximo) Ponderado(IReadOnlyList<int> pesos)
     {
         ArgumentNullException.ThrowIfNull(pesos);
@@ -51,17 +45,15 @@ public readonly record struct Aleatorio(ulong Estado)
         throw new InvalidOperationException("Inalcançável: o alvo é menor que a soma dos pesos.");
     }
 
-    /// <summary>Duração uniforme entre dois limites, em milissegundos inteiros.</summary>
+    // Sorteia em ms inteiros.
     public (TimeSpan Valor, Aleatorio Proximo) Duracao(TimeSpan minimo, TimeSpan maximo)
     {
         (int ms, Aleatorio proximo) = Entre((int)minimo.TotalMilliseconds, (int)maximo.TotalMilliseconds);
         return (TimeSpan.FromMilliseconds(ms), proximo);
     }
 
-    /// <summary>
-    /// Um sorteio com a chance dada, num passo só do gerador: um inteiro uniforme de 1 a <see cref="Chance.Em"/>, que sai se
-    /// for até <see cref="Chance.Vezes"/>. O passo acontece mesmo com a chance certa (1 em 1) ou nula (0 em 1).
-    /// </summary>
+    // Sempre gasta um passo do gerador, mesmo com chance certa (1 em 1)
+    // ou nula (0 em 1), pra não mudar a sequência dos sorteios seguintes.
     public (bool Saiu, Aleatorio Proximo) Sortear(Chance chance)
     {
         ArgumentNullException.ThrowIfNull(chance);
@@ -70,10 +62,7 @@ public readonly record struct Aleatorio(ulong Estado)
     }
 }
 
-/// <summary>
-/// Uma chance de <see cref="Vezes"/> em <see cref="Em"/>, como "1 em 8", sorteada por <see cref="Aleatorio.Sortear(Chance)"/>.
-/// <see cref="Em"/> é pelo menos 1, e <see cref="Vezes"/> vai de 0 (nunca) a <see cref="Em"/> (sempre).
-/// </summary>
+// "Vezes em Em", tipo "1 em 8". Vezes = 0 é nunca; Vezes = Em é sempre.
 public sealed record Chance
 {
     public Chance(int vezes, int em)
@@ -85,12 +74,9 @@ public sealed record Chance
         Em = em;
     }
 
-    /// <summary>Em quantas, de cada <see cref="Em"/>, sai.</summary>
     public int Vezes { get; }
 
-    /// <summary>De quantas.</summary>
     public int Em { get; }
 
-    /// <summary>"1 em 8", na cultura invariante.</summary>
     public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"{Vezes} em {Em}");
 }

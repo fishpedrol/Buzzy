@@ -1,22 +1,13 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Procura no código-fonte C# os padrões de <see cref="Regra.PadroesNaFonte"/>: palavras
-/// inteiras, ou sequências de palavras separadas por ponto (Process.Start), sem diferenciar
-/// maiúsculas. Os comentários são removidos antes (<see cref="RemovedorDeComentarios"/>); os
-/// textos continuam sendo lidos, e assim GetProcAddress("SendInput") acusa as duas palavras.
-/// A exceção é o arquivo de um uso restrito (<see cref="UsosRestritos"/>), que pode citar a função dele.
-///
-/// Limites conhecidos: nomes montados em partes ("Send" + "Input"), apelidos de using e
-/// identificadores escritos com escapes Unicode não são reconhecidos aqui. A verificação dos
-/// binários continua valendo para eles.
-/// </summary>
+// Procura os PadroesNaFonte (palavras inteiras ou com ponto, como Process.Start), sem caixa.
+// Tira os comentários antes mas lê as strings, então GetProcAddress("SendInput") acusa as duas.
+// Não pega nome montado ("Send" + "Input"), alias de using nem escape Unicode; o binário cobre.
 internal static class VerificadorDeFonte
 {
     private static readonly string[] PastasIgnoradas = ["bin", "obj"];
 
-    // Escapes simples de texto C# (\n, \t...): em "\tSendInput" a palavra lida seria
-    // "tSendInput"; a letra do escape é descartada numa segunda tentativa.
+    // Em "\tSendInput" a palavra lida seria "tSendInput"; tenta de novo sem a letra do escape.
     private const string LetrasDeEscape = "abefnrtv0";
 
     private static readonly Dictionary<string, Regra> Palavras = IndexarPalavras();
@@ -33,10 +24,7 @@ internal static class VerificadorDeFonte
 
     private readonly record struct Token(TipoDeToken Tipo, int Inicio, int Fim);
 
-    /// <summary>
-    /// Todos os arquivos .cs de uma pasta e subpastas, sem descer em pastas chamadas bin ou obj
-    /// nem em pontos de junção, em ordem.
-    /// </summary>
+    // Não desce em bin, obj nem em pontos de junção.
     public static IReadOnlyList<string> ListarArquivos(string pasta)
     {
         ArgumentNullException.ThrowIfNull(pasta);
@@ -75,7 +63,7 @@ internal static class VerificadorDeFonte
         var vistas = new HashSet<(int Posicao, Regra Regra)>();
         void Acusar(int posicao, string encontrado, Regra regra)
         {
-            // O único arquivo de um uso restrito pode citar a função dele (UsosRestritos); as outras regras valem nele também.
+            // O arquivo de um uso restrito pode citar a função dele; as outras regras valem igual.
             if (UsosRestritos.NaFonte(arquivo, regra) is not null) return;
             if (!vistas.Add((posicao, regra))) return;
             (int linha, int coluna) = Posicao(inicioDasLinhas, posicao);
@@ -110,10 +98,7 @@ internal static class VerificadorDeFonte
         return violacoes;
     }
 
-    /// <summary>
-    /// Confere se os tokens depois de tokens[k] seguem a sequência: ".", parte 1, ".", parte 2...
-    /// Devolve em <paramref name="restante"/> o texto casado depois da primeira palavra.
-    /// </summary>
+    // Depois de tokens[k] tem que vir ".", parte 1, ".", parte 2... restante é o que casou depois da primeira.
     private static bool CasaSequencia(List<Token> tokens, string texto, int k, string[] partes, out string restante)
     {
         restante = "";
@@ -179,8 +164,7 @@ internal static class VerificadorDeFonte
 
     private static Dictionary<string, Regra> IndexarPalavras()
     {
-        // A mesma palavra em duas regras (Clipboard do WPF e do Windows Forms) fica com a
-        // primeira; as duas têm a mesma categoria.
+        // Palavra repetida (Clipboard do WPF e do WinForms) fica com a primeira; a categoria é a mesma.
         var palavras = new Dictionary<string, Regra>(StringComparer.Ordinal);
         foreach (Regra r in ListaProibida.Regras)
         {

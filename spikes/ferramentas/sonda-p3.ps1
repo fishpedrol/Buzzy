@@ -1,24 +1,16 @@
 ﻿<#
-    sonda-p3.ps1 — preparação e evidência automatizada para o protótipo P3.
-
-    Duas partes bem separadas:
-
-    PARTE A, automatizada (esta roda sozinha):
-      A1. A janela do protótipo aparece sem tirar o foco do Bloco de Notas.
-      A2. A janela atravessa do monitor primário para o secundário, em coordenadas
-          negativas, movida por SetWindowPos com SWP_NOACTIVATE, e o foco continua no
-          Bloco de Notas em cada passo.
-      A3. Os estilos da janela confirmam WS_EX_NOACTIVATE e WS_EX_LAYERED.
-
-    PARTE B, física (exige uma pessoa): o gesto de arraste com o mouse. Não é injetado
-    input; o script imprime os passos e deixa o protótipo aberto.
-
-    A2 é movimento programático, NÃO é o arraste. Serve para isolar o mecanismo de
-    movimento e foco do mecanismo de captura do mouse. Só a Parte B aprova P3.
+    sonda-p3.ps1 — prepara o teste de arraste e confere o que dá sem uma pessoa.
 
     Uso:
       .\sonda-p3.ps1                 # captura simples
-      .\sonda-p3.ps1 -Margem         # recuo com margem alfa 1 durante o gesto
+      .\sonda-p3.ps1 -Margem         # plano B: margem alfa 1 durante o gesto
+      .\sonda-p3.ps1 -SemBlocoDeNotas
+
+    Parte A (sozinha): A1 a janela aparece sem tirar o foco do Bloco de Notas; A2 ela vai
+    do primário ao secundário (x negativo) por SetWindowPos + SWP_NOACTIVATE sem mexer no
+    foco; A3 tem WS_EX_NOACTIVATE e WS_EX_LAYERED.
+    Parte B (pessoa): o arraste de verdade. O script só imprime os passos e deixa aberto.
+    A2 não é arraste: separa o movimento/foco da captura do mouse. Só a Parte B vale.
 #>
 
 [CmdletBinding()]
@@ -102,7 +94,7 @@ if (-not $SemBlocoDeNotas) {
 $focoAntes = [P3]::GetForegroundWindow()
 Write-Host ("Janela em primeiro plano ANTES de abrir o protótipo: " + (NomeDaJanela $focoAntes)) -ForegroundColor DarkGray
 
-# Posicionar o protótipo sobre a janela do Bloco de Notas, quando ela existir.
+# Protótipo por cima do Bloco de Notas, se ele existir.
 $X = 700; $Y = 400
 if ($hBloco -ne [IntPtr]::Zero) {
     $r = New-Object P3+RECT
@@ -194,7 +186,7 @@ foreach ($px in $passos) {
     $linhasA2 += ("     A2 x=$px -> ($($rAgora.Left),$($rAgora.Top)) $monitor foco_ok=$ok")
 }
 
-# Devolver a janela para cima do Bloco de Notas, para a Parte B.
+# Volta pra cima do Bloco de Notas pra Parte B.
 [void][P3]::SetWindowPos($hSpike, [IntPtr]::Zero, $X, $Y, 0, 0,
     ([P3]::SWP_NOSIZE -bor [P3]::SWP_NOZORDER -bor [P3]::SWP_NOACTIVATE))
 

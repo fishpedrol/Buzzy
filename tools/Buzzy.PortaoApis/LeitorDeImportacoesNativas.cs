@@ -4,10 +4,7 @@ using System.Text;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>Uma função importada por um PE nativo.</summary>
-/// <param name="Modulo">Nome do módulo como está na tabela: <c>KERNEL32.dll</c>.</param>
-/// <param name="Funcao">Nome da função, ou <c>#n</c> quando importada pelo ordinal n.</param>
-/// <param name="CargaAtrasada">Se veio da tabela de importação com carga atrasada.</param>
+// Funcao é "#n" quando a importação é pelo ordinal n.
 internal sealed record ImportacaoNativa(string Modulo, string Funcao, bool CargaAtrasada)
 {
     public bool PorOrdinal => Funcao.StartsWith('#');
@@ -15,11 +12,8 @@ internal sealed record ImportacaoNativa(string Modulo, string Funcao, bool Carga
     public override string ToString() => $"{Modulo}!{Funcao}";
 }
 
-/// <summary>
-/// Lê as importações de um PE: o diretório de importação (IMAGE_IMPORT_DESCRIPTOR) e o de
-/// importação com carga atrasada (IMAGE_DELAYLOAD_DESCRIPTOR), em PE32 e PE32+. Não carrega o
-/// arquivo como executável. Um PE malformado gera <see cref="BadImageFormatException"/>.
-/// </summary>
+// Lê as importações normais e as de carga atrasada, em PE32 e PE32+, sem carregar o arquivo.
+// PE malformado lança BadImageFormatException.
 internal static class LeitorDeImportacoesNativas
 {
     private const int MaximoDeEntradas = 1 << 16;
@@ -67,10 +61,8 @@ internal static class LeitorDeImportacoesNativas
         }
     }
 
-    // IMAGE_DELAYLOAD_DESCRIPTOR, 32 bytes: Attributes, DllNameRVA, ModuleHandleRVA,
-    // ImportAddressTableRVA, ImportNameTableRVA, BoundImportAddressTableRVA,
-    // UnloadInformationTableRVA, TimeDateStamp. Sem o bit RvaBased em Attributes (formato antigo),
-    // os campos são endereços virtuais e é preciso descontar a base da imagem.
+    // IMAGE_DELAYLOAD_DESCRIPTOR, 32 bytes (8 campos de 4). Sem o bit RvaBased em Attributes
+    // (formato antigo), os campos são VAs e tem que descontar a base da imagem.
     private static void LerDiretorioAtrasado(PEReader pe, DirectoryEntry diretorio, bool pe32Mais, long baseDaImagem, List<ImportacaoNativa> destino)
     {
         if (diretorio.RelativeVirtualAddress == 0) return;
@@ -94,9 +86,8 @@ internal static class LeitorDeImportacoesNativas
         }
     }
 
-    // Cada entrada da tabela tem 4 bytes (PE32) ou 8 (PE32+). Bit mais alto ligado: importação
-    // por ordinal nos 16 bits baixos. Desligado: RVA de IMAGE_IMPORT_BY_NAME (dica de 2 bytes e
-    // nome em ASCII). A tabela termina numa entrada zero.
+    // Entrada de 4 bytes (PE32) ou 8 (PE32+). Bit alto ligado: ordinal nos 16 bits baixos.
+    // Desligado: RVA de IMAGE_IMPORT_BY_NAME (2 bytes de dica + nome ASCII). Termina em zero.
     private static void LerFuncoes(PEReader pe, string modulo, int rvaDaTabela, bool pe32Mais, long desconto, bool cargaAtrasada, List<ImportacaoNativa> destino)
     {
         BlobReader leitor = Bloco(pe, rvaDaTabela);

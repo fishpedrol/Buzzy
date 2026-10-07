@@ -3,7 +3,7 @@
 
   <assemblyIdentity version="0.1.3.0" name="Buzzy.app" />
 
-  <!-- Sem elevação (SECURITY.md 2 e 8, item 5): nenhum recurso do Buzzy exige administrador. -->
+  <!-- Sem elevação: nada no Buzzy precisa de administrador. -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
@@ -15,17 +15,16 @@
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
     <application>
       <!--
-        Windows 10 (versão 1607 ou mais recente) e Windows 11, que compartilham este GUID (DEC-043; Q-02 revista). Sem ele,
-        o Windows informa ao aplicativo a versão do Windows 8 e aplica o comportamento de compatibilidade dela. O portão
-        exige esta declaração (VerificadorDeManifesto).
+        Windows 10 (1607+) e 11 usam o mesmo GUID. Sem ele, o Windows diz ao app que é o Windows 8
+        e aplica a compatibilidade dele. O portão exige esta linha (VerificadorDeManifesto).
       -->
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
     </application>
   </compatibility>
 
   <!--
-    Per-Monitor V2 declarado no manifesto, não por chamada de função (ARCHITECTURE.md 2.4
-    e 2.13.3). dpiAware fica como recuo para quem só entende o esquema antigo.
+    Per-Monitor V2 pelo manifesto, não por chamada de função. dpiAware é o recuo pra quem
+    só entende o esquema antigo.
   -->
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>

@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 
 namespace Buzzy.Visual;
 
-/// <summary>Um nó da árvore de uma pose (formato de assets/identidade/buzzy-poses.json).</summary>
+// Formato de assets/identidade/buzzy-poses.json.
 public sealed class NoDaPose
 {
     [JsonPropertyName("parte")] public string Parte { get; init; } = "";
@@ -18,7 +18,6 @@ public sealed class NoDaPose
     [JsonPropertyName("frente")] public List<NoDaPose> Frente { get; init; } = [];
 }
 
-/// <summary>Uma pose-chave: vista, estado de origem, expressão padrão e a árvore de partes.</summary>
 public sealed class Pose
 {
     [JsonPropertyName("vista")] public string Vista { get; init; } = "frente";
@@ -26,13 +25,13 @@ public sealed class Pose
     [JsonPropertyName("expressao")] public string Expressao { get; init; } = "neutro";
     [JsonPropertyName("topete")] public string? Topete { get; init; }
 
-    /// <summary>Para poses de escalada: x da parede, em DIP a partir da âncora (usado nas prévias e no manifesto).</summary>
+    // Só escalada: x da parede em DIP a partir da âncora.
     [JsonPropertyName("parede")] public double? Parede { get; init; }
 
     [JsonPropertyName("raiz")] public List<NoDaPose> Raiz { get; init; } = [];
 }
 
-/// <summary>Camadas do rosto de uma expressão, para a vista de frente e de perfil.</summary>
+// Camadas do rosto, de frente e de perfil (*Lado).
 public sealed class Expressao
 {
     [JsonPropertyName("olhos")] public string Olhos { get; init; } = "";
@@ -44,7 +43,7 @@ public sealed class Expressao
     [JsonPropertyName("topeteLado")] public string TopeteLado { get; init; } = "";
 }
 
-/// <summary>Quadro lógico do boneco, em DIPs, com a âncora (centro da borda inferior).</summary>
+// Em DIP; âncora no centro da borda de baixo.
 public sealed class Quadro
 {
     [JsonPropertyName("largura")] public double Largura { get; init; } = 128;
@@ -53,7 +52,6 @@ public sealed class Quadro
     [JsonPropertyName("ancoraY")] public double AncoraY { get; init; } = 128;
 }
 
-/// <summary>Arquivo de poses e expressões.</summary>
 public sealed class DefinicaoDoBoneco
 {
     [JsonPropertyName("versao")] public int Versao { get; init; }
@@ -66,10 +64,8 @@ public sealed class DefinicaoDoBoneco
            ?? throw new InvalidDataException("Arquivo de poses vazio.");
 }
 
-/// <summary>
-/// Boneco de recorte: compõe uma pose (árvore de partes com translate/rotate/scale) com as camadas
-/// de uma expressão, em coordenadas do quadro lógico (0..128 DIP, âncora no centro da base).
-/// </summary>
+// Boneco de recorte: árvore de partes (translate/rotate/scale) + camadas da expressão, no quadro
+// lógico de 0..128 DIP.
 public sealed class Boneco
 {
     public Boneco(BibliotecaDePartes partes, DefinicaoDoBoneco definicao)
@@ -81,10 +77,7 @@ public sealed class Boneco
     public BibliotecaDePartes Partes { get; }
     public DefinicaoDoBoneco Definicao { get; }
 
-    /// <summary>
-    /// Desenho congelado da pose no quadro lógico. <paramref name="espelhar"/> vira a pose na
-    /// horizontal em torno da âncora (perfil olhando para a esquerda).
-    /// </summary>
+    // espelhar vira em torno da âncora (perfil olhando pra esquerda).
     public Drawing Compor(string pose, string? expressao = null, bool espelhar = false)
     {
         Pose p = Definicao.Poses.TryGetValue(pose, out Pose? achada) ? achada : throw new KeyNotFoundException($"Pose ausente: {pose}");
@@ -131,10 +124,7 @@ public sealed class Boneco
         _ => parte,
     };
 
-    /// <summary>
-    /// Renderiza a pose no DPI pedido, no tamanho físico do quadro. Com <paramref name="bordaDura"/>,
-    /// todo pixel termina com alfa 0 ou 255 (regra de P1; docs/IDENTIDADE_VISUAL.md, seção 5).
-    /// </summary>
+    // Com bordaDura, todo pixel sai com alfa 0 ou 255 (sem borda semitransparente).
     public BitmapSource Renderizar(string pose, double dpi, string? expressao = null, bool espelhar = false, bool bordaDura = true)
         => Rasterizar(Compor(pose, expressao, espelhar), Definicao.Quadro.Largura, Definicao.Quadro.Altura, dpi, bordaDura);
 
@@ -161,7 +151,7 @@ public sealed class Boneco
         return bmp;
     }
 
-    /// <summary>Força cada pixel Pbgra32 a alfa 0 (tudo zero) ou 255 (cor desfeita da pré-multiplicação).</summary>
+    // Pbgra32: alfa < 128 zera tudo; senão vira 255 e desfaz a pré-multiplicação da cor.
     public static void Limiarizar(int[] pixels)
     {
         for (int i = 0; i < pixels.Length; i++)
@@ -181,6 +171,6 @@ public sealed class Boneco
         }
     }
 
-    /// <summary>Limites da pose no quadro lógico, para conferir se ela cabe em 0..largura × 0..altura.</summary>
+    // Pra conferir se a pose cabe no quadro.
     public Rect Limites(string pose, string? expressao = null) => Compor(pose, expressao).Bounds;
 }

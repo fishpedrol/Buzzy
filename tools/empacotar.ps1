@@ -1,31 +1,30 @@
 ﻿<#
 .SYNOPSIS
-    Gera o pacote pessoal do Buzzy (o ZIP portátil ou o .exe único) e o confere rodando de uma pasta temporária
-    (DEC-040, item 9; DEC-042; Q-10).
+    Gera o pacote pessoal do Buzzy (ZIP portátil ou .exe único) e confere rodando de uma
+    pasta temporária. Nada é publicado nem enviado.
 
 .DESCRIPTION
-    Uso pessoal e de testes, sem distribuição (Q-10; DEC-042, item 6): nada é publicado nem enviado. Passos:
-      1. confere que nenhum Buzzy está aberto e que não está elevado;
-      2. publica src\Buzzy.App em Release, numa pasta temporária:
-         -Formato zip (padrão): dependente do framework (exige o .NET 10 Desktop Runtime);
-         -Formato exe: o .exe único autocontido para Windows x64 (-p:BuzzyExeUnico=true; F9-P10), sem exigir runtime;
-         -Edicao publica: a edição pública do download, sem as drogas ilícitas (-p:BuzzyEdicao=publica; DEC-044, item 2);
-         -Edicao completa (padrão): a de sempre, com os treze itens, para a página separada do site;
-      3. o portão de APIs: no zip, roda na pasta publicada; no exe, roda dentro do publish duas vezes (a pasta
-         autocontida, com a procedência do runtime, e o pacote por dentro, com o host contra o singlefilehost.exe do SDK),
-         e o script exige os dois APROVADO;
-      4. recusa qualquer arquivo fora da lista esperada (os .pdb ficam fora);
-      5. gera resultados\Buzzy-<versão>[-completo].zip ou resultados\Buzzy-<versão>[-completo]-win-x64.exe (o sufixo só na
-         edição completa), e o SHA-256 dele;
-      6. põe o pacote numa pasta temporária (o ZIP extraído; o .exe copiado, como um download), abre o Buzzy.exe de lá com
-         o perfil de teste "pacote" (sem instalar nem elevar), espera a janela, fecha por WM_CLOSE e exige saída limpa
-         (código 0); a linha INICIO do log tem de dizer a edição pedida (edicao=publica ou edicao=completa). O .exe vai com o nome do download e roda duas vezes: a primeira faz o runtime extrair as DLLs
-         nativas do WPF em %TEMP%\.net\Buzzy-<versão>-win-x64\<id>, a segunda tem de reaproveitá-las sem gravar de novo;
-         o script mede o caminho, os arquivos e o tamanho, e apaga só as pastas <id> que esta execução criou;
-      7. confere que a pasta temporária não mudou (o Buzzy não grava ao lado do executável) e que os arquivos e o registro
-         reais do usuário ficaram iguais, vistos só por fora.
-    Abre uma janela do Buzzy por alguns segundos (duas vezes no exe): avise quem usa o computador antes. Códigos de
-    saída: 0 tudo certo; 1 alguma conferência falhou; 2 pré-condição não atendida (nada foi aberto).
+    -Formato zip (padrão): dependente do framework (precisa do .NET 10 Desktop Runtime).
+    -Formato exe: .exe único autocontido win-x64 (-p:BuzzyExeUnico=true).
+    -Edicao completa (padrão): os treze itens. -Edicao publica: sem as drogas ilícitas.
+
+    Passos:
+      1. recusa se houver Buzzy aberto ou se estiver elevado;
+      2. publica em Release numa pasta temporária;
+      3. portão de APIs: no zip, na pasta publicada; no exe, roda duas vezes dentro do
+         publish (pasta autocontida e pacote por dentro) e exige os dois APROVADO;
+      4. recusa arquivo fora da lista esperada (.pdb fica fora);
+      5. grava resultados\Buzzy-<versão>[-completo].zip ou [-completo]-win-x64.exe e o SHA-256;
+      6. abre o Buzzy da pasta temporária com o perfil "pacote", espera a janela, fecha por
+         WM_CLOSE e exige código 0, com a edição certa na linha INICIO do log. O .exe roda
+         duas vezes: a 1ª extrai as DLLs nativas do WPF em %TEMP%\.net\<nome>\<id>, a 2ª
+         tem de reaproveitar sem regravar. Só apaga as pastas <id> que criou;
+      7. confere que nada foi gravado ao lado do exe nem nos arquivos/registro reais
+         (vistos só por fora).
+    Abre uma janela do Buzzy por alguns segundos (duas vezes no exe).
+    Saída: 0 ok; 1 alguma conferência falhou; 2 pré-condição falhou (nada foi aberto).
+
+    Uso: .\tools\empacotar.ps1 [-Formato zip|exe] [-Edicao completa|publica]
 #>
 [CmdletBinding()]
 param(
@@ -38,16 +37,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $raiz = Split-Path -Parent $PSScriptRoot
-# Qualquer Buzzy, com qualquer nome de arquivo: Buzzy.exe, o .exe único Buzzy-<versão>-win-x64.exe ou uma cópia renomeada
-# (o mutex de instância única cobre esta; revisão adversarial do F9-P10).
+# Qualquer nome: Buzzy.exe, Buzzy-<versão>-win-x64.exe; cópia renomeada o mutex pega.
 $nomesProcesso = @('Buzzy*')
 $perfilDeTeste = 'pacote'
 $pastaLocal = [Environment]::GetFolderPath('LocalApplicationData')
 $pastaDoBuzzyReal = [IO.Path]::Combine($pastaLocal, 'Buzzy')
 $logDiag = [IO.Path]::Combine($pastaDoBuzzyReal, 'diagnostico.log')
 $esperados = if ($Formato -eq 'exe') { @('Buzzy.exe') } else { @('Buzzy.exe', 'Buzzy.dll', 'Buzzy.Core.dll', 'Buzzy.Visual.dll', 'Buzzy.deps.json', 'Buzzy.runtimeconfig.json') }
-# O runtime do .NET extrai as DLLs nativas do .exe único em %TEMP%\.net\<nome do arquivo .exe, sem a extensão>\<id do
-# pacote> (DOTNET_BUNDLE_EXTRACT_BASE_DIR, que o Buzzy não define; DEC-042, item 9). Definida no passo 6, com o nome real.
+# O runtime extrai as DLLs nativas do .exe único em %TEMP%\.net\<nome do exe sem
+# extensão>\<id> (o Buzzy não define DOTNET_BUNDLE_EXTRACT_BASE_DIR). Preenchida no passo 6.
 $extracaoDoRuntime = $null
 $extracoesAntes = $null
 
@@ -63,7 +61,7 @@ function Falhar([string] $motivo) {
     $script:falhas++
 }
 
-# As pastas de extração (os ids de pacote) que existem agora em $extracaoDoRuntime; nenhuma no formato zip.
+# Ids de extração que existem agora; nenhum no formato zip.
 function PastasDeExtracao {
     if ($null -eq $extracaoDoRuntime -or -not [IO.Directory]::Exists($extracaoDoRuntime)) { return @() }
     @(Get-ChildItem -LiteralPath $extracaoDoRuntime -Directory -Force | ForEach-Object { $_.Name })
@@ -71,7 +69,7 @@ function PastasDeExtracao {
 
 function ProcessosBuzzyAbertos {
     $abertos = @(Get-Process -Name $nomesProcesso -ErrorAction SilentlyContinue | Sort-Object Id -Unique)
-    # O mutex de instância única do usuário (InstanciaUnica): só aberto para saber se existe, e fechado na hora.
+    # Mutex de instância única: abre só pra saber se existe e fecha na hora.
     $sid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     $mutex = $null
     if ([Threading.Mutex]::TryOpenExisting(('Local\Buzzy.Instancia.' + $sid), [ref]$mutex)) {
@@ -81,8 +79,8 @@ function ProcessosBuzzyAbertos {
     $abertos
 }
 
-# Os arquivos reais de configuração e o registro do início com o Windows, só por fora (metadados e existência), como a
-# medição (tools\medir-desempenho.ps1) e a integração (ArquivosReais.cs): nada é lido por dentro nem gravado.
+# Configurações reais e registro do início com o Windows, só por fora (metadados e
+# existência): nada é lido por dentro nem gravado.
 function FotoDosArquivosReais {
     $arquivos = (@('settings.json', 'settings.json.bak', 'settings.json.tmp', 'settings.corrupt.json') | ForEach-Object {
         $info = New-Object IO.FileInfo ([IO.Path]::Combine($pastaDoBuzzyReal, $_))
@@ -100,7 +98,7 @@ function FotoDosArquivosReais {
     '{0}; registro: {1}' -f $arquivos, $registro
 }
 
-# A limpeza dos testes (PerfilDeTeste.Limpar): só a pasta testes\<perfil>, sem seguir junção nem link no caminho.
+# Igual ao PerfilDeTeste.Limpar: só testes\<perfil>, sem seguir junção nem link.
 function LimparPerfilDeTeste([string] $pastaLocal, [string] $perfil) {
     if ($perfil -cnotmatch '\A[a-z0-9][a-z0-9-]{0,31}\z') { Abortar ('nome de perfil de teste inválido: {0}' -f $perfil) }
     if ([string]::IsNullOrEmpty($pastaLocal) -or $pastaLocal -notmatch '\A([A-Za-z]:\\|\\\\)') { return 'sem a pasta local do usuário; nada a apagar' }
@@ -118,7 +116,7 @@ function LimparPerfilDeTeste([string] $pastaLocal, [string] $perfil) {
     'pasta da execução anterior apagada'
 }
 
-# O hash de cada arquivo de uma pasta, em ordem: a pasta extraída antes e depois de rodar o Buzzy.
+# Hash de cada arquivo, em ordem, pra comparar a pasta antes e depois de rodar.
 function HashDaPasta([string] $pasta) {
     (Get-ChildItem -LiteralPath $pasta -Recurse -File -Force | Sort-Object FullName | ForEach-Object {
         '{0}={1}' -f $_.FullName.Substring($pasta.Length), (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
@@ -156,7 +154,7 @@ New-Item -ItemType Directory -Path $publicado, $extraido | Out-Null
 try {
     # ---- 2 e 3. Publicar e o portão ------------------------------------------------------------------------------------
     $portao = Join-Path $raiz 'tools\Buzzy.PortaoApis\bin\Release\net10.0\Buzzy.PortaoApis.dll'
-    # No PowerShell 5.1, o stderr de um executável nativo com 2>&1 e 'Stop' vira erro terminal: só aqui, 'Continue'.
+    # No PS 5.1, stderr de nativo com 2>&1 e 'Stop' vira erro terminal; por isso o 'Continue'.
     if ($Formato -eq 'exe') {
         Write-Host '== publicar (Release, .exe único autocontido, win-x64; o portão roda dentro do publish) =='
         $ErrorActionPreference = 'Continue'
@@ -196,8 +194,8 @@ try {
 
     # ---- 5. O pacote e o SHA-256 ---------------------------------------------------------------------------------------
     $versao = (Get-Item (Join-Path $publicado 'Buzzy.exe')).VersionInfo.ProductVersion -replace '\+.*$', ''
-    # A pública leva o nome de sempre; a completa, o sufixo (DEC-044, item 2). Os dois começam com "Buzzy", como pede a regra
-    # do início com o Windows (DEC-038, item 10), e extraem o runtime em pastas separadas.
+    # Só a completa leva sufixo. Os dois nomes começam com "Buzzy" (o início com o
+    # Windows depende disso) e extraem o runtime em pastas separadas.
     $sufixo = if ($Edicao -eq 'completa') { '-completo' } else { '' }
     $resultados = Join-Path $raiz 'resultados'
     New-Item -ItemType Directory -Force -Path $resultados | Out-Null
@@ -213,7 +211,7 @@ try {
     Set-Content -LiteralPath ($pacote + '.sha256') -Value ('{0}  {1}' -f $hash, (Split-Path -Leaf $pacote)) -Encoding ascii
     Write-Host ('== {0}: {1:N0} bytes, SHA-256 {2} ==' -f (Split-Path -Leaf $pacote), (Get-Item $pacote).Length, $hash)
     if ($Formato -eq 'exe') {
-        # DEC-044, item 4: a licença e os avisos de terceiros da Microsoft acompanham cada release do .exe.
+        # Licença e avisos de terceiros da Microsoft vão junto com cada .exe.
         if ($saidaPublish -notmatch 'Microsoft\.NETCore\.App\.Host\.win-x64\\(\d+\.\d+\.\d+)\\') { Falhar 'a versão do runtime não apareceu no publish (avisos de terceiros).' }
         else {
             & (Join-Path $PSScriptRoot 'avisos-de-terceiros.ps1') -VersaoDoRuntime $Matches[1] -Destino (Join-Path $resultados 'THIRD-PARTY-NOTICES.txt')
@@ -223,7 +221,7 @@ try {
     }
 
     # ---- 6. Rodar da pasta temporária ----------------------------------------------------------------------------------
-    # O .exe vai com o nome do download, porque o runtime extrai numa pasta com o nome do arquivo (revisão adversarial).
+    # Nome do download, porque o runtime extrai numa pasta com o nome do arquivo.
     $nomeDoExe = if ($Formato -eq 'exe') { Split-Path -Leaf $pacote } else { 'Buzzy.exe' }
     if ($Formato -eq 'exe') { Copy-Item -LiteralPath $pacote -Destination (Join-Path $extraido $nomeDoExe) }
     else { Expand-Archive -LiteralPath $pacote -DestinationPath $extraido }
@@ -239,7 +237,7 @@ try {
     $fotoDaExtracao = $null
     foreach ($rodada in 1..$rodadas) {
         if (@(ProcessosBuzzyAbertos).Count -gt 0) {
-            # Depois da primeira rodada, algo já foi aberto: não é "nada foi aberto" (código 2), é uma falha.
+            # Depois da 1ª rodada algo já foi aberto, então é falha (1), não código 2.
             if ($rodada -eq 1) { Abortar 'um Buzzy abriu antes da rodada 1.' }
             Falhar ('um Buzzy abriu antes da rodada {0}.' -f $rodada)
             break
@@ -282,11 +280,11 @@ try {
         Write-Host ('   abriu da pasta temporária (pid {0}, sem instalar nem elevar) e saiu limpo (código 0)' -f $proc.Id)
 
         if ($Formato -eq 'exe') {
-            # A extração do runtime: uma pasta nova na primeira rodada; a mesma, sem gravar nada, na segunda.
+            # 1ª rodada: uma pasta nova; 2ª: a mesma, sem gravar nada.
             $novas = @(PastasDeExtracao | Where-Object { $extracoesAntes -notcontains $_ })
             if ($rodada -eq 1) {
                 if ($novas.Count -ne 1) {
-                    # Sem pasta nova, a extração não foi medida (sobra de uma execução anterior, ou outro lugar): falha.
+                    # Sem pasta nova não deu pra medir (sobra anterior ou outro lugar).
                     Falhar ('extração do runtime: {0} pasta(s) nova(s) em {1}, esperada 1 (antes já havia: {2}); apague a sobra e rode de novo.' -f $novas.Count, $extracaoDoRuntime, ($extracoesAntes -join ', '))
                     break
                 } else {
@@ -315,7 +313,7 @@ try {
     Write-Host '   arquivos e registro reais do usuário intocados, vistos só por fora'
 } finally {
     if (Test-Path -LiteralPath $temporaria) { Remove-Item -LiteralPath $temporaria -Recurse -Force -ErrorAction SilentlyContinue }
-    # Só as pastas de extração que esta execução criou (também quando uma rodada falhou), direto em
+    # Só as pastas de extração criadas aqui (mesmo se a rodada falhou), direto em
     # %TEMP%\.net\<nome do exe> e sem junção nem link no caminho.
     if ($null -ne $extracaoDoRuntime -and $null -ne $extracoesAntes) {
         foreach ($nova in @(PastasDeExtracao | Where-Object { $extracoesAntes -notcontains $_ })) {

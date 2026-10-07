@@ -2,17 +2,12 @@ using System.Windows.Threading;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// Um disparo único num <see cref="DispatcherTimer"/> (DEC-011: nada periódico), para as agendas da raiz que recebem o
-/// agendador injetado (<see cref="AgendaDeGravacao"/> e <see cref="AgendaDaReleitura"/>). Só na thread da interface.
-/// </summary>
+// Disparo único num DispatcherTimer (nada de timer periódico), usado pelas
+// agendas de gravação e releitura. Só na thread da interface.
 internal static class DisparoUnico
 {
-    /// <summary>
-    /// Agenda <paramref name="acao"/> para daqui a <paramref name="espera"/> (no mínimo 1 ms), na
-    /// <paramref name="prioridade"/> dada. O temporizador para antes de chamar a ação (sem o Stop, dispararia a cada
-    /// intervalo). Devolve o que o cancela; cancelado, ou já disparado, não dispara mais.
-    /// </summary>
+    // Espera mínima de 1 ms. O Stop vem antes da ação, senão o timer dispara de novo
+    // a cada intervalo. Devolve o cancelamento; depois de disparar ou cancelar, não dispara mais.
     internal static Action NoDispatcher(TimeSpan espera, Action acao, DispatcherPriority prioridade)
     {
         ArgumentNullException.ThrowIfNull(acao);

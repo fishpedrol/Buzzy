@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Protótipo descartável da Etapa 0B. Não é código de produto e não segue para a Fase 1.
-    Nenhum pacote NuGet: só o que vem no SDK do .NET e no WPF.
+    Protótipo descartável, não é código de produto. Sem pacote NuGet.
   -->
 
   <PropertyGroup>
@@ -17,14 +16,13 @@
     <AssemblyName>BuzzySpike</AssemblyName>
     <RootNamespace>BuzzySpike</RootNamespace>
 
-    <!-- Este protótipo não usa XAML: a janela é construída em código para ficar auditável. -->
+    <!-- Sem XAML: a janela é montada em código pra ficar fácil de auditar. -->
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <StartupObject>BuzzySpike.Programa</StartupObject>
 
-    <!-- Per-Monitor V2 e asInvoker declarados no manifesto, conforme ARCHITECTURE.md 2.13.3. -->
+    <!-- Per-Monitor V2 e asInvoker vêm do manifesto. -->
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
-    <!-- Nada de telemetria nem de busca de atualização durante o build do protótipo. -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 

@@ -2,27 +2,17 @@ using Buzzy.Visual.Pixel;
 
 namespace Buzzy.Visual.Animacao;
 
-/// <summary>
-/// A validação do manifesto (DEC-036, item 4; critérios 2 e 3 da Fase 6), que reprova o build:
-/// <list type="bullet">
-/// <item>toda situação de <see cref="Situacoes.Todas"/> tem clipe (o leitor já recusa situação desconhecida ou repetida);</item>
-/// <item>todo quadro cita uma pose que a arte tem (<see cref="PosesPixel.PorNome"/>) e, se tiver, uma cara de
-/// <see cref="Rostos.Expressoes"/>;</item>
-/// <item>todo quadro, desenhado com cada cara que pode receber e cada deformação que pode ter, só tem pixels de alfa 0 ou
-/// 255: mais estrito que o critério 3, que tolera semitransparência numa borda de 2 pixels em volta da silhueta.</item>
-/// </list>
-/// O espelho e os giros do esconderijo só trocam pixels de lugar e não mudam o alfa. A sobreposição da onda e o item na mão
-/// ficam com os testes da arte.
-/// </summary>
+// Reprova o build se: falta clipe pra alguma situação; um quadro cita pose ou cara que a arte não
+// tem; ou algum quadro, com qualquer cara e deformação possíveis, tem pixel de alfa fora de 0/255.
+// Espelho e giros não mudam o alfa, então não precisam ser testados. Onda e item na mão ficam com
+// os testes da arte.
 public static class ValidadorDeClipes
 {
-    /// <summary>Os problemas do manifesto, um por linha; vazio, ele passa.</summary>
+    // Um problema por linha; vazio = passou.
     public static IReadOnlyList<string> Validar(ManifestoDeClipes manifesto) => Validar(manifesto, (pose, cara, deformacao) => Desenhar(pose, cara, deformacao).ParaArgb());
 
-    /// <summary>
-    /// O mesmo, com o desenho de cada quadro em ARGB de 64 × 64 vindo de <paramref name="desenhar"/>: os testes entregam um
-    /// quadro semitransparente, que a pixel art não produz, para provar que a leitura do alfa reprova.
-    /// </summary>
+    // desenhar devolve ARGB 64x64. Existe pros testes injetarem um quadro semitransparente, que a
+    // pixel art nunca produz, e provar que a checagem reprova.
     public static IReadOnlyList<string> Validar(ManifestoDeClipes manifesto, Func<PosePixel, string?, DeformacaoDoQuadro, uint[]> desenhar)
     {
         ArgumentNullException.ThrowIfNull(manifesto);
@@ -62,7 +52,7 @@ public static class ValidadorDeClipes
         return problemas;
     }
 
-    /// <summary>As caras que o quadro pode receber (nula é a da pose).</summary>
+    // Nula = cara da pose.
     private static IEnumerable<string?> CarasPossiveis(Clipe clipe, QuadroDoClipe quadro)
     {
         if (quadro.Cara is { } cara) return [cara];
@@ -75,14 +65,14 @@ public static class ValidadorDeClipes
         };
     }
 
-    /// <summary>As deformações que o quadro pode ter: pela velocidade, as duas.</summary>
+    // PelaVelocidade pode sair dos dois jeitos.
     private static IEnumerable<DeformacaoDoQuadro> DeformacoesPossiveis(Clipe clipe, QuadroDoClipe quadro) => (quadro.Deformacao ?? clipe.Deformacao) switch
     {
         DeformacaoDoQuadro.PelaVelocidade => [DeformacaoDoQuadro.Nenhuma, DeformacaoDoQuadro.Esticado],
         DeformacaoDoQuadro d => [d],
     };
 
-    /// <summary>O quadro em pixels de arte, como o app o compõe (sem espelho e sem giro, que não mudam o alfa).</summary>
+    // Como o app compõe, só sem espelho e giro.
     public static Tela Desenhar(PosePixel pose, string? cara, DeformacaoDoQuadro deformacao)
     {
         ArgumentNullException.ThrowIfNull(pose);
@@ -95,10 +85,9 @@ public static class ValidadorDeClipes
         };
     }
 
-    /// <summary>O primeiro pixel com alfa fora de 0 e 255, ou nulo.</summary>
+    // Primeiro pixel com alfa fora de 0 e 255, ou nulo.
     public static (int X, int Y, int Alfa)? PixelSemitransparente(Tela tela) => PixelSemitransparente(tela.ParaArgb(), tela.Largura);
 
-    /// <summary>O primeiro pixel ARGB com alfa fora de 0 e 255, numa imagem de <paramref name="largura"/> pixels por linha, ou nulo.</summary>
     public static (int X, int Y, int Alfa)? PixelSemitransparente(IReadOnlyList<uint> argb, int largura)
     {
         ArgumentNullException.ThrowIfNull(argb);

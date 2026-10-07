@@ -5,27 +5,17 @@ using System.Windows.Media.Imaging;
 
 namespace BuzzySpike;
 
-/// <summary>Uma faixa da figura de teste, com o alfa exato do seu interior.</summary>
-/// <param name="Nome">Rótulo curto usado no log e na sonda.</param>
-/// <param name="Alfa">Valor de alfa gravado no interior da faixa.</param>
-/// <param name="Interior">Retângulo clicável, em pixels locais da figura.</param>
+// Interior em pixels locais da figura, com o alfa exato.
 internal sealed record Banda(string Nome, byte Alfa, Interop.RECT Interior)
 {
-    /// <summary>Centro do interior, em pixels locais da figura. É o ponto de clique do teste.</summary>
+    // Onde o teste clica.
     public Interop.POINT Centro => new(
         (Interior.Left + Interior.Right) / 2,
         (Interior.Top + Interior.Bottom) / 2);
 }
 
-/// <summary>
-/// Gera em código a figura simples de teste exigida por P1: pixels alfa 0, alfa 1 e
-/// pixels visíveis, mais uma faixa alfa 128 para verificar a regra de ARCHITECTURE.md
-/// 2.13.7 item 7, que afirma que só alfa exatamente 0 é transparente ao clique.
-///
-/// A figura é gerada, não carregada de arquivo, por três motivos:
-/// nenhum asset de arte é criado nesta etapa; os valores de alfa ficam exatos, sem
-/// compressão nem perfil de cor no caminho; e o resultado é reproduzível.
-/// </summary>
+// Faixas com alfa 0, 1, 255 e 128, pra ver que só alfa exatamente 0 deixa o clique passar.
+// Gerada em código pra o alfa ficar exato, sem compressão nem perfil de cor no caminho.
 internal static class FiguraTeste
 {
     internal const int Largura = 200;
@@ -48,7 +38,6 @@ internal static class FiguraTeste
         ("alfa128", 128, Color.FromRgb(0x40, 0x70, 0xE0)),  // azul
     ];
 
-    /// <summary>Geometria das quatro faixas, em pixels locais da figura.</summary>
     internal static IReadOnlyList<Banda> Bandas { get; } = Construir();
 
     private static List<Banda> Construir()
@@ -71,17 +60,10 @@ internal static class FiguraTeste
         return lista;
     }
 
-    /// <summary>
-    /// Monta a figura: desenha rótulos e molduras opacas, depois sobrescreve o interior de
-    /// cada faixa com o alfa exato. O desenho vem primeiro justamente para que nenhuma
-    /// suavização de borda do WPF encoste no interior medido.
-    /// </summary>
-    /// <param name="margemAlfa1">
-    /// Quando verdadeiro, todo pixel que ficaria com alfa 0 recebe alfa 1. É a margem
-    /// temporária de captura descrita em TODO.md para P3, a ser usada apenas se a captura
-    /// simples falhar: a janela inteira passa a ser alcançável pelo teste de acerto, ao
-    /// custo de deixar de ser transparente ao clique enquanto estiver ativa.
-    /// </param>
+    // Desenha molduras e rótulos primeiro e só depois sobrescreve o interior com o alfa exato,
+    // pro antialiasing do WPF não sujar o que é medido.
+    // margemAlfa1: troca alfa 0 por 1 em tudo. É o plano B do arraste se a captura simples
+    // falhar; a janela toda passa a pegar clique enquanto isso estiver ligado.
     internal static BitmapSource Criar(bool margemAlfa1 = false)
     {
         int[] pixels = Rasterizar(DesenharMolduras());
@@ -118,7 +100,7 @@ internal static class FiguraTeste
         var visual = new DrawingVisual();
         using DrawingContext dc = visual.RenderOpen();
 
-        // Coluna de rótulos: opaca, serve de controle. Um clique nela sempre pertence à janela.
+        // Coluna opaca de controle: clique aqui é sempre da janela.
         dc.DrawRectangle(
             new SolidColorBrush(Color.FromRgb(0x20, 0x20, 0x28)),
             null,
@@ -133,7 +115,6 @@ internal static class FiguraTeste
             int topo = i * AlturaBanda;
             Banda banda = Bandas[i];
 
-            // Faixa alfa 255: preenchimento opaco, é o pixel "visível" do teste.
             if (alfa == 255)
             {
                 dc.DrawRectangle(
@@ -143,7 +124,7 @@ internal static class FiguraTeste
                              banda.Interior.Largura, banda.Interior.Altura));
             }
 
-            // Moldura opaca de 2 px: deixa a faixa visível mesmo quando o interior é invisível.
+            // Moldura pra achar a faixa na tela mesmo com o interior invisível.
             var caneta = new Pen(new SolidColorBrush(cor), Contorno);
             dc.DrawRectangle(null, caneta, new Rect(
                 ColunaRotulo + Contorno / 2.0,
@@ -151,7 +132,6 @@ internal static class FiguraTeste
                 Largura - ColunaRotulo - Contorno,
                 AlturaBanda - Contorno));
 
-            // Rótulo do valor de alfa, dentro da coluna opaca.
             var texto = new FormattedText(
                 alfa.ToString(CultureInfo.InvariantCulture),
                 CultureInfo.GetCultureInfo("pt-BR"),
@@ -162,7 +142,6 @@ internal static class FiguraTeste
                 1.0);
             dc.DrawText(texto, new Point(4, topo + (AlturaBanda - texto.Height) / 2));
 
-            // Marca da cor da faixa na coluna, para casar rótulo e moldura.
             dc.DrawRectangle(new SolidColorBrush(cor), null,
                 new Rect(ColunaRotulo - 5, topo + 6, 4, AlturaBanda - 12));
         }
@@ -188,11 +167,8 @@ internal static class FiguraTeste
         return bmp;
     }
 
-    /// <summary>
-    /// Quadros para o modo de animação de P2: um disco opaco que gira, sobre fundo alfa 0.
-    /// Cada quadro tem conteúdo diferente, então o WPF precisa recompor de verdade a cada
-    /// troca; não é uma imagem repetida que o compositor poderia reaproveitar.
-    /// </summary>
+    // Disco girando sobre alfa 0. Cada quadro é diferente pra forçar o WPF a recompor de verdade,
+    // em vez de reaproveitar a mesma imagem.
     internal static IReadOnlyList<BitmapSource> CriarQuadrosAnimacao(int quantidade = 8)
     {
         var quadros = new List<BitmapSource>(quantidade);

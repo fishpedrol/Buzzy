@@ -9,19 +9,9 @@ public enum Orientacao
     Retrato,
 }
 
-/// <summary>
-/// Um monitor do desktop virtual, em pixels físicos (DEC-008).
-/// </summary>
-/// <param name="Chave">
-/// Identificador opaco do monitor. No app é a chave estável da Fase 5 (DEC-030): <c>mon:</c> e um
-/// resumo do caminho do dispositivo, ou, sem ele, a reserva <c>gdi:</c> e o nome GDI. O núcleo só a
-/// compara por igualdade; nenhuma decisão depende do texto, e as topologias de exemplo dos testes
-/// usam o nome GDI (<c>\\.\DISPLAYn</c>).
-/// </param>
-/// <param name="Tela">Retângulo do monitor inteiro.</param>
-/// <param name="AreaUtil">Retângulo sem a barra de tarefas e outras barras reservadas.</param>
-/// <param name="Dpi">DPI efetivo do monitor (96 = escala de 100%).</param>
-/// <param name="Principal">Se é o monitor principal, que tem a origem (0,0).</param>
+// Monitor em pixels físicos. Chave é opaca e só comparada por igualdade: no app é "mon:" + resumo
+// do caminho do dispositivo (ou "gdi:" + nome GDI como reserva); os testes usam \\.\DISPLAYn.
+// AreaUtil exclui a barra de tarefas. Dpi 96 = 100%. O principal tem a origem (0,0).
 public sealed record MonitorDoDesktop(string Chave, RetanguloPx Tela, RetanguloPx AreaUtil, int Dpi, bool Principal)
 {
     public double Escala => Dpi / 96.0;
@@ -32,10 +22,8 @@ public sealed record MonitorDoDesktop(string Chave, RetanguloPx Tela, RetanguloP
         => $"{Chave}{(Principal ? " [principal]" : "")} tela {Tela} útil {AreaUtil} dpi {Dpi}";
 }
 
-/// <summary>
-/// Topologia imutável do desktop virtual. Nada aqui presume monitores lado a lado,
-/// alinhados, com a mesma resolução ou com o principal à esquerda (ARCHITECTURE.md 2.4).
-/// </summary>
+// Imutável. Não presume monitores lado a lado, alinhados, de mesma resolução
+// nem com o principal à esquerda.
 public sealed class Topologia
 {
     public Topologia(IEnumerable<MonitorDoDesktop> monitores)
@@ -72,15 +60,13 @@ public sealed class Topologia
         ImpressaoDigital = CalcularImpressao(lista);
     }
 
-    /// <summary>Monitores na ordem recebida.</summary>
+    // Na ordem recebida.
     public IReadOnlyList<MonitorDoDesktop> Monitores { get; }
 
     public MonitorDoDesktop Principal { get; }
 
-    /// <summary>
-    /// Resumo canônico de chaves, retângulos, áreas úteis, DPI e monitor principal, em ordem
-    /// de chave. Impressões diferentes significam mudança de configuração (ARCHITECTURE.md 2.4).
-    /// </summary>
+    // Resumo canônico (chaves, retângulos, áreas úteis, DPI, principal) em ordem de chave.
+    // Se mudou, a configuração de monitores mudou.
     public string ImpressaoDigital { get; }
 
     public bool MesmaConfiguracao(Topologia outra)
@@ -91,13 +77,10 @@ public sealed class Topologia
 
     public MonitorDoDesktop? PorChave(string chave) => Monitores.FirstOrDefault(m => string.Equals(m.Chave, chave, StringComparison.Ordinal));
 
-    /// <summary>Monitor cuja tela contém o ponto, ou nulo se o ponto cai num vão entre monitores.</summary>
+    // Nulo se o ponto cai num vão entre monitores.
     public MonitorDoDesktop? MonitorQueContem(PontoPx p) => Monitores.FirstOrDefault(m => m.Tela.Contem(p));
 
-    /// <summary>
-    /// Monitor que contém o ponto ou, num vão, o de tela mais próxima. Em empate de
-    /// distância, vence o principal e depois a ordem da lista.
-    /// </summary>
+    // Num vão, pega a tela mais próxima. Empate: principal primeiro, depois a ordem da lista.
     public MonitorDoDesktop MonitorMaisProximo(PontoPx p)
     {
         MonitorDoDesktop? contem = MonitorQueContem(p);
@@ -128,8 +111,8 @@ public sealed class Topologia
         return sb.ToString();
     }
 
-    // Mesmo formato de RetanguloPx.ToString, mas sempre na cultura invariante: o ToString usa
-    // a cultura atual, e culturas como sv-SE escrevem números negativos com U+2212.
+    // Igual ao RetanguloPx.ToString, mas invariante: sv-SE, por exemplo, escreve o sinal
+    // de negativo como U+2212.
     private static string Canonico(RetanguloPx r)
         => string.Create(CultureInfo.InvariantCulture, $"({r.Esquerda},{r.Topo})-({r.Direita},{r.Base})");
 

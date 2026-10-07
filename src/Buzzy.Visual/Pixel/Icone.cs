@@ -1,10 +1,7 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>
-/// Ícone da bandeja: a cabeça do Buzzy, com o chapéu de palha, desenhada à mão em 16 × 16 pixels (o tamanho do ícone
-/// pequeno a 100%). Reduzir o sprite de 64 pixels apagaria olhos e boca; por isso o ícone tem
-/// desenho próprio, com a mesma paleta.
-/// </summary>
+// Ícone da bandeja: cabeça com chapéu de palha feita à mão em 16x16 (ícone pequeno a 100%).
+// Reduzir o sprite de 64 px apagaria olhos e boca, por isso tem desenho próprio.
 public static class Icone
 {
     public const int Lado = 16;

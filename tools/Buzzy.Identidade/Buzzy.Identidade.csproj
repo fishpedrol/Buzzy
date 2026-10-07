@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Gera as prévias da identidade visual (assets/identidade/previa/) a partir das fontes editáveis
-    (buzzy-partes.svg e buzzy-poses.json) e confere se cada pose cabe no quadro e usa só partes
-    existentes. Renderiza fora da tela: não abre janelas. Ferramenta de desenvolvimento, fora do produto.
+    Gera as prévias em assets/identidade/previa/ a partir de buzzy-partes.svg e buzzy-poses.json,
+    e confere se cada pose cabe no quadro e só usa partes que existem. Renderiza fora da tela.
+    Ferramenta de dev, não vai no produto.
   -->
 
   <PropertyGroup>

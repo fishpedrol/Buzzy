@@ -3,36 +3,27 @@ using Buzzy.Visual.Pixel;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// Os bitmaps dos ícones de uma abertura do menu nativo (DEC-027). Cada um é um DIB de 32 bits criado por
-/// <c>CreateDIBSection</c> sem DC (<c>hdc = 0</c>, <c>BI_RGB</c>), com altura positiva — o DIB guarda a última linha da
-/// imagem primeiro, por isso as linhas entram invertidas (<see cref="IconesDoMenu.DeBaixoParaCima"/>; crítica, C30) —
-/// e preenchido por <see cref="Marshal.Copy(int[], int, nint, int)"/>: os pixels vêm do próprio desenho, nunca de um DC.
-///
-/// O menu não apaga o bitmap de um item (<c>DestroyMenu</c> não apaga <c>hbmpItem</c>): quem cria apaga, no
-/// <see cref="Dispose"/>, que vem depois do <c>DestroyMenu</c>. <see cref="Criados"/> e <see cref="Apagados"/> vão para o
-/// log do menu e precisam terminar iguais. Uma falha do Windows não derruba o menu: o item fica sem ícone, e o log leva
-/// só o código do erro.
-/// </summary>
+// Bitmaps dos ícones de uma abertura do menu nativo: DIB 32 bits via CreateDIBSection
+// sem DC, altura positiva. O DIB guarda a última linha primeiro, por isso as linhas
+// entram invertidas. Os pixels vêm do nosso desenho, nunca de um DC.
+//
+// DestroyMenu não apaga hbmpItem: quem cria apaga, no Dispose depois do DestroyMenu.
+// Criados e Apagados vão pro log e têm que bater. Se o Windows falhar, o item só
+// fica sem ícone.
 internal sealed class BitmapsDoMenu : IDisposable
 {
     private readonly List<nint> _vivos = [];
     private bool _descartado;
 
-    /// <summary>Bitmaps criados nesta abertura do menu.</summary>
     internal int Criados { get; private set; }
 
-    /// <summary>Bitmaps apagados por <see cref="Dispose"/>.</summary>
     internal int Apagados { get; private set; }
 
-    /// <summary>Ícones que o Windows recusou criar: os itens deles ficam só com texto.</summary>
+    // Ícones que o Windows recusou; esses itens ficam só com texto.
     internal int Falhas { get; private set; }
 
-    /// <summary>
-    /// Cria o bitmap de um ícone a partir dos pixels em 0xAARRGGBB, linha a linha de cima para baixo, com o alfa só 0 ou
-    /// 255 (o transparente vale 0, já pré-multiplicado, como o menu espera num bitmap de 32 bits). Devolve 0 se o
-    /// Windows recusar.
-    /// </summary>
+    // Pixels 0xAARRGGBB de cima pra baixo, alfa só 0 ou 255: o transparente é 0, então
+    // já está pré-multiplicado como o menu espera. Devolve 0 se o Windows recusar.
     internal nint Criar(uint[] pixelsDeCimaParaBaixo, int largura, int altura)
     {
         ArgumentNullException.ThrowIfNull(pixelsDeCimaParaBaixo);
@@ -46,7 +37,7 @@ internal sealed class BitmapsDoMenu : IDisposable
         {
             biSize = Marshal.SizeOf<Win32.BITMAPINFOHEADER>(),
             biWidth = largura,
-            biHeight = altura, // positiva: de baixo para cima
+            biHeight = altura, // positiva = de baixo pra cima
             biPlanes = 1,
             biBitCount = 32,
             biCompression = Win32.BI_RGB,
@@ -61,7 +52,7 @@ internal sealed class BitmapsDoMenu : IDisposable
         Criados++;
         if (bits == 0)
         {
-            Falhou(0); // criado sem memória de pixels: apagado no Dispose, como os outros
+            Falhou(0); // sem memória de pixels; o Dispose apaga igual
             return 0;
         }
 
@@ -72,7 +63,7 @@ internal sealed class BitmapsDoMenu : IDisposable
         return bitmap;
     }
 
-    /// <summary>Apaga todos os bitmaps criados. Chame depois do <c>DestroyMenu</c>: o menu não os apaga.</summary>
+    // Chamar depois do DestroyMenu.
     public void Dispose()
     {
         foreach (nint bitmap in _vivos)

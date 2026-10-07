@@ -2,15 +2,11 @@ using System.Globalization;
 
 namespace Buzzy.Core.Personagem;
 
-/// <summary>Resultado de aplicar um evento: o novo estado, os efeitos em ordem e as transições percorridas.</summary>
 public sealed record Resultado(EstadoDoNucleo Estado, IReadOnlyList<Efeito> Efeitos, IReadOnlyList<Transicao> Transicoes);
 
-/// <summary>
-/// Máquina de estados do personagem (ARCHITECTURE.md 2.6): função pura de (estado, evento) para
-/// (estado novo, efeitos). Não acessa relógio, arquivo nem Windows; o tempo só avança por
-/// <see cref="Tick"/> e pelos disparos do <see cref="AutonomyTimer"/> e do <see cref="ItemEffectTimer"/> que ela
-/// mesma agendou. O tamagotchi (DEC-028) fica em Maquina.Itens.cs (os itens e o uso) e Maquina.Onda.cs (a onda).
-/// </summary>
+// Máquina de estados do personagem: função pura (estado, evento) -> (estado novo, efeitos). Não toca relógio,
+// arquivo nem Windows; o tempo só anda por Tick e pelos timers que ela mesma agendou.
+// Tamagotchi em Maquina.Itens.cs e Maquina.Onda.cs.
 public static partial class Maquina
 {
     public static Resultado Aplicar(EstadoDoNucleo estado, Evento evento, ConfiguracaoDoNucleo config)
@@ -23,18 +19,15 @@ public static partial class Maquina
         return passo.Concluir();
     }
 
-    /// <summary>
-    /// Monitor em que está a âncora: o que contém o pixel dos pés, logo acima dela
-    /// (<see cref="Posicionador.PixelDosPes"/>). A âncora fica na borda inferior exclusiva do sprite,
-    /// que numa pilha de monitores já é o primeiro pixel do monitor de baixo.
-    /// </summary>
+    // Usa o pixel dos pés, logo acima da âncora: a âncora é a borda de baixo exclusiva do sprite e, com
+    // monitores empilhados, já cairia no monitor de baixo.
     public static MonitorDoDesktop MonitorDaAncora(Topologia topologia, PontoPx ancora)
     {
         ArgumentNullException.ThrowIfNull(topologia);
         return topologia.MonitorMaisProximo(Posicionador.PixelDosPes(ancora));
     }
 
-    /// <summary>Estados em que a agenda autônoma mantém um temporizador pendente.</summary>
+    // Estados em que a agenda mantém um timer pendente.
     public static bool DecideNoEstado(Estado estado)
         => estado is Estado.Idle or Estado.Resting or Estado.Climbing or Estado.Hanging or Estado.Peeking;
 
@@ -55,23 +48,20 @@ public static partial class Maquina
             _s = estado with { Sinal = Sinal.Nenhum };
         }
 
-        /// <summary>O perfil de energia em vigor: com a onda de um item, o da fase dela (DEC-028, <see cref="PerfilEfetivo"/>).</summary>
+        // Já ajustado pela onda, se houver.
         private PerfilDeEnergia Perfil => PerfilEfetivo(_s, _cfg);
 
         internal void Tratar(Evento evento)
         {
             if (_s.Estado == Estado.Exiting) return;
 
-            // Com o tamagotchi desligado (DEC-028), os eventos dele são descartados antes de tudo, até de encerrar um
-            // gesto curto (L15 da crítica): o núcleo fica exatamente como antes.
+            // Recurso desligado: descarta o evento antes de tudo, até antes de encerrar o gesto curto,
+            // pra o núcleo ficar exatamente como antes.
             if (!_cfg.Tamagotchi && EhDoTamagotchi(evento)) return;
-            // Com a curiosidade desligada (DEC-037), os eventos dela também: o núcleo fica como antes.
             if (!_cfg.Curiosidade && EhDaCuriosidade(evento)) return;
-            // Sem as configurações (DEC-038, item 2), os comandos delas também, antes de encerrar um gesto curto.
             if (!_cfg.ConfiguracoesDisponiveis && evento is CmdSetEnergy or CmdSetAlwaysOnTop or CmdSetScale) return;
 
-            // Invariante 15: um gesto curto termina ao chegar qualquer evento de prioridade maior
-            // que a do relógio (PRESS, CMD_*, painel, sistema).
+            // Gesto curto termina com qualquer evento de prioridade acima do relógio (PRESS, CMD_*, painel, sistema).
             if (evento.Origem >= Origem.Sistema && _s.Gesto != Gesto.Nenhum)
                 EncerrarGesto();
 
@@ -140,8 +130,7 @@ public static partial class Maquina
             // esconder, bloqueio ou suspensão anteriores à carga) ou EXITING.
             if (_s.Carregado || _s.Estado is not (Estado.Booting or Estado.Hidden)) return;
 
-            // A posição salva é restaurada pela cascata da partida (ARCHITECTURE.md 2.8): chave, tela do
-            // monitor da época, principal. Sem ela, a posição inicial; o texto da regra fica o de sempre.
+            // Restaura em cascata: pela chave do monitor, pelo retângulo dele na época, ou no principal.
             Posicionamento lugar;
             PosicaoDoPersonagem posicao;
             string restaurada = "";
@@ -162,16 +151,14 @@ public static partial class Maquina
             }
             _s = _s with { Carregado = true, Topologia = e.Topologia, Preferencias = Sanear(e.Preferencias, _cfg), Lugar = lugar, Posicao = posicao };
 
-            // A postura gravada com a posição (esquema v3, DEC-029, item 11): a acomodação abaixo o devolve escondido na
-            // mesma borda (DEC-025), ou agarrado e ainda preso onde o usuário o deixou (DEC-024); longe da parede e do cipó,
-            // ela apaga a marca. Sem posição salva, não vale; sem o esconderijo pelo clique duplo na configuração, a borda
-            // também não (ele não teria como sair de lá); fora do enum, nenhuma (SECURITY.md 7).
+            // Postura salva: a acomodação abaixo o devolve escondido na mesma borda ou agarrado e preso (longe de
+            // parede/cipó, a marca some). Sem o esconderijo no clique duplo, ignora a borda, senão ele não teria
+            // como sair. Valor fora do enum vem do arquivo e é descartado.
             if (e.PosicaoSalva is not null)
             {
                 LadoDoEsconderijo lado = _cfg.EsconderijoNoCliqueDuplo && Enum.IsDefined(e.Esconderijo) ? e.Esconderijo : LadoDoEsconderijo.Nenhum;
                 _s = _s with { Esconderijo = lado, PresoPeloUsuario = e.PresoPeloUsuario };
             }
-            // Com a emoção dominante gravada (DEC-027), ele já começa com a cara dela.
             if (_s.Preferencias.EmocaoDominante is { } dominante) _s = _s with { Expressao = dominante };
 
             if (_s.Estado == Estado.Booting)
@@ -179,27 +166,15 @@ public static partial class Maquina
             else if (_s.Motivo == MotivoDoOcultamento.Nenhum)
                 Acomodar(lugar.Ancora, "HIDDEN: pedido de mostrar anterior à carga" + restaurada, posicao);
 
-            // O modo de tela cheia vale desde a partida: monitores ocupados avisados antes da carga
-            // estão em cache.
+            // Tela cheia vale desde a partida: os ocupados avisados antes da carga estão em cache.
             if (_s.Estado.Visivel() && _s.Preferencias.ModoTelaCheia && _s.Lugar is { } l && _s.Ocupados.Contem(l.Monitor.Chave))
                 SairDoMonitorOcupado("BOOTING: carga sobre um monitor ocupado pela tela cheia");
         }
 
-        /// <summary>
-        /// TOPOLOGY_CHANGED (DEC-030). As posições guardadas (a do personagem e o retorno da tela cheia) e os itens fora da mão
-        /// acompanham a topologia em qualquer estado, sem mover a janela (<see cref="Posicionador.Rebasear"/>): escondido, ele
-        /// continua ligado à chave do monitor dele. Nos estados que revalidam, vale o que aconteceu com o monitor do personagem:
-        /// <list type="bullet">
-        /// <item>a geometria dele não mudou (só outros monitores mudaram, ele só foi transladado no desktop virtual ou só a chave
-        /// mudou): o estado continua (<see cref="ContinuarNoMonitor"/>). Com a toon force (DEC-023), a lateral da área útil
-        /// continua sendo parede, então nenhum apoio deixa de existir;</item>
-        /// <item>a geometria mudou: SETTLING na mesma posição relativa, com o texto de sempre;</item>
-        /// <item>ele sumiu: SETTLING no sobrevivente mais próximo, medido nas coordenadas antigas.</item>
-        /// </list>
-        /// USING é tratado como REACTING: continua nos dois primeiros casos e acaba numa revalidação (a onda continua). No
-        /// gesto, nada é validado: em PRESSED, toda saída parte da posição acompanhada (<see cref="ReancorarOGesto"/>); em
-        /// DRAGGING, o lugar do arraste anda com o monitor em que está, como a janela e o cursor.
-        /// </summary>
+        // Posições guardadas e itens acompanham a topologia em qualquer estado, sem mover a janela. Nos estados
+        // que revalidam: monitor dele com a mesma geometria (só transladado ou chave nova) -> continua; geometria
+        // mudou -> SETTLING na mesma posição relativa; monitor sumiu -> SETTLING no mais próximo. USING age como
+        // REACTING (a onda continua). Em PRESSED/DRAGGING nada é validado aqui.
         private void MudarTopologia(Topologia nova)
         {
             Topologia? antiga = _s.Topologia;
@@ -212,27 +187,24 @@ public static partial class Maquina
             if (_s.RetornoDaTelaCheia is { } retorno)
                 _s = _s with { RetornoDaTelaCheia = Posicionador.Rebasear(antiga, nova, retorno, _cfg.Tamanho) };
 
-            // No arraste, a janela segue o cursor, e o Windows leva os dois com o monitor físico quando a origem muda: o lugar do
-            // arraste anda com o monitor em que está, sem validar. Soltar, esconder ou sair antes do próximo DRAG_MOVE fica no
-            // mesmo monitor físico (revisão do bloco P6-P9, achado 2).
+            // No arraste o Windows leva janela e cursor junto com o monitor físico, então o lugar acompanha sem
+            // validar. Soltar antes do próximo DRAG_MOVE fica no mesmo monitor físico.
             if (_s.Estado == Estado.Dragging && _s.Lugar is { } arrastado)
                 _s = _s with { Lugar = LugarLivre(nova, Posicionador.AcompanharPonto(antiga, nova, arrastado.Ancora)) };
 
-            // PRESSED, DRAGGING, BOOTING, HIDDEN e EXITING só atualizam o cache e as posições: a validação acontece ao soltar,
-            // ao clicar, ao reaparecer ou ao terminar de carregar.
+            // Nos outros estados só atualiza o cache; valida depois, ao soltar, clicar, reaparecer ou carregar.
             GrupoDoEstado grupo = _s.Estado.Grupo();
             bool revalida = grupo is GrupoDoEstado.Autonomo or GrupoDoEstado.Fisico || _s.Estado is Estado.Reacting or Estado.Using;
             if (!revalida || _s.Posicao is null || _s.Lugar is not { } lugar) return;
 
-            // A travessia em curso (andando, ou no voo do salto) guarda chaves e coordenadas absolutas: numa mudança de
-            // configuração, ela se desfaz e ele se acomoda pela posição relativa (passo P13; C15 da crítica), mesmo se só o outro
-            // monitor mudou. A caminhada até a partida de um salto ainda não é travessia: só o plano cai, e ela para no passo
-            // seguinte, pela regra de sempre.
+            // Travessia guarda chaves e coordenadas absolutas: qualquer mudança a desfaz e ele se acomoda pela
+            // posição relativa, mesmo se só o outro monitor mudou. Andando até a partida do salto ainda não é
+            // travessia: só o plano cai.
             if (_s.Movimento.Travessia is { } travessia)
             {
                 if (_s.Estado == Estado.Jumping || (_s.Estado == Estado.Walking && travessia.Tipo == TipoDeTravessia.Andando))
                 {
-                    // A volta da tela cheia interrompida (DEC-035) termina na posição de antes dela, que já acompanhou a topologia.
+                    // Volta da tela cheia interrompida: termina na posição de antes, já rebaseada.
                     if (travessia.Pulo == PuloDaTelaCheia.Volta && _s.RetornoDaTelaCheia is { } retornoDoPulo)
                     {
                         (Posicionamento rv, PosicaoDoPersonagem pv) = Posicionador.Reacomodar(nova, retornoDoPulo, _cfg.Tamanho);
@@ -261,20 +233,15 @@ public static partial class Maquina
             Acomodar(r.Ancora, correspondente is null ? "TOPOLOGY_CHANGED: o monitor do personagem foi desconectado" : "TOPOLOGY_CHANGED", p);
         }
 
-        /// <summary>
-        /// O monitor do personagem continua com a mesma geometria, no máximo transladado em (<paramref name="dx"/>,
-        /// <paramref name="dy"/>): o estado continua, com o que estiver em curso (a caminhada, a escalada, o pulo, a reação, o uso,
-        /// o esconderijo e o preso), e a âncora, a posição fina e a janela andam juntas. A posição passa a descrever o lugar
-        /// novo, para não divergir 1 px da âncora por arredondamento. O relógio e a agenda não mudam; uma transição para o
-        /// mesmo estado registra o que aconteceu, sem a chave (que vai ao log).
-        /// </summary>
+        // Monitor só transladado: tudo segue em curso e anda junto. A posição é redescrita do lugar novo pra não
+        // divergir 1 px da âncora por arredondamento. Relógio e agenda não mudam.
         private void ContinuarNoMonitor(MonitorDoDesktop novo, int dx, int dy)
         {
             Posicionamento antes = _s.Lugar!;
             var ancora = new PontoPx(antes.Ancora.X + dx, antes.Ancora.Y + dy);
             var lugar = new Posicionamento(novo, ancora, antes.Tamanho, antes.Retangulo.Deslocado(dx, dy));
             _s = _s with { Lugar = lugar, Posicao = Posicionador.Descrever(lugar) };
-            // A posição fina só vale nos estados de movimento; nos outros, quem entra num deles parte da âncora (IrPara).
+            // Posição fina só vale em movimento; nos outros, IrPara parte da âncora.
             if (_s.Estado.EmMovimento())
                 _s = _s with { Movimento = _s.Movimento with { X = _s.Movimento.X + dx, Y = _s.Movimento.Y + dy } };
 
@@ -290,7 +257,7 @@ public static partial class Maquina
         {
             if (!_s.Estado.AceitaPressionar() || _s.Lugar is null) return;
             PontoPx ancora = _s.Lugar.Ancora;
-            // Pegar no ar a volta da tela cheia (DEC-035): a tela cheia já acabou, e o usuário assume daqui; o retorno acaba.
+            // Pegou no ar a volta da tela cheia: quem arrasta assume, o retorno acaba.
             if (PuloEmVoo is { Pulo: PuloDaTelaCheia.Volta }) _s = _s with { RetornoDaTelaCheia = null };
             _s = _s with { Pegada = new PontoPx(cursor.X - ancora.X, cursor.Y - ancora.Y), PassosRestantes = 0, TelaCheiaMudouNoGesto = false };
             if (_cfg.Personalidade) _s = _s with { ReagiuDe = _s.Estado };
@@ -298,13 +265,8 @@ public static partial class Maquina
             IrPara(Estado.Pressed, "PRESS sobre pixel opaco");
         }
 
-        /// <summary>
-        /// Fim de um gesto do usuário (linha PRESSED, DRAGGING | FULLSCREEN_TARGETS_CHANGED): um
-        /// arraste é sempre escolha de posição; um clique ou um cancelamento só descartam o retorno
-        /// temporário se a tela cheia mudou durante o gesto (o ponto do usuário vale). Se o modo foi
-        /// desligado durante o gesto, que não escolheu posição, o efeito temporário se desfaz agora:
-        /// o personagem volta à posição de antes da tela cheia (linha SETTINGS_CHANGED).
-        /// </summary>
+        // Arraste sempre escolhe posição e descarta o retorno da tela cheia. Clique/cancelamento só descartam se a
+        // tela cheia mudou no gesto. Se o modo foi desligado no meio, volta agora pra posição de antes.
         private void FimDoGestoDoUsuario(bool escolheuPosicao)
         {
             if (escolheuPosicao || _s.TelaCheiaMudouNoGesto)
@@ -319,14 +281,8 @@ public static partial class Maquina
             _s = _s with { TelaCheiaMudouNoGesto = false };
         }
 
-        /// <summary>
-        /// R14 em toda saída de PRESSED (DEC-030; revisão do bloco P6-P9, achados 2 e 3): com o botão pressionado,
-        /// TOPOLOGY_CHANGED só acompanha a posição (<see cref="Posicionador.Rebasear"/>), e o lugar de antes do gesto fica nas
-        /// coordenadas antigas. Se o monitor dele mudou ou sumiu, o lugar passa a ser o que a posição acompanhada descreve, como
-        /// ele estaria parado (<see cref="Posicionador.Reacomodar"/>): a mesma posição relativa no monitor correspondente ou, sem
-        /// ele, no mais próximo da âncora acompanhada; validado, sem sair do gesto. As frações continuam descrevendo o lugar
-        /// validado. Senão, nada muda. Vale para CLICK, DOUBLE_CLICK, DRAG_CANCEL e DRAG_START.
-        /// </summary>
+        // Roda em toda saída de PRESSED. Com o botão apertado a topologia só rebaseia a posição e o lugar fica nas
+        // coordenadas antigas. Se o monitor mudou ou sumiu, reacomoda e valida aqui, sem sair do gesto.
         private void ReancorarOGesto()
         {
             if (_s.Estado != Estado.Pressed || _s.Lugar is not { } lugar || _s.Topologia is not { } topologia || _s.Posicao is not { } posicao
@@ -339,8 +295,6 @@ public static partial class Maquina
         private void Clicar()
         {
             if (_s.Estado != Estado.Pressed) return;
-            // Se o monitor do personagem mudou ou sumiu no gesto, valida já no CLICK, sem sair da reação, a partir da posição
-            // que acompanhou a topologia; senão, a reação começa no mesmo lugar.
             ReancorarOGesto();
             FimDoGestoDoUsuario(escolheuPosicao: false);
             if (!_cfg.Personalidade)
@@ -351,17 +305,13 @@ public static partial class Maquina
             }
             _s = _s with { CliquesSeguidos = _s.CliquesSeguidos + 1 };
             (VarianteDaReacao variante, string regra) = EscolherReacao();
-            // Escondido ou preso, a reação de antes, com a duração de antes.
+            // Escondido ou preso: reação padrão com a duração fixa.
             int passos = variante == VarianteDaReacao.Padrao && (_s.Esconderijo != LadoDoEsconderijo.Nenhum || _s.PresoPeloUsuario) ? _cfg.PassosDaReacao : Perfil.PassosDaReacao;
             _s = _s with { PassosRestantes = passos, Expressao = CaraDaReacao(variante), Sinal = Sinal.FoiClicado, Reacao = variante };
             IrPara(Estado.Reacting, $"CLICK: {regra}");
         }
 
-        /// <summary>
-        /// A variante da reação ao clique (DEC-037, item 8), por regra e sem sorteio, nesta ordem: escondido ou preso, a de
-        /// antes; clicado descansando, um susto; olhando a janela, um flagra; o segundo clique seguido desde a última decisão,
-        /// empolgada; senão, a da energia (Baixa preguiçosa, Média a de antes, Alta empolgada).
-        /// </summary>
+        // Sem sorteio; a ordem dos testes importa.
         private (VarianteDaReacao Variante, string Regra) EscolherReacao()
         {
             if (_s.Esconderijo != LadoDoEsconderijo.Nenhum) return (VarianteDaReacao.Padrao, "reação de antes (escondido)");
@@ -377,7 +327,7 @@ public static partial class Maquina
             };
         }
 
-        /// <summary>A cara do núcleo para cada variante da reação: a do primeiro quadro do clipe dela (ARCHITECTURE.md 2.10).</summary>
+        // A cara do primeiro quadro do clipe de cada variante.
         private static Expressao CaraDaReacao(VarianteDaReacao variante) => variante switch
         {
             VarianteDaReacao.Susto or VarianteDaReacao.Flagra => Expressao.Surpreso,
@@ -386,13 +336,13 @@ public static partial class Maquina
             _ => Expressao.Feliz,
         };
 
-        /// <summary>Se ele está olhando a janela ativa, pela curiosidade (DEC-037, item 5): o clique é um flagra, e ele volta a olhar.</summary>
+        // Clique aqui é um flagra, e depois ele volta a olhar.
         private bool OlhandoAJanela => _cfg.Curiosidade && _s.Curiosidade == EstagioDaCuriosidade.Olhando;
 
         private void CliqueDuplo()
         {
             Estado de = _s.Estado;
-            // A partir de PRESSED, o lugar do gesto no referencial atual (R14): é dele que ele se esconde ou fica.
+            // Traz o lugar do gesto pra topologia atual: é dali que ele se esconde ou fica.
             ReancorarOGesto();
             if (_cfg.EsconderijoNoCliqueDuplo)
             {
@@ -413,21 +363,17 @@ public static partial class Maquina
             }
         }
 
-        /// <summary>
-        /// Clique duplo com o esconderijo ligado (DEC-025): escondido, sai de lá; senão, esconde-se
-        /// atrás da borda mais próxima, só com a cabeça e as mãos para fora.
-        /// </summary>
+        // Escondido, sai; senão, se esconde atrás da borda mais próxima, só cabeça e mãos pra fora.
         private void AlternarEsconderijo(Estado de)
         {
             if (_s.Topologia is null) return;
-            // O fim do gesto vem antes: com o modo de tela cheia desligado no meio dele, ele devolve
-            // o personagem à posição de antes da tela cheia (DEC-020), e é de lá que ele se esconde.
+            // Fim do gesto primeiro: se a tela cheia foi desligada no meio, ele volta pra posição de antes e
+            // se esconde de lá.
             if (de == Estado.Pressed) FimDoGestoDoUsuario(escolheuPosicao: false);
             if (_s.Lugar is not { } lugar) return;
             if (_s.Esconderijo != LadoDoEsconderijo.Nenhum)
             {
-                // Sai do esconderijo pela mão do usuário: na borda de baixo, fica de pé no chão; numa
-                // lateral, fica grudado na parede (DEC-024).
+                // Na borda de baixo fica de pé no chão; numa lateral, fica grudado na parede.
                 _s = _s with { Esconderijo = LadoDoEsconderijo.Nenhum, Expressao = Expressao.Feliz, Sinal = Sinal.FoiClicadoDuasVezes };
                 Acomodar(lugar.Ancora, "DOUBLE_CLICK: sai do esconderijo", pelaMaoDoUsuario: true);
                 return;
@@ -437,11 +383,7 @@ public static partial class Maquina
             Acomodar(lugar.Ancora, $"DOUBLE_CLICK: esconde-se atrás da borda ({lado})");
         }
 
-        /// <summary>
-        /// Borda do esconderijo (DEC-025): a de cima, se o topo do sprite está ao alcance do cipó (pendurado nele, por exemplo;
-        /// pedido do usuário de 2026-10-03); a lateral mais próxima, se o personagem está no alto e junto dela (na parede, por
-        /// exemplo); senão, a de baixo.
-        /// </summary>
+        // Cima se está ao alcance do cipó; lateral se está no alto e junto dela; senão, baixo.
         private LadoDoEsconderijo LadoMaisProximo(Posicionamento lugar)
         {
             Superficies sup = Superficies.Do(_s.Topologia!, lugar.Monitor, lugar.Tamanho);
@@ -455,12 +397,7 @@ public static partial class Maquina
             return aDireita <= aEsquerda ? LadoDoEsconderijo.Direita : LadoDoEsconderijo.Esquerda;
         }
 
-        /// <summary>
-        /// Onde fica o esconderijo na borda dada (DEC-025), perto do lugar atual: na de baixo, os pés
-        /// no chão (o quadro inteiro fica acima da barra e a pose só mostra a cabeça e as mãos); numa
-        /// lateral, encostado nela, na mesma altura; na de cima, com o topo do sprite nela, como no cipó.
-        /// O sprite continua inteiro na área útil.
-        /// </summary>
+        // O sprite fica inteiro na área útil; quem esconde o corpo é a pose, que só mostra cabeça e mãos.
         private Posicionamento EsconderijoPara(Posicionamento lugar, LadoDoEsconderijo lado)
         {
             Superficies sup = Superficies.Do(_s.Topologia!, lugar.Monitor, lugar.Tamanho);
@@ -475,13 +412,9 @@ public static partial class Maquina
             return NoLugar(lugar.Monitor, ancora);
         }
 
-        /// <summary>Caras de quem está escondido, espiando o que acontece (DEC-025).</summary>
         private static readonly Expressao[] ExpressoesDoEscondido = [Expressao.Curioso, Expressao.Travesso, Expressao.Feliz, Expressao.Surpreso, Expressao.Pensativo, Expressao.Rindo];
 
-        /// <summary>
-        /// A cara de quem espia escondido, num único sorteio: com a onda de um item, uma das caras da fase (DEC-028); com a
-        /// emoção dominante, ela ou uma companheira (DEC-027); na automática, uma das outras caras de quem espia.
-        /// </summary>
+        // Prioridade: cara da onda, depois emoção dominante, depois uma diferente da atual.
         private Expressao SortearCaraDoEscondido()
         {
             if (FaseEmVigor is { } fase) return SortearCaraDaFase(fase);
@@ -496,11 +429,10 @@ public static partial class Maquina
         private void IniciarArraste()
         {
             if (_s.Estado != Estado.Pressed) return;
-            // O arraste parte do lugar do gesto no referencial atual (R14): um cancelamento antes do primeiro DRAG_MOVE fica lá.
+            // Cancelar antes do primeiro DRAG_MOVE deixa ele neste lugar.
             ReancorarOGesto();
-            // Invariante 9: iniciar um arraste fecha o painel de energia.
             FecharPainelSeAberto();
-            // Arrastar tira o personagem do esconderijo (DEC-025) e zera os cliques seguidos (DEC-037, item 8).
+            // Arrastar tira do esconderijo e zera os cliques seguidos.
             _s = _s with { Esconderijo = LadoDoEsconderijo.Nenhum, CliquesSeguidos = 0 };
             IrPara(Estado.Dragging, "DRAG_START");
         }
@@ -508,7 +440,7 @@ public static partial class Maquina
         private void Arrastar(PontoPx cursor)
         {
             if (_s.Estado != Estado.Dragging || _s.Topologia is null) return;
-            // Invariante 2: posição = cursor menos o deslocamento da pegada, sem física nem limite.
+            // Cursor menos a pegada, sem física nem limite.
             var ancora = new PontoPx(cursor.X - _s.Pegada.X, cursor.Y - _s.Pegada.Y);
             _s = _s with { Lugar = LugarLivre(_s.Topologia, ancora) };
         }
@@ -517,7 +449,7 @@ public static partial class Maquina
         {
             if (_s.Estado != Estado.Dragging) return;
             var ancora = new PontoPx(cursor.X - _s.Pegada.X, cursor.Y - _s.Pegada.Y);
-            // Soltar é escolha manual: descarta o retorno temporário da tela cheia (DEC-013).
+            // Soltar é escolha manual: descarta o retorno da tela cheia.
             FimDoGestoDoUsuario(escolheuPosicao: true);
             Acomodar(ancora, "DRAG_END", pelaMaoDoUsuario: true);
             Dispensar("DRAG_END");
@@ -529,7 +461,7 @@ public static partial class Maquina
             if (_s.Lugar is null) return;
             if (_s.Estado == Estado.Dragging)
             {
-                // O personagem fica onde estava; não volta ao ponto de origem (ARCHITECTURE.md 2.7).
+                // Fica onde está; não volta pro ponto de origem.
                 FimDoGestoDoUsuario(escolheuPosicao: true);
                 Acomodar(_s.Lugar.Ancora, "DRAG_CANCEL", pelaMaoDoUsuario: true);
                 if (_s.Posicao is { } posicao) GravarComAPostura(posicao);
@@ -565,19 +497,16 @@ public static partial class Maquina
 
         private void EscolherEnergia(NivelDeEnergia nivel)
         {
-            // SECURITY.md 7: só os três níveis permitidos; um valor fora deles é ignorado.
+            // Valor fora do enum é ignorado.
             if (!_s.PainelAberto || !Enum.IsDefined(nivel)) return;
             if (_s.Preferencias.Energia == nivel) return;
             _s = _s with { Preferencias = _s.Preferencias with { Energia = nivel } };
             _depois.Add(new GravarPreferencias(_s.Preferencias));
         }
 
-        // ---------------------------------------------------------------- comandos das configurações (DEC-038, item 2)
+        // ---------------------------------------------------------------- comandos das configurações
 
-        /// <summary>
-        /// CMD_SET_ENERGY: a energia pelas configurações, sem exigir o painel. Só o campo muda e é gravado; a agenda armada
-        /// fica como está, e a próxima decisão usa o perfil novo (invariante 35).
-        /// </summary>
+        // Não precisa do painel aberto. A agenda armada não muda; a próxima decisão já usa o perfil novo.
         private void EscolherEnergiaPorComando(NivelDeEnergia nivel)
         {
             if (!_s.Carregado || !Enum.IsDefined(nivel) || _s.Preferencias.Energia == nivel) return;
@@ -586,7 +515,6 @@ public static partial class Maquina
             _depois.Add(new GravarPreferencias(_s.Preferencias));
         }
 
-        /// <summary>CMD_SET_ALWAYS_ON_TOP: muda o campo, grava e pede à raiz que o aplique.</summary>
         private void EscolherSempreNoTopo(bool ligado)
         {
             if (!_s.Carregado || _s.Preferencias.SempreNoTopo == ligado) return;
@@ -596,7 +524,7 @@ public static partial class Maquina
             _depois.Add(new AplicarSempreNoTopo(ligado));
         }
 
-        /// <summary>CMD_SET_SCALE: só o campo muda e é gravado; vale na próxima abertura.</summary>
+        // Só vale na próxima abertura.
         private void EscolherEscala(EscalaDoPersonagem escala)
         {
             if (!_s.Carregado || !Enum.IsDefined(escala) || _s.Preferencias.Escala == escala) return;
@@ -625,14 +553,11 @@ public static partial class Maquina
         {
             if (_s.Estado == Estado.Hidden)
             {
-                // Um evento do sistema não troca uma ocultação do usuário; entre os motivos do
-                // sistema, a sessão bloqueada prevalece sobre a suspensão e a tela cheia
-                // (precedência em ARCHITECTURE.md 2.6).
+                // Só troca o motivo por um de precedência maior: usuário > sessão > suspensão > tela cheia.
                 if (Precedencia(motivo) > Precedencia(_s.Motivo))
                 {
                     _transicoes.Add(new Transicao(Estado.Hidden, Estado.Hidden, $"{regra}: motivo {_s.Motivo} -> {motivo}"));
-                    // A ocultação deixa de ser da tela cheia: o retorno temporário volta a ser a
-                    // posição do personagem, sem reaparecer, e não sobra para o próximo episódio.
+                    // Deixou de ser por tela cheia: o retorno vira a posição, pra não sobrar pro próximo episódio.
                     if (_s.Motivo == MotivoDoOcultamento.PorTelaCheia)
                         _s = _s with { Posicao = _s.RetornoDaTelaCheia ?? _s.Posicao, RetornoDaTelaCheia = null };
                     _s = _s with { Motivo = motivo };
@@ -644,32 +569,24 @@ public static partial class Maquina
             FixarArrasteInterrompido();
             DarOPuloPorTerminado();
             FecharPainelSeAberto();
-            // Os itens (DEC-028): o da mão solta a captura, e os que caem vão ao chão (D18).
+            // Item da mão solta a captura; os que caem vão pro chão.
             LiberarItemNaMao();
             AssentarItens();
             _s = _s with { Motivo = motivo, PassosRestantes = 0 };
             IrPara(Estado.Hidden, regra);
-            // Com o modo desligado, o retorno só sobra de um PRESSED interrompido: a posição de
-            // antes da tela cheia volta a valer, como no fim do gesto.
+            // Com o modo desligado, retorno só sobra de um PRESSED interrompido: volta a valer, como no fim do gesto.
             if (!_s.Preferencias.ModoTelaCheia && _s.RetornoDaTelaCheia is { } retorno)
                 _s = _s with { Posicao = retorno, RetornoDaTelaCheia = null };
             GravarPosicaoDoUsuario();
         }
 
-        /// <summary>
-        /// Grava a posição escolhida pelo usuário: durante a tela cheia, a de antes da transferência
-        /// automática, nunca a temporária (SECURITY.md 5: a posição temporária fica só em memória).
-        /// </summary>
+        // Durante a tela cheia grava a posição de antes; a temporária fica só em memória.
         private void GravarPosicaoDoUsuario()
         {
             if ((_s.RetornoDaTelaCheia ?? _s.Posicao) is { } posicao) GravarComAPostura(posicao);
         }
 
-        /// <summary>
-        /// O efeito que grava a posição, com a postura do estado como ela está agora (esquema v3, DEC-029, item 11): a borda
-        /// do esconderijo (DEC-025) e a marca "preso pelo usuário" (DEC-024). Escondido pela bandeja ou pela sessão, a borda
-        /// continua no estado e vai junto; a ocultação, não.
-        /// </summary>
+        // Grava junto a borda do esconderijo e o "preso". A ocultação (bandeja, sessão) não é gravada.
         private void GravarComAPostura(PosicaoDoPersonagem posicao)
             => _depois.Add(new GravarPosicao(posicao) { Esconderijo = _s.Esconderijo, PresoPeloUsuario = _s.PresoPeloUsuario });
 
@@ -684,11 +601,10 @@ public static partial class Maquina
 
         private void Reaparecer(MotivoDoOcultamento motivoQueSeDesfaz, string regra)
         {
-            // Invariante 10: SESSION_UNLOCKED e RESUMED nunca mostram o que o usuário escondeu.
+            // Desbloquear ou acordar nunca mostra o que o usuário escondeu.
             if (_s.Estado != Estado.Hidden || _s.Motivo != motivoQueSeDesfaz) return;
             Mostrar(regra);
-            // Um evento do sistema também não desfaz o modo de tela cheia: se o personagem
-            // reapareceu num monitor ainda ocupado (monitores em cache), o modo age de novo.
+            // Reapareceu num monitor ainda em tela cheia: o modo age de novo.
             if (_s.Preferencias.ModoTelaCheia && _s.Lugar is { } lugar && _s.Ocupados.Contem(lugar.Monitor.Chave))
                 SairDoMonitorOcupado($"{regra}: reapareceu num monitor ocupado pela tela cheia");
         }
@@ -700,21 +616,18 @@ public static partial class Maquina
             {
                 if (_s.Motivo == MotivoDoOcultamento.PorTelaCheia)
                 {
-                    // O usuário pediu: aparece na posição anterior e descarta o retorno temporário.
+                    // Aparece na posição de antes da tela cheia.
                     _s = _s with { Posicao = _s.RetornoDaTelaCheia ?? _s.Posicao, RetornoDaTelaCheia = null };
                 }
                 else
                 {
-                    // Escondido por outro motivo no meio de um episódio de tela cheia: mostrar é
-                    // escolha manual, então reaparece onde estava e o fim da tela cheia não o move
-                    // mais (invariante 14).
+                    // Mostrar é escolha manual: reaparece onde estava e o fim da tela cheia não o move mais.
                     _s = _s with { RetornoDaTelaCheia = null };
                 }
                 Mostrar("CMD_SHOW");
                 return;
             }
-            // Visível: mostrar manualmente durante a tela cheia vale como escolha do usuário
-            // (invariante 14).
+            // Já visível: mostrar na mão durante a tela cheia conta como escolha manual.
             if (_s.Estado.Visivel()) _s = _s with { RetornoDaTelaCheia = null };
         }
 
@@ -741,9 +654,8 @@ public static partial class Maquina
             if (_s.AutonomiaPausada == pausar) return;
             _s = _s with { AutonomiaPausada = pausar };
             if (!pausar) _reagendar = true;
-            // Fase 4 (DEC-022): pausar para a caminhada na hora; na parede ele desce e pendurado se
-            // solta nos passos seguintes (PassoEscalando, PassoPendurado).
-            // A travessia em curso é atômica (passo P13; D7): ela termina, e o fim dela o para.
+            // Pausar para a caminhada na hora; parede e cipó resolvem nos passos seguintes.
+            // Travessia é atômica: termina, e o fim dela o para.
             if (pausar && _cfg.Movimento && _s.Estado == Estado.Walking && _s.Movimento.Travessia is not { Tipo: TipoDeTravessia.Andando }) IrPara(Estado.Idle, "CMD_PAUSE_AUTONOMY: para de andar");
         }
 
@@ -783,52 +695,36 @@ public static partial class Maquina
             if (_s.Estado is Estado.Pressed or Estado.Dragging) _antes.Add(new LiberarCaptura());
         }
 
-        // ---------------------------------------------------------------- emoção dominante (DEC-027)
+        // ---------------------------------------------------------------- emoção dominante
 
-        /// <summary>
-        /// CMD_SET_DOMINANT_EMOTION: grava a emoção nas preferências e, com a cara livre, a mostra na hora. Antes da
-        /// carga, fora das 14 caras de humor ou igual à atual, é ignorada. "Automática" (nula) mantém a cara atual
-        /// até a próxima troca. Não muda estado, posição nem agenda: a transição para o mesmo estado só registra a
-        /// escolha.
-        /// </summary>
+        // Só aceita as 14 caras de humor. Nula = automática: mantém a cara atual até a próxima troca.
         private void EscolherEmocao(Expressao? emocao)
         {
             if (!_s.Carregado || (emocao is { } e && !Expressoes.EhDeHumor(e)) || emocao == _s.Preferencias.EmocaoDominante) return;
             _s = _s with { Preferencias = _s.Preferencias with { EmocaoDominante = emocao } };
             _depois.Add(new GravarPreferencias(_s.Preferencias));
             _transicoes.Add(new Transicao(_s.Estado, _s.Estado, $"CMD_SET_DOMINANT_EMOTION: {emocao?.ToString() ?? "Automatica"}"));
-            // Com a onda de um item, a cara dela tem precedência; a dominante entra quando a onda acabar (DEC-028).
+            // Com onda, a cara dela manda; a dominante entra quando a onda acabar.
             if (emocao is { } nova && !ComOnda && CaraLivre(_s.Estado)) _s = _s with { Expressao = nova };
         }
 
-        /// <summary>
-        /// Estados em que a cara pode mudar na hora, pela emoção dominante ou pela fase da onda de um item: em RESTING
-        /// (sonolento), em REACTING (feliz com o clique) e em USING (a cara de quem usa o item, DEC-028), a cara do estado
-        /// continua até ele acabar, e então volta à de base.
-        /// </summary>
+        // RESTING, REACTING e USING têm cara própria até acabar; depois volta à de base.
         private static bool CaraLivre(Estado estado) => estado is not (Estado.Resting or Estado.Reacting or Estado.Using);
 
-        /// <summary>
-        /// A cara de base: com a onda de um item, a da fase dela (DEC-028); sem onda, a emoção dominante (DEC-027); na
-        /// automática, a neutra, como antes.
-        /// </summary>
+        // Onda > olhando a janela > emoção dominante > neutra.
         private Expressao CaraDeBase()
             => ComOnda && _s.Onda is { } onda ? _cfg.TabelaDeOndas(onda.Tipo).Cara(onda.Fase)
                : OlhandoAJanela ? Expressao.Curioso
                : _s.Preferencias.EmocaoDominante ?? Expressao.Neutro;
 
-        /// <summary>
-        /// Fim da reação ao clique e do pouso: com a onda de um item (DEC-028) ou com a emoção dominante (DEC-027), a cara
-        /// volta à de base. Na automática, sem onda, nada muda: a cara da reação ou do quique fica até a próxima troca,
-        /// como antes.
-        /// </summary>
+        // No automático e sem onda, a cara da reação/pouso fica até a próxima troca.
         private void VoltarACaraDeBase()
         {
-            // Olhando a janela (DEC-037), a cara curiosa volta depois do flagra.
+            // Olhando a janela, a cara curiosa volta depois do flagra.
             if (ComOnda || _s.Preferencias.EmocaoDominante is not null || OlhandoAJanela) _s = _s with { Expressao = CaraDeBase() };
         }
 
-        // ---------------------------------------------------------------- tela cheia (DEC-013)
+        // ---------------------------------------------------------------- tela cheia
 
         private void MudarTelaCheia(MonitoresOcupados ocupados)
         {
@@ -837,8 +733,7 @@ public static partial class Maquina
             // Uma vez por mudança; com o modo desligado, só o cache.
             if (!mudou || !_s.Preferencias.ModoTelaCheia || _s.Topologia is null) return;
 
-            // Invariante 14: PRESSED e DRAGGING nunca são interrompidos pelo modo; ao soltar, o ponto
-            // do usuário vale e o retorno temporário é descartado (FimDoGestoDoUsuario).
+            // Nunca interrompe um gesto; ao soltar, vale o ponto escolhido e o retorno é descartado.
             if (_s.Estado is Estado.Pressed or Estado.Dragging)
             {
                 _s = _s with { TelaCheiaMudouNoGesto = true };
@@ -847,8 +742,8 @@ public static partial class Maquina
             if (_s.Estado is Estado.Booting or Estado.Exiting) return;
             DesistirDoSaltoParaMonitorFechado();
 
-            // O pulo da tela cheia em voo (DEC-035) segue com o destino livre. A tela cheia acabou: volta dali mesmo. O destino
-            // ficou ocupado: sai dali para o monitor livre mais próximo, com o retorno de antes.
+            // Pulo em voo: se a tela cheia acabou, volta dali mesmo; se o destino ficou ocupado, sai pro livre
+            // mais próximo mantendo o retorno.
             if (PuloEmVoo is { } emVoo)
             {
                 if (ocupados.Vazio)
@@ -866,9 +761,7 @@ public static partial class Maquina
             {
                 if (_s.Motivo != MotivoDoOcultamento.PorTelaCheia)
                 {
-                    // O episódio terminou com o personagem escondido por outro motivo (usuário,
-                    // sessão, suspensão): ele não reaparece, mas a posição de antes da tela cheia
-                    // volta a valer para quando reaparecer, e o retorno não sobra.
+                    // Escondido por outro motivo: não reaparece, mas a posição de antes volta a valer.
                     if (ocupados.Vazio && _s.RetornoDaTelaCheia is { } retorno)
                         _s = _s with { Posicao = retorno, RetornoDaTelaCheia = null };
                     return;
@@ -900,11 +793,8 @@ public static partial class Maquina
             SairDoMonitorOcupado("FULLSCREEN_TARGETS_CHANGED");
         }
 
-        /// <summary>
-        /// Personagem visível num monitor ocupado pela tela cheia (monitores em cache): guarda a
-        /// posição anterior só em memória, se ainda não houver uma, e transfere para o monitor livre
-        /// mais próximo, sem ativar; se nenhum estiver livre, fecha o painel e esconde.
-        /// </summary>
+        // Guarda a posição de antes (só em memória, se ainda não houver) e vai pro monitor livre mais próximo,
+        // sem roubar foco. Sem monitor livre, esconde.
         private void SairDoMonitorOcupado(string regra)
         {
             if (_s.Topologia is null || _s.Lugar is null || _s.Posicao is null) return;
@@ -920,8 +810,8 @@ public static partial class Maquina
                 IrPara(Estado.Hidden, $"{regra}: nenhum monitor livre");
                 return;
             }
-            // Perto da lateral que encosta no livre, só um pulinho para o outro lado da borda (item 6); senão, ou sem um arco
-            // dele que caiba, o pulo até o cipó.
+            // Perto da lateral que encosta no livre, um pulinho pro outro lado; senão (ou se não couber), pula
+            // até o cipó.
             MonitorDoDesktop daqui = _s.Topologia.PorChave(_s.Lugar.Monitor.Chave) ?? _s.Lugar.Monitor;
             int lado = LadoDoPulinho(daqui, _s.Lugar.Ancora.X, monitorLivre);
             if (lado != 0 && Pular(monitorLivre, ChegadaDoPulinho(daqui, monitorLivre, lado), PuloDaTelaCheia.Ida, $"{regra}: pulinho para o monitor livre", pulinho: true)) return;
@@ -938,21 +828,17 @@ public static partial class Maquina
             Mostrar(regra);
         }
 
-        // ---------------------------------------------------------------- pulo da tela cheia (DEC-035)
+        // ---------------------------------------------------------------- pulo da tela cheia
 
-        /// <summary>O pulo da tela cheia em voo, ou nulo.</summary>
         private Travessia? PuloEmVoo => _s.Estado == Estado.Jumping && _s.Movimento.Travessia is { Pulo: not PuloDaTelaCheia.Nenhum } pulo ? pulo : null;
 
-        /// <summary>
-        /// Visível, com a posição de antes da tela cheia guardada: volta para ela num pulo (DEC-035) ou, sem um arco que caiba,
-        /// direto, como antes, com a <paramref name="regraDireta"/>.
-        /// </summary>
+        // Volta num pulo; se nenhum arco couber, volta direto.
         private void VoltarDaTelaCheia(string regraDoPulo, string regraDireta)
         {
             if (_s.RetornoDaTelaCheia is { } retorno && _s.Topologia is { } t)
             {
                 (Posicionamento r, _) = Posicionador.Reacomodar(t, retorno, _cfg.Tamanho);
-                // Das duas pontas perto da mesma borda entre os monitores, a volta também é um pulinho (item 6).
+                // As duas pontas perto da mesma borda: a volta também é um pulinho.
                 bool pulinho = _s.Lugar is { } l && t.PorChave(l.Monitor.Chave) is { } aqui && aqui.Chave != r.Monitor.Chave
                     && LadoDoPulinho(aqui, l.Ancora.X, r.Monitor) is var lado && lado != 0 && LadoDoPulinho(r.Monitor, r.Ancora.X, aqui) == -lado;
                 if (pulinho && Pular(r.Monitor, r.Ancora, PuloDaTelaCheia.Volta, $"{regraDoPulo} (pulinho)", pulinho: true)) return;
@@ -961,12 +847,7 @@ public static partial class Maquina
             RestaurarRetorno(regraDireta);
         }
 
-        /// <summary>
-        /// O lado (−1 ou +1) do monitor <paramref name="monitor"/> em que ele está perto da borda com o <paramref name="vizinho"/>
-        /// (DEC-035, item 6): a lateral tem uma porta para o vizinho (as áreas úteis se encostam, DEC-032), e a âncora em
-        /// <paramref name="x"/> está a até <see cref="ParametrosDeMovimento.DistanciaDoPulinho"/> dela. Senão, 0: no meio, ou perto
-        /// da beirada sem monitor do lado.
-        /// </summary>
+        // -1/+1 se a âncora está perto da lateral que tem porta pro vizinho (áreas úteis encostadas); senão 0.
         private int LadoDoPulinho(MonitorDoDesktop monitor, int x, MonitorDoDesktop vizinho)
         {
             Topologia t = _s.Topologia!;
@@ -980,11 +861,7 @@ public static partial class Maquina
             return 0;
         }
 
-        /// <summary>
-        /// Onde o pulinho pousa (DEC-035, item 6): do outro lado da borda, a <see cref="ParametrosDeMovimento.EntradaDoPulinho"/>
-        /// dela, na mesma superfície: no chão, no chão do livre; no cipó, no cipó; na parede da borda, encostado na parede do
-        /// livre, na mesma altura.
-        /// </summary>
+        // Do outro lado da borda, na mesma superfície (chão, cipó ou parede na mesma altura).
         private PontoPx ChegadaDoPulinho(MonitorDoDesktop daqui, MonitorDoDesktop livre, int lado)
         {
             Topologia t = _s.Topologia!;
@@ -996,10 +873,7 @@ public static partial class Maquina
             return new PontoPx(Math.Clamp(x, la.Esquerda, la.Direita), y);
         }
 
-        /// <summary>
-        /// Onde ele agarra o cipó do monitor livre (DEC-035): na borda de cima, a <see cref="ParametrosDeMovimento.EntradaNoCipo"/>
-        /// da lateral voltada para a partida; com a partida na faixa do monitor (um em cima do outro), na mesma vertical.
-        /// </summary>
+        // Perto da lateral virada pra partida; com monitores empilhados, na mesma vertical.
         private PontoPx ChegadaNoCipo(MonitorDoDesktop livre)
         {
             Superficies sup = Superficies.Do(_s.Topologia!, livre, _cfg.Tamanho.ParaPixels(livre.Dpi));
@@ -1009,13 +883,8 @@ public static partial class Maquina
             return new PontoPx(Math.Clamp(x, sup.Esquerda, sup.Direita), sup.Teto);
         }
 
-        /// <summary>
-        /// Começa o pulo da tela cheia (DEC-035) da âncora atual até <paramref name="chegada"/>, no monitor
-        /// <paramref name="destino"/>: JUMPING, com o arco de <see cref="Passagens.PlanejarPuloDaTelaCheia"/>, sem o gesto em curso e
-        /// com a cara empolgada (na automática, sem onda). Com a capacidade ou o movimento desligados, ou sem um arco em que o
-        /// sprite fique na união das áreas úteis (por exemplo, escondido atrás da borda), não muda nada e devolve falso: quem
-        /// chamou faz a troca direta, como antes.
-        /// </summary>
+        // Devolve false sem mexer em nada se o recurso está desligado ou nenhum arco cabe nas áreas úteis
+        // (ex.: escondido atrás da borda); aí quem chamou faz a troca direta.
         private bool Pular(MonitorDoDesktop destino, PontoPx chegada, PuloDaTelaCheia pulo, string regra, bool pulinho = false)
         {
             if (!_cfg.PuloDaTelaCheia || !_cfg.Movimento || _s.Topologia is not { } t || _s.Lugar is not { } lugar) return false;
@@ -1027,15 +896,12 @@ public static partial class Maquina
             _s = _s with { Gesto = Gesto.Nenhum, PassosDoGesto = 0, Direcao = chegada.X >= partida.X ? Direcao.Direita : Direcao.Esquerda };
             if (!ComOnda && _s.Preferencias.EmocaoDominante is null) _s = _s with { Expressao = Expressao.Empolgado };
             IrPara(Estado.Jumping, regra);
-            // IrPara só recomeça o movimento quando o estado muda: um pulo que substitui outro em voo parte daqui também.
+            // IrPara só zera o movimento se o estado muda; um pulo que substitui outro em voo precisa disso aqui.
             _s = _s with { Movimento = new EstadoDoMovimento(partida.X, partida.Y, 0, 0, double.PositiveInfinity, -1, false) { Travessia = plano } };
             return true;
         }
 
-        /// <summary>
-        /// O fim do pulo da tela cheia (DEC-035): a acomodação na chegada. Na ida, perto da borda de cima, ele agarra o cipó
-        /// (<see cref="OndeAgarrar"/>); no chão (o pulinho, item 6), pousa (LANDING); na volta, a posição de antes da tela cheia vale, com a postura dela, e o retorno acaba.
-        /// </summary>
+        // Ida: agarra o cipó, ou pousa se for pulinho no chão. Volta: assume a posição de antes e o retorno acaba.
         private void ChegarDoPulo(Travessia pulo)
         {
             if (pulo.Pulo == PuloDaTelaCheia.Volta && _s.RetornoDaTelaCheia is { } retorno && _s.Topologia is { } t)
@@ -1046,7 +912,7 @@ public static partial class Maquina
                 return;
             }
             var chegada = new PontoPx((int)Math.Round(pulo.XDestino, MidpointRounding.AwayFromZero), (int)Math.Round(pulo.YDestino, MidpointRounding.AwayFromZero));
-            // A ida que acaba no chão (o pulinho, item 6) pousa, como o salto de degrau.
+            // Pulinho que acaba no chão pousa, igual ao salto de degrau.
             if (pulo.Pulo == PuloDaTelaCheia.Ida && _s.Topologia?.PorChave(pulo.ChaveDestino) is { } destino && chegada.Y == destino.AreaUtil.Base)
             {
                 MoverPara(destino, chegada.X, chegada.Y);
@@ -1059,11 +925,8 @@ public static partial class Maquina
                 : "JUMPING: fim do pulo da tela cheia");
         }
 
-        /// <summary>
-        /// Esconder ou sair com o pulo da tela cheia em voo (DEC-035): ele vale como terminado. Na ida, a posição passa a ser a
-        /// chegada, e o retorno continua guardado; na volta, a posição de antes da tela cheia, e o retorno acaba. Assim, nem a
-        /// gravação nem o reaparecer partem de um ponto no ar, por cima do monitor ocupado.
-        /// </summary>
+        // Esconder/sair no meio do pulo: conta como pousado, pra não gravar nem reaparecer num ponto no ar
+        // em cima do monitor ocupado.
         private void DarOPuloPorTerminado()
         {
             if (PuloEmVoo is not { } pulo || _s.Topologia is not { } t) return;
@@ -1094,32 +957,21 @@ public static partial class Maquina
             return melhor;
         }
 
-        /// <summary>
-        /// Se o monitor de chave <paramref name="chave"/> está fechado à autonomia (DEC-034): ocupado pela tela cheia, com o modo
-        /// ligado. A travessia não entra nele, e a lateral que encosta nele é parede; arrastar até lá continua valendo
-        /// (DEC-013: a escolha do usuário prevalece).
-        /// </summary>
+        // Fechado só pra autonomia: a travessia não entra e a lateral vira parede. Arrastar até lá ainda vale.
         private bool Fechado(string chave) => _s.Preferencias.ModoTelaCheia && _s.Ocupados.Contem(chave);
 
-        /// <summary>O filtro das portas (<see cref="Fechado"/>), ou nulo sem nenhum monitor ocupado com o modo ligado.</summary>
+        // Nulo quando nenhum monitor está fechado.
         private Func<string, bool>? Fechados => _s.Preferencias.ModoTelaCheia && !_s.Ocupados.Vazio ? Fechado : null;
 
-        /// <summary>
-        /// A caminhada até a partida de um salto de degrau planejado para um monitor que ficou fechado (DEC-034): o plano cai,
-        /// e ela para no passo seguinte, pela regra de sempre, como numa mudança de topologia. Uma travessia já em curso
-        /// termina, e na chegada ele volta pela porta (<see cref="VoltarSeAPortaFechou"/>).
-        /// </summary>
+        // Andando até um salto pra monitor que fechou: o plano cai. Travessia já em curso termina e volta na chegada.
         private void DesistirDoSaltoParaMonitorFechado()
         {
             if (_s.Estado == Estado.Walking && _s.Movimento.Travessia is { Tipo: TipoDeTravessia.Salto } planejado && Fechado(planejado.ChaveDestino))
                 _s = _s with { Movimento = _s.Movimento with { Travessia = null, Restante = 0 } };
         }
 
-        /// <summary>
-        /// O fim de uma travessia num monitor que fechou no meio dela (DEC-034): a porta fechou, e ele volta à origem, inteiro,
-        /// encostado na lateral da porta, no chão, sem retorno guardado, porque nunca esteve lá por escolha. Sem a origem, ou
-        /// com ela fechada também, sai como numa mudança de tela cheia (<see cref="SairDoMonitorOcupado"/>). Devolve se voltou.
-        /// </summary>
+        // O destino fechou no meio da travessia: volta pra origem, encostado na porta, sem guardar retorno (nunca
+        // esteve lá por escolha). Se a origem também sumiu ou fechou, sai como na tela cheia.
         private bool VoltarSeAPortaFechou(Travessia travessia, string regra)
         {
             if (!Fechado(travessia.ChaveDestino)) return false;
@@ -1135,14 +987,7 @@ public static partial class Maquina
             return true;
         }
 
-        /// <summary>
-        /// CMD_SET_FULLSCREEN_MODE (DEC-034): o modo de tela cheia (Q-09) ligado ou desligado pelo menu. Registra a escolha numa
-        /// transição para o mesmo estado e a grava nas preferências. Desligar desfaz o efeito temporário, como pelas
-        /// preferências (<see cref="MudarPreferencias"/>). Ligar com ele à vista num monitor já ocupado o tira de lá, como se a
-        /// tela cheia tivesse acabado de começar, e um salto planejado para um monitor ocupado cai; num gesto do usuário,
-        /// nada muda (invariante 14). Antes da carga ou igual ao atual, é ignorado.
-        /// </summary>
-        /// <summary>CMD_SET_CROSS_MONITORS (DEC-046): grava a escolha da travessia; só vale para as próximas decisões.</summary>
+        // Só vale pras próximas decisões.
         private void EscolherTravessia(bool ligado)
         {
             if (!_s.Carregado || ligado == _s.Preferencias.AtravessarMonitores) return;
@@ -1151,6 +996,8 @@ public static partial class Maquina
             _depois.Add(new GravarPreferencias(_s.Preferencias));
         }
 
+        // Desligar desfaz o efeito temporário. Ligar com ele à vista num monitor já ocupado o tira de lá, como
+        // se a tela cheia tivesse acabado de começar. Durante um gesto, nada muda.
         private void EscolherModoTelaCheia(bool ligado)
         {
             if (!_s.Carregado || ligado == _s.Preferencias.ModoTelaCheia) return;
@@ -1163,11 +1010,8 @@ public static partial class Maquina
                 SairDoMonitorOcupado("CMD_SET_FULLSCREEN_MODE: ligado com ele num monitor ocupado pela tela cheia");
         }
 
-        /// <summary>
-        /// SECURITY.md 7: nível de energia fora de BAIXA/MEDIA/ALTA vira o padrão seguro, Média; emoção dominante fora
-        /// das 14 caras de humor vira "Automática" (DEC-027); escala fora das três vira a Média (DEC-038); um item adulto fora
-        /// da edição sai da seleção (DEC-044, item 2).
-        /// </summary>
+        // Valores vêm do arquivo e não são confiáveis: energia ou escala inválida vira o padrão, emoção que não é
+        // de humor vira automática, e item fora da edição compilada sai da seleção.
         private static Preferencias Sanear(Preferencias preferencias, ConfiguracaoDoNucleo cfg)
         {
             if (!Enum.IsDefined(preferencias.Energia)) preferencias = preferencias with { Energia = Preferencias.Padrao.Energia };
@@ -1189,20 +1033,18 @@ public static partial class Maquina
             Preferencias antes = _s.Preferencias;
             novas = Sanear(novas, _cfg);
             _s = _s with { Preferencias = novas };
-            // Uma emoção dominante nova aparece na hora, como pelo menu (DEC-027), a não ser com a onda de um item, que tem
-            // precedência (DEC-028); antes da carga, quem decide a cara de partida é a carga.
+            // Emoção nova aparece na hora, salvo com onda. Antes da carga, quem decide a cara é a carga.
             if (_s.Carregado && novas.EmocaoDominante is { } emocao && emocao != antes.EmocaoDominante && !ComOnda && CaraLivre(_s.Estado))
                 _s = _s with { Expressao = emocao };
             if (_s.Carregado)
                 foreach (Item item in TabelaDoTamagotchi.Itens)
                     if (ItemAdulto(item) && antes.ItensAdultosHabilitados.Contem(item) && !novas.ItensAdultosHabilitados.Contem(item))
                         TirarOItemAdulto(item);
-            // Desligar o conteúdo adulto pelas preferências faz o mesmo que pelo menu (DEC-033).
+            // Mesmo efeito de desligar pelo menu.
             if (_s.Carregado && antes.ConteudoAdulto && !novas.ConteudoAdulto) TirarOConteudoAdulto();
             if (!antes.ModoTelaCheia || novas.ModoTelaCheia) return;
 
-            // Desligar o modo desfaz o efeito temporário dele (Q-09): a posição temporária nunca vira
-            // a do usuário (invariante 16).
+            // Desligar o modo desfaz o efeito: a posição temporária nunca vira a escolhida.
             if (_s.Estado == Estado.Hidden && _s.Motivo == MotivoDoOcultamento.PorTelaCheia)
             {
                 RestaurarRetorno("SETTINGS_CHANGED: modo de tela cheia desligado");
@@ -1214,7 +1056,7 @@ public static partial class Maquina
             }
             else if (_s.Estado is Estado.Pressed or Estado.Dragging)
             {
-                // Invariante 14: o gesto não é interrompido; o fim dele decide (FimDoGestoDoUsuario).
+                // Não interrompe o gesto; o fim dele decide.
             }
             else if (_s.Estado.Visivel() && _s.RetornoDaTelaCheia is not null)
             {
@@ -1231,7 +1073,7 @@ public static partial class Maquina
         private void Passar()
         {
             _s = _s with { Passos = _s.Passos + 1 };
-            // Os itens que caem (DEC-028) seguem a própria física, em qualquer estado do personagem.
+            // Itens caem em qualquer estado do personagem.
             PassoDosItens();
             switch (_s.Estado)
             {
@@ -1259,7 +1101,6 @@ public static partial class Maquina
                     _s = _s with { PassosDoGesto = _s.PassosDoGesto - 1 };
                     if (_s.PassosDoGesto <= 0) EncerrarGesto();
                     break;
-                // Fase 4 (DEC-022): o passo físico move o personagem pelas superfícies.
                 case Estado.Walking when _cfg.Movimento:
                     PassoAndando();
                     break;
@@ -1308,7 +1149,7 @@ public static partial class Maquina
                     IrPara(Estado.Hanging, "CLIMBING: alcança borda superior apoiável");
                     break;
                 case (Estado.Hanging, SinalDeMovimento.FimDaBorda):
-                    // Com a toon force (DEC-023), toda lateral dá para descer, mesmo a passagem.
+                    // Toon force: toda lateral dá pra descer, até a passagem.
                     Escolher("HANGING: passagem compatível ou fim da borda", calmo,
                         (Estado.Climbing, 2),
                         (Estado.Hanging, 1),
@@ -1328,8 +1169,7 @@ public static partial class Maquina
         {
             // Disparo de um agendamento substituído ou cancelado: ignorado.
             if (!_s.DecisaoAgendada || geracao != _s.Geracao) return;
-            // Invariante 1 e ARCHITECTURE.md 2.3: nada autônomo com o usuário no controle, com
-            // a autonomia pausada, com o painel aberto ou com o usuário segurando um item (DEC-028).
+            // Nada autônomo enquanto o usuário controla, com pausa, painel aberto ou item na mão.
             if (_s.Estado.ControladoPeloUsuario() || _s.AutonomiaPausada || _s.PainelAberto || !_s.Estado.Visivel() || AtentoAoItem) return;
 
             _s = _s with { DecisaoAgendada = false, CliquesSeguidos = 0 };
@@ -1337,7 +1177,7 @@ public static partial class Maquina
             switch (_s.Estado)
             {
                 case Estado.Idle:
-                    // A curiosidade decide primeiro (DEC-037); sem ela, ou sem estágio que aja, a agenda de sempre.
+                    // A curiosidade tem a vez; se não agir, segue a agenda normal.
                     if (!DecidirCurioso()) DecidirParado();
                     break;
                 case Estado.Resting:
@@ -1345,7 +1185,7 @@ public static partial class Maquina
                     IrPara(Estado.Idle, "RESTING + AUTONOMY_TIMER: acorda");
                     break;
                 case Estado.Peeking:
-                    // Escondido (DEC-025): nada o tira de lá; só troca a cara, espiando.
+                    // A agenda nunca o tira do esconderijo; só troca a cara.
                     Expressao espiando = SortearCaraDoEscondido();
                     _s = _s with { Expressao = espiando };
                     _transicoes.Add(new Transicao(Estado.Peeking, Estado.Peeking, "PEEKING + AUTONOMY_TIMER: espia com outra cara"));
@@ -1354,8 +1194,7 @@ public static partial class Maquina
                     DecidirPreso();
                     break;
                 case Estado.Climbing when _cfg.Movimento && _s.Movimento.Agarrado:
-                    // Agarrado sem ter sido posto pelo usuário (numa revalidação): volta a escalar,
-                    // para cima ou para baixo, salta ou se solta.
+                    // Agarrado sem ter sido posto ali (ex.: revalidação): volta a escalar, salta ou se solta.
                     Escolher("CLIMBING agarrado + AUTONOMY_TIMER", calmo: false,
                         (Estado.Climbing, Permite(AcoesAutonomas.Escalar) ? 4 : 0),
                         (Estado.Jumping, Permite(AcoesAutonomas.Pular) ? Perfil.PesoPular : 0),
@@ -1390,7 +1229,7 @@ public static partial class Maquina
                     if (_cfg.Movimento && _s.Estado == Estado.Jumping) SaltarDaParede();
                     break;
                 case Estado.Hanging:
-                    // Pendurado no meio da borda não há parede para descer; só na quina.
+                    // No meio da borda não tem parede pra descer; só na quina.
                     bool naQuina = !_cfg.Movimento || (Mundo(out _, out Superficies sup, out _) && sup.NaLateral(_s.Movimento.X, out _));
                     Escolher("HANGING + AUTONOMY_TIMER", calmo: false,
                         (Estado.Hanging, 2),
@@ -1410,8 +1249,8 @@ public static partial class Maquina
             {
                 if (Permite(acao) && peso > 0) opcoes.Add((acao, peso));
             }
-            // Com a física, escalar exige saber onde estão as laterais do monitor. Com a toon force
-            // (DEC-023), as duas são escaláveis, mesmo a que encosta em outro monitor.
+            // Escalar precisa saber onde estão as laterais. Com toon force as duas servem, mesmo a que
+            // encosta em outro monitor.
             bool temLateral = !_cfg.Movimento || Mundo(out _, out _, out _);
             Opcao(AcoesAutonomas.Andar, perfil.PesoAndar);
             Opcao(AcoesAutonomas.Escalar, temLateral ? perfil.PesoEscalar : 0);
@@ -1419,11 +1258,10 @@ public static partial class Maquina
             Opcao(AcoesAutonomas.Descansar, perfil.PesoDescansar);
             Opcao(AcoesAutonomas.Gesto, perfil.PesoGesto);
             Opcao(AcoesAutonomas.TrocarExpressao, perfil.PesoTrocarExpressao);
-            // O uso por conta própria (DEC-028, item 41; DEC-045), a última opção, com um peso só, seja qual for o número de
-            // drogas marcadas: sem nenhuma que possa agora, o sorteio é o de sempre.
+            // Uso por conta própria tem um peso só, não importa quantas drogas estejam marcadas.
             List<Item> proprias = CandidatasPorContaPropria();
             Opcao(AcoesAutonomas.UsarPorContaPropria, proprias.Count > 0 ? perfil.PesoUsarPorContaPropria : 0);
-            // Ir ao outro monitor (Fase 5, passo P13), a última opção: só com uma porta plana, numa lateral do monitor dele.
+            // Ir ao outro monitor, só com uma porta numa lateral do monitor dele.
             (bool portaEsquerda, bool portaDireita) = PortasDeTravessia();
             Opcao(AcoesAutonomas.IrAoOutroMonitor, portaEsquerda || portaDireita ? perfil.PesoIrAoOutroMonitor : 0);
             if (opcoes.Count == 0) return;
@@ -1458,14 +1296,14 @@ public static partial class Maquina
                     IrPara(Estado.Resting, "IDLE + AUTONOMY_TIMER: descansar");
                     break;
                 case AcoesAutonomas.Gesto:
-                    // Dois sorteios, com ou sem onda: o gesto (o da fase, com a onda de um item) e a duração.
+                    // Sempre dois sorteios (gesto e duração), com ou sem onda.
                     (Gesto gesto, Aleatorio a3) = SortearGesto();
                     (int passos, Aleatorio a4) = a3.Entre(perfil.PassosDoGestoMinimo, perfil.PassosDoGestoMaximo);
                     _s = _s with { Aleatorio = a4, Gesto = gesto, PassosDoGesto = passos };
                     _transicoes.Add(new Transicao(Estado.Idle, Estado.Idle, $"IDLE + AUTONOMY_TIMER: gesto {gesto}"));
                     break;
                 case AcoesAutonomas.TrocarExpressao:
-                    // O sorteio avança o gerador em _s: a cara vai para uma variável antes do "with".
+                    // O sorteio mexe em _s, então a cara vai pra uma variável antes do "with".
                     Expressao nova = SortearTrocaDeCara();
                     _s = _s with { Expressao = nova };
                     break;
@@ -1478,10 +1316,7 @@ public static partial class Maquina
             }
         }
 
-        /// <summary>
-        /// As laterais do monitor dele por onde a travessia vale agora (<see cref="PlanoDeTravessia"/>): andando ou num salto de
-        /// degrau, com a partida entre ele e a lateral.
-        /// </summary>
+        // Laterais por onde dá pra atravessar agora (andando, salto ou transbordo).
         private (bool Esquerda, bool Direita) PortasDeTravessia()
         {
             if (!_cfg.Movimento || !Mundo(out MonitorDoDesktop m, out Superficies sup, out _)) return (false, false);
@@ -1490,11 +1325,7 @@ public static partial class Maquina
                 PlanoDeTravessia(m, +1, (int)Math.Max(0, sup.Direita - x)) is not null || TemTransbordo(m, +1));
         }
 
-        /// <summary>
-        /// Ir ao outro monitor (<see cref="AcoesAutonomas.IrAoOutroMonitor"/>; Fase 5, passo P13): anda até a porta plana (com
-        /// duas, sorteia o lado) e atravessa sem o sorteio da porta; o percurso é a distância até a borda mais uma caminhada do
-        /// perfil, que ele segue do outro lado.
-        /// </summary>
+        // Com duas portas, sorteia o lado. Do outro lado, segue andando uma distância do perfil.
         private void PlanejarIdaAoOutroMonitor(PerfilDeEnergia perfil, bool portaEsquerda, bool portaDireita)
         {
             int lado = portaEsquerda && portaDireita ? 0 : portaEsquerda ? -1 : 1;
@@ -1509,11 +1340,8 @@ public static partial class Maquina
             IrAteAPorta(lado, dip, "IDLE + AUTONOMY_TIMER: ir ao outro monitor (anda até a porta)");
         }
 
-        /// <summary>
-        /// Anda até a porta do lado <paramref name="lado"/> e atravessa sem o sorteio da porta, seguindo <paramref name="dip"/>
-        /// DIP do outro lado: a porta plana, o salto de degrau ou o transbordo (Fase 5, P13). A ida ao outro monitor e a ida
-        /// para ver da curiosidade (DEC-037, item 4) usam a mesma.
-        /// </summary>
+        // Atravessa sem sortear a porta (plana, salto de degrau ou transbordo) e anda mais dip DIP do outro lado.
+        // Usado pela agenda e pela curiosidade.
         private void IrAteAPorta(int lado, int dip, string regra)
         {
             _s = _s with { Direcao = lado > 0 ? Direcao.Direita : Direcao.Esquerda };
@@ -1521,14 +1349,14 @@ public static partial class Maquina
             if (!Mundo(out MonitorDoDesktop m, out Superficies sup, out double escala)) return;
             double x = _s.Movimento.X;
             double ateABorda = lado > 0 ? sup.Direita - x : x - sup.Esquerda;
-            // Um salto de degrau fica planejado, com a partida entre ele e a lateral (P13b): a caminhada vai até lá.
+            // Salto de degrau: anda até a partida planejada.
             Travessia? plano = PlanoDeTravessia(m, lado, (int)Math.Max(0, ateABorda));
             if (plano is { Tipo: TipoDeTravessia.Salto })
             {
                 _s = _s with { Movimento = _s.Movimento with { Travessia = plano, Restante = double.PositiveInfinity } };
                 return;
             }
-            // Sem a porta plana e sem o salto, pelo transbordo (P13c): anda até a lateral, escala e transborda.
+            // Sem porta plana nem salto: anda até a lateral, escala e transborda.
             if (plano is null)
             {
                 _s = _s with { Movimento = _s.Movimento with { QuerAtravessar = true, QuerEscalar = true } };
@@ -1537,13 +1365,8 @@ public static partial class Maquina
             _s = _s with { Movimento = _s.Movimento with { QuerAtravessar = true, Restante = ateABorda + dip * escala } };
         }
 
-        /// <summary>
-        /// Troca de cara da agenda, com exatamente um sorteio (DEC-027 e DEC-028). Com a onda de um item, uma das caras
-        /// da fase, que tem precedência (<see cref="SortearCaraDaFase"/>). Com a emoção dominante, ela ou uma das
-        /// companheiras (<see cref="SortearComADominante"/>). Na automática, uma das outras 13 caras de humor, pela lista
-        /// fixa <see cref="Expressoes.DeHumor"/> (com a cara atual fora das 14, uma das 14): com a tendência da energia
-        /// (<see cref="PerfilDeEnergia.PesosDasCaras"/>; DEC-036, item 6), ponderada; sem ela, uniforme, como antes.
-        /// </summary>
+        // Exatamente um sorteio. Prioridade: cara da onda, emoção dominante, ou uma das outras 13 caras de humor
+        // (ponderada pela energia, se o perfil tiver pesos; senão uniforme).
         private Expressao SortearTrocaDeCara()
         {
             if (FaseEmVigor is { } fase) return SortearCaraDaFase(fase);
@@ -1551,13 +1374,13 @@ public static partial class Maquina
             IReadOnlyList<Expressao> humor = Expressoes.DeHumor;
             if (Perfil.PesosDasCaras is { } tendencia)
             {
-                // A cara atual sai do sorteio (peso 0): a troca sempre muda a cara, como na uniforme.
+                // Peso 0 pra cara atual: a troca sempre muda.
                 int[] pesos = [.. humor.Select((cara, i) => cara == _s.Expressao ? 0 : tendencia[i])];
                 (int escolhida, Aleatorio ap) = _s.Aleatorio.Ponderado(pesos);
                 _s = _s with { Aleatorio = ap };
                 return humor[escolhida];
             }
-            // As 14 estão na ordem do enum: a posição de uma cara de humor na lista é o valor dela.
+            // As 14 estão na ordem do enum: índice na lista = valor do enum.
             int atual = Expressoes.EhDeHumor(_s.Expressao) ? (int)_s.Expressao : -1;
             (int e, Aleatorio a) = _s.Aleatorio.Entre(0, humor.Count - (atual < 0 ? 1 : 2));
             _s = _s with { Aleatorio = a };
@@ -1565,14 +1388,10 @@ public static partial class Maquina
             return humor[atual >= 0 && e >= atual ? e + 1 : e];
         }
 
-        /// <summary>Pesos do sorteio com a emoção dominante: ela, 6; cada uma das quatro companheiras, 1.</summary>
+        // Dominante 6, cada uma das 4 companheiras 1 (60% a dominante).
         private static readonly int[] PesosDaDominante = [6, 1, 1, 1, 1];
 
-        /// <summary>
-        /// Uma cara com a emoção dominante (DEC-027), num único sorteio: ela, em 60% das vezes, ou uma das quatro
-        /// companheiras (<see cref="Expressoes.Companheiras"/>). Pode repetir a cara atual: de cada 100 trocas, cerca
-        /// de 36 não mudam nada, e é assim que a dominante fica a mais frequente.
-        /// </summary>
+        // Pode repetir a cara atual de propósito (~36 em 100 trocas): é assim que a dominante fica a mais frequente.
         private Expressao SortearComADominante(Expressao dominante)
         {
             (int i, Aleatorio a) = _s.Aleatorio.Ponderado(PesosDaDominante);
@@ -1582,10 +1401,7 @@ public static partial class Maquina
 
         private bool Permite(AcoesAutonomas acao) => (_cfg.Acoes & acao) == acao;
 
-        /// <summary>
-        /// Escolha ponderada e reproduzível entre destinos permitidos. Com a autonomia pausada ou o
-        /// painel aberto, fica com o primeiro destino, o mais calmo.
-        /// </summary>
+        // Sorteio ponderado. Calmo (pausa ou painel aberto) fica sempre com o primeiro, o mais tranquilo.
         private void Escolher(string regra, bool calmo, params (Estado Destino, int Peso)[] opcoes)
         {
             (Estado Destino, int Peso)[] validas = [.. opcoes.Where(o => o.Peso > 0)];
@@ -1608,23 +1424,18 @@ public static partial class Maquina
 
         private void EncerrarGesto()
         {
-            // O fim do gesto acaba também a espiada na borda explorada (DEC-037, item 9).
+            // Também encerra a espiada na borda explorada.
             _s = _s with { Gesto = Gesto.Nenhum, PassosDoGesto = 0, Movimento = _s.Movimento with { ExplorandoBorda = false } };
             _reagendar = true;
         }
 
-        // ---------------------------------------------------------------- movimento (Fase 4, DEC-022)
+        // ---------------------------------------------------------------- movimento
 
-        /// <summary>Com a autonomia pausada ou o painel aberto, o movimento em curso termina num lugar estável.</summary>
+        // Calmo: o movimento em curso termina num lugar estável.
         private bool Calmo => _s.AutonomiaPausada || _s.PainelAberto;
 
-        /// <summary>
-        /// DEC-022 com DEC-024: com a autonomia pausada ou o painel aberto, a agenda não decide, e quem está agarrado à
-        /// parede ou ao cipó sem ter sido posto lá pelo usuário (depois da reação a um clique, de uma revalidação, do fim do
-        /// uso de um item ou do atento) não fica esperando por ela: deixa de estar agarrado, e os passos seguintes o fazem
-        /// descer pela parede ou se soltar do cipó, como a calma faz com quem escala. Preso pelo usuário, continua agarrado
-        /// (DEC-024); com um item na mão do usuário, o atento o mantém onde está (DEC-028) até o item sair da mão.
-        /// </summary>
+        // Calmo, a agenda não decide; quem está agarrado sem ter sido posto lá ficaria esperando pra sempre.
+        // Solta o agarre e os próximos passos o fazem descer/se soltar. Preso ou com item na mão, fica.
         private void SoltarOAgarreComCalma()
         {
             if (!_cfg.Movimento || !Calmo || AtentoAoItem || _s.PresoPeloUsuario) return;
@@ -1632,10 +1443,9 @@ public static partial class Maquina
                 _s = _s with { Movimento = _s.Movimento with { Agarrado = false } };
         }
 
-        /// <summary>+1 para a direita, −1 para a esquerda.</summary>
         private int Sentido => _s.Direcao == Direcao.Direita ? 1 : -1;
 
-        /// <summary>Monitor atual (da topologia em cache), superfícies para o sprite e escala; falso sem lugar ou topologia.</summary>
+        // False sem lugar ou topologia.
         private bool Mundo(out MonitorDoDesktop monitor, out Superficies superficies, out double escala)
         {
             monitor = null!;
@@ -1648,13 +1458,10 @@ public static partial class Maquina
             return true;
         }
 
-        /// <summary>Pixels físicos por passo fixo, a partir de DIPs por segundo.</summary>
+        // DIP/s -> px físicos por passo.
         private double PorPasso(double dipPorSegundo, double escala) => dipPorSegundo * escala / _cfg.PassosPorSegundo;
 
-        /// <summary>
-        /// Leva a âncora fina a (x, y): a janela usa a posição arredondada, e a posição relativa
-        /// acompanha, para sobreviver a uma mudança de topologia no meio do movimento.
-        /// </summary>
+        // A janela usa o arredondado. A posição relativa acompanha pra sobreviver a troca de topologia no meio.
         private void MoverPara(MonitorDoDesktop monitor, double x, double y)
         {
             var ancora = new PontoPx((int)Math.Round(x, MidpointRounding.AwayFromZero), (int)Math.Round(y, MidpointRounding.AwayFromZero));
@@ -1666,7 +1473,7 @@ public static partial class Maquina
         private void PassoAndando()
         {
             if (!Mundo(out MonitorDoDesktop m, out Superficies sup, out double escala)) return;
-            // A travessia andando em curso é atômica (passo P13; D7): nem a calma a para no meio.
+            // Travessia é atômica: nem a calma a para no meio.
             if (_s.Movimento.Travessia is { Tipo: TipoDeTravessia.Andando } travessia)
             {
                 PassoAtravessando(travessia);
@@ -1678,8 +1485,7 @@ public static partial class Maquina
                 return;
             }
             EstadoDoMovimento mv = _s.Movimento;
-            // Com a onda de um item, a velocidade da fase e o cambaleio (DEC-028): o passo oscila numa onda triangular,
-            // às vezes para trás; o recuo devolve distância ao percurso e nunca passa da lateral de trás.
+            // Cambaleio: o passo oscila e às vezes vai pra trás; o recuo devolve distância e nunca passa da lateral.
             double passo = PorPasso(Fisica.VelocidadeAndando, escala) * Cambaleio(out bool cambaleia);
             double x = mv.X + Sentido * passo;
             int limite = Sentido > 0 ? sup.Direita : sup.Esquerda;
@@ -1687,7 +1493,7 @@ public static partial class Maquina
             if (naBorda) x = limite;
             else if (cambaleia) x = Math.Clamp(x, sup.Esquerda, sup.Direita);
             _s = _s with { Movimento = mv with { Restante = mv.Restante - passo } };
-            // A caminhada até a partida de um salto de degrau planejado (passo P13b): ao chegar, ele salta de lá.
+            // Chegou na partida do salto de degrau planejado: salta.
             if (mv.Travessia is { Tipo: TipoDeTravessia.Salto } pendente && (Sentido > 0 ? x >= pendente.X0 : x <= pendente.X0))
             {
                 MoverPara(m, pendente.X0, sup.Chao);
@@ -1708,16 +1514,16 @@ public static partial class Maquina
                     ChegarNaBordaExplorada();
                     return;
                 }
-                // Toon force (DEC-023): a lateral é parede para ele mesmo quando outro monitor encosta nela.
+                // Toon force: a lateral é parede mesmo quando outro monitor encosta nela.
                 if (mv.QuerEscalar)
                 {
                     IrPara(Estado.Climbing, "WALKING: parede (andava até ela para escalar)");
-                    // Indo ao outro monitor pelo transbordo (P13c), a intenção sobe com ele.
+                    // Indo pro outro monitor pelo transbordo: a intenção sobe junto.
                     if (mv.QuerAtravessar) _s = _s with { Movimento = _s.Movimento with { QuerAtravessar = true } };
                     TalvezFoguete();
                     return;
                 }
-                // Numa porta plana (passo P13; C14 da crítica), a agenda sorteia entre atravessar e o caminho da parede.
+                // Na porta, sorteia entre atravessar e o caminho normal da parede.
                 if (PlanoDeTravessia(m, Sentido) is { } plano && (mv.QuerAtravessar || SorteiaAtravessar()))
                 {
                     if (plano.Tipo == TipoDeTravessia.Salto)
@@ -1735,12 +1541,8 @@ public static partial class Maquina
             if (!mv.QuerEscalar && _s.Movimento.Restante <= 0) IrPara(Estado.Idle, "WALKING: fim do percurso");
         }
 
-        /// <summary>
-        /// A travessia possível pela lateral <paramref name="lado"/> do monitor, ou nula (passo P13; DEC-032): com a capacidade
-        /// e a preferência ligadas, sem calma e sem um item na mão do usuário, andando por uma porta plana
-        /// (<see cref="Passagens.PortaPlana"/>) ou, sem ela, num salto de degrau (<see cref="Passagens.SaltoDeDegrau"/>, P13b), com
-        /// a partida até <paramref name="recuoMaximo"/> px antes da lateral. Nunca para um monitor fechado (<see cref="Fechado"/>).
-        /// </summary>
+        // Porta plana, ou salto de degrau com a partida até recuoMaximo px antes da lateral. Nunca pra
+        // monitor fechado.
         private Travessia? PlanoDeTravessia(MonitorDoDesktop m, int lado, int recuoMaximo = 0)
         {
             if (!_cfg.Travessia || !_s.Preferencias.AtravessarMonitores || Calmo || AtentoAoItem || _s.Topologia is not { } t) return null;
@@ -1750,11 +1552,7 @@ public static partial class Maquina
             return Passagens.SaltoDeDegrau(t, m, lado, _cfg.Tamanho, _cfg.Fisica, _cfg.PassosPorSegundo, recuoMaximo, fechados);
         }
 
-        /// <summary>
-        /// O transbordo possível na lateral em que ele escala (P13c), se os pés passaram, de <paramref name="yAntes"/> a
-        /// <paramref name="yDepois"/>, subindo, pela altura do chão de um vizinho mais alto daquela lateral; ou nulo. Com as
-        /// mesmas guardas da travessia (<see cref="PlanoDeTravessia"/>).
-        /// </summary>
+        // Se, subindo de yAntes a yDepois, os pés cruzaram o chão de um vizinho mais alto dessa lateral.
         private Travessia? TransbordoAoPassar(MonitorDoDesktop m, double yAntes, double yDepois)
         {
             if (!_cfg.Travessia || !_s.Preferencias.AtravessarMonitores || Calmo || AtentoAoItem || _s.Topologia is not { } t) return null;
@@ -1769,10 +1567,7 @@ public static partial class Maquina
             return null;
         }
 
-        /// <summary>
-        /// Se há um transbordo possível pela lateral <paramref name="lado"/> do monitor (P13c): algum vizinho mais alto daquela
-        /// lateral cujo chão ele alcança escalando.
-        /// </summary>
+        // Algum vizinho mais alto nessa lateral cujo chão ele alcança escalando.
         private bool TemTransbordo(MonitorDoDesktop m, int lado)
         {
             if (!_cfg.Travessia || !_s.Preferencias.AtravessarMonitores || Calmo || AtentoAoItem || _s.Topologia is not { } t) return false;
@@ -1785,21 +1580,15 @@ public static partial class Maquina
             return false;
         }
 
-        /// <summary>
-        /// O salto de degrau começa (P13b): JUMPING, com o plano, que o voo segue passo a passo (<see cref="PassoNoSalto"/>). O
-        /// plano entra depois de <see cref="IrPara"/>, que recomeça o movimento parado ao entrar num estado de movimento.
-        /// </summary>
+        // O plano entra depois de IrPara, que zera o movimento ao entrar no estado.
         private void Saltar(Travessia salto, string regra = "WALKING: degrau alcançável (salto de travessia)")
         {
             IrPara(Estado.Jumping, regra);
             _s = _s with { Movimento = _s.Movimento with { Travessia = salto with { Passo = 0 } } };
         }
 
-        /// <summary>
-        /// Um passo do salto de degrau (P13b; D6 e D8): a posição analítica do arco; o monitor da âncora troca na borda, com o
-        /// tamanho do novo monitor. No último passo, o pouso exato no chão do vizinho, e o contato com o chão leva a LANDING. No pulo
-        /// da tela cheia (DEC-035), o monitor de cada passo é o da âncora, e a chegada é uma acomodação (<see cref="ChegarDoPulo"/>).
-        /// </summary>
+        // Posição analítica do arco (não integrada). O monitor troca na borda. No último passo pousa exato no chão
+        // do vizinho; no pulo da tela cheia, a chegada é uma acomodação.
         private void PassoNoSalto(Travessia salto)
         {
             if (_s.Topologia is not { } t || t.PorChave(salto.ChaveOrigem) is not { } origem || t.PorChave(salto.ChaveDestino) is not { } destino)
@@ -1826,16 +1615,13 @@ public static partial class Maquina
             var ancora = new PontoPx((int)Math.Round(x, MidpointRounding.AwayFromZero), (int)Math.Round(y, MidpointRounding.AwayFromZero));
             MoverPara(Passagens.MonitorNoSalto(t, salto, origem, destino, ancora), x, y);
             _s = _s with { Movimento = _s.Movimento with { Travessia = salto with { Passo = passo } } };
-            // No pulo da tela cheia, a velocidade do arco vai ao estado, para a pose esticar quando ele vai rápido (DEC-035).
+            // No pulo da tela cheia a velocidade vai pro estado, pra pose esticar quando ele vai rápido.
             if (salto.Pulo != PuloDaTelaCheia.Nenhum)
                 _s = _s with { Movimento = _s.Movimento with { VX = salto.VX, VY = salto.VY0 + salto.G * passo / _cfg.PassosPorSegundo } };
         }
 
-        /// <summary>
-        /// Na porta, um sorteio entre atravessar, com <see cref="PerfilDeEnergia.PesoAtravessar"/>, e o caminho da parede, com a
-        /// soma dos pesos dele (parar, escalar e virar; <see cref="Sinalizar"/>), que sorteia de novo entre os três: a mesma
-        /// distribuição de um sorteio só, com o código da parede intacto.
-        /// </summary>
+        // Atravessar contra a soma dos pesos da parede (parar 3, escalar, virar 2). Se perder, Sinalizar sorteia
+        // de novo entre os três: dá a mesma distribuição de um sorteio só sem mexer no código da parede.
         private bool SorteiaAtravessar()
         {
             int atravessar = Perfil.PesoAtravessar;
@@ -1846,11 +1632,8 @@ public static partial class Maquina
             return i == 0;
         }
 
-        /// <summary>
-        /// Um passo da travessia andando (4.1 e D8): a âncora fina anda reta, sem o cambaleio, na velocidade do monitor da âncora,
-        /// e troca de monitor quando, arredondada, passa da borda; os pés ficam no chão (o mesmo dos dois lados). Ela termina com o
-        /// sprite inteiro no destino; aí, com calma, com um item na mão do usuário ou sem percurso, ele para.
-        /// </summary>
+        // Anda reto, sem cambaleio, na velocidade do monitor da âncora; troca de monitor quando a âncora
+        // arredondada passa da borda. Termina com o sprite inteiro no destino.
         private void PassoAtravessando(Travessia travessia)
         {
             if (_s.Topologia is not { } t || t.PorChave(travessia.ChaveOrigem) is not { } origem || t.PorChave(travessia.ChaveDestino) is not { } destino)
@@ -1887,15 +1670,14 @@ public static partial class Maquina
                 PassoPresoNaParede(m, sup, escala);
                 return;
             }
-            // Pausado ou com o painel aberto, desce até o chão em vez de subir (e o foguete apaga).
+            // Calmo: desce até o chão em vez de subir, e o foguete apaga.
             int sentido = Calmo ? 1 : mv.SentidoVertical;
             bool foguete = mv.Foguete && sentido < 0;
             double velocidade = foguete ? _cfg.Fisica.VelocidadeDoFoguete : Fisica.VelocidadeEscalando;
             double y = mv.Y + sentido * PorPasso(velocidade, escala);
             double x = Sentido > 0 ? sup.Direita : sup.Esquerda;
             _s = _s with { Movimento = mv with { SentidoVertical = sentido, Foguete = foguete } };
-            // Subindo, os pés cruzaram neste passo a altura do chão de um vizinho mais alto (o topo do trecho de parede abaixo
-            // da porta): o transbordo para ele (P13c; C14 da crítica), sem sorteio se ele ia ao outro monitor.
+            // Os pés cruzaram o chão de um vizinho mais alto: transborda pra ele (sem sorteio se já ia atravessar).
             if (sentido < 0 && TransbordoAoPassar(m, mv.Y, y) is { } transbordo && (mv.QuerAtravessar || SorteiaAtravessar()))
             {
                 MoverPara(m, x, transbordo.Y0);
@@ -1906,7 +1688,7 @@ public static partial class Maquina
             {
                 MoverPara(m, x, sup.Teto);
                 Sinalizar(SinalDeMovimento.BordaSuperior);
-                // Pendurado, segue pela borda para dentro, de costas para a parede.
+                // Pendurado, segue pela borda pra dentro, de costas pra parede.
                 if (_s.Estado == Estado.Hanging) Virar();
                 return;
             }
@@ -1919,10 +1701,7 @@ public static partial class Maquina
             MoverPara(m, x, y);
         }
 
-        /// <summary>
-        /// Preso pelo usuário na parede (DEC-024): percorre o passeio sorteado pela mesma lateral, sem
-        /// chegar ao chão nem passar para o cipó, e para agarrado no fim, num limite ou com calma.
-        /// </summary>
+        // Passeia pela mesma lateral sem chegar ao chão nem passar pro cipó; para agarrado no fim, no limite ou calmo.
         private void PassoPresoNaParede(MonitorDoDesktop m, Superficies sup, double escala)
         {
             EstadoDoMovimento mv = _s.Movimento;
@@ -1937,10 +1716,7 @@ public static partial class Maquina
             if (Calmo || noLimite || restante <= 0) _s = _s with { Movimento = _s.Movimento with { Agarrado = true } };
         }
 
-        /// <summary>
-        /// Preso pelo usuário no cipó (DEC-024): percorre o passeio sorteado pela borda de cima; numa
-        /// quina dá meia-volta em vez de descer; para agarrado no fim ou com calma.
-        /// </summary>
+        // Na quina dá meia-volta em vez de descer; para agarrado no fim ou calmo.
         private void PassoPresoNoCipo(MonitorDoDesktop m, Superficies sup, double escala)
         {
             EstadoDoMovimento mv = _s.Movimento;
@@ -1981,7 +1757,7 @@ public static partial class Maquina
             if (naBorda) Sinalizar(SinalDeMovimento.FimDaBorda);
         }
 
-        /// <summary>Pulo ou queda: gravidade com velocidade máxima, integração semi-implícita, até o chão.</summary>
+        // Euler semi-implícito, com velocidade máxima de queda.
         private void PassoNoAr()
         {
             if (!Mundo(out MonitorDoDesktop m, out Superficies sup, out double escala)) return;
@@ -1996,7 +1772,7 @@ public static partial class Maquina
             double vx = mv.VX;
             double x = mv.X + vx * dt;
             double y = mv.Y + vy * dt;
-            // O sprite nunca sai da área útil: as laterais e a borda de cima param o voo.
+            // Nunca sai da área útil: laterais e topo param o voo.
             if (x < sup.Esquerda) { x = sup.Esquerda; vx = 0; }
             else if (x > sup.Direita) { x = sup.Direita; vx = 0; }
             if (y < sup.Teto) { y = sup.Teto; if (vy < 0) vy = 0; }
@@ -2012,12 +1788,7 @@ public static partial class Maquina
             MoverPara(m, x, y);
         }
 
-        /// <summary>
-        /// Toon force (DEC-023): um impacto forte no chão quica como borracha, rindo, em vez de
-        /// pousar. A cada quique sobra uma fração da velocidade; depois de
-        /// <see cref="ParametrosDeMovimento.QuiquesMaximos"/>, ou com a autonomia pausada ou o
-        /// painel aberto, ele pousa. Devolve se quicou.
-        /// </summary>
+        // Toon force: impacto forte quica como borracha, rindo. Pousa depois do máximo de quiques ou se calmo.
         private bool Quicar(MonitorDoDesktop m, double x, int chao, double vx, double vy, double escala)
         {
             ParametrosDeMovimento f = _cfg.Fisica;
@@ -2027,17 +1798,14 @@ public static partial class Maquina
             string de = _s.Estado.ToString().ToUpperInvariant();
             _s = _s with { Expressao = Expressao.Rindo };
             IrPara(Estado.Jumping, $"{de}: contato com o chão, quique de borracha (toon force)");
-            // IrPara recomeça o movimento parado quando o estado muda: a velocidade vem depois.
+            // IrPara zera o movimento quando o estado muda, então a velocidade vem depois.
             _s = _s with { Movimento = _s.Movimento with { VX = vx * f.AtritoDoQuique, VY = -vy * f.RestituicaoDoQuique, Quiques = quiques + 1 } };
             MoverPara(m, x, chao);
             return true;
         }
 
-        /// <summary>
-        /// Toon force (DEC-023): ao começar a subir uma parede a partir do chão, às vezes dispara
-        /// parede acima num foguete de borracha, até a borda superior. A chance é do perfil de
-        /// energia (frequência de uma ação); a velocidade é a mesma em todo nível.
-        /// </summary>
+        // Toon force: às vezes sobe a parede num foguete de borracha até o topo. Chance vem do perfil; a
+        // velocidade é a mesma em todo nível.
         private void TalvezFoguete()
         {
             if (!_cfg.Movimento || _s.Estado != Estado.Climbing || Calmo || _cfg.Fisica.VelocidadeDoFoguete <= 0) return;
@@ -2047,7 +1815,7 @@ public static partial class Maquina
                 _s = _s with { Movimento = _s.Movimento with { Foguete = true } };
         }
 
-        /// <summary>Explorar a borda (DEC-037, item 9): uma caminhada em cada <see cref="PerfilDeEnergia.ExplorarBordaUmEm"/>, no gerador da personalidade.</summary>
+        // Uma caminhada em cada ExplorarBordaUmEm, no gerador da personalidade.
         private bool SorteiaExplorarBorda(PerfilDeEnergia perfil)
         {
             (int n, Aleatorio a) = _s.AleatorioDaPersonalidade.Entre(1, Math.Max(1, perfil.ExplorarBordaUmEm));
@@ -2055,10 +1823,7 @@ public static partial class Maquina
             return n == 1;
         }
 
-        /// <summary>
-        /// Explorar a borda (DEC-037, item 9): anda até a lateral mais próxima da área útil, sem atravessar nem escalar, e lá
-        /// espia para fora (<see cref="ChegarNaBordaExplorada"/>).
-        /// </summary>
+        // Anda até a lateral mais próxima, sem atravessar nem escalar, e espia pra fora.
         private void PlanejarExploracaoDaBorda()
         {
             if (!Mundo(out _, out Superficies sup, out _) || _s.Lugar is null) return;
@@ -2069,7 +1834,6 @@ public static partial class Maquina
             _s = _s with { Movimento = _s.Movimento with { ExplorandoBorda = true, Restante = Math.Min(ateDireita, ateEsquerda) + 1 } };
         }
 
-        /// <summary>Na lateral explorada (DEC-037, item 9): para, virado para fora, e espia, com a duração do perfil no gerador da personalidade.</summary>
         private void ChegarNaBordaExplorada()
         {
             PerfilDeEnergia perfil = Perfil;
@@ -2078,7 +1842,7 @@ public static partial class Maquina
             _s = _s with { AleatorioDaPersonalidade = a, Gesto = Gesto.Espiar, PassosDoGesto = passos };
         }
 
-        /// <summary>Caminhada autônoma: distância do perfil de energia; sem espaço à frente, vira.</summary>
+        // Sem espaço à frente, vira.
         private void PlanejarCaminhada(PerfilDeEnergia perfil)
         {
             if (!Mundo(out _, out Superficies sup, out double escala)) return;
@@ -2087,17 +1851,13 @@ public static partial class Maquina
             double x = _s.Movimento.X;
             double livre = Sentido > 0 ? sup.Direita - x : x - sup.Esquerda;
             double atras = Sentido > 0 ? x - sup.Esquerda : sup.Direita - x;
-            // Com uma porta plana à frente (passo P13), o espaço continua do outro lado: não vira.
+            // Porta à frente: o espaço continua do outro lado, não vira.
             if (Mundo(out MonitorDoDesktop m, out _, out _) && PlanoDeTravessia(m, Sentido) is not null) livre = double.PositiveInfinity;
             if (livre < _cfg.Fisica.EspacoMinimo * escala && atras > livre) Virar();
             _s = _s with { Movimento = _s.Movimento with { Restante = dip * escala } };
         }
 
-        /// <summary>
-        /// Escalar a partir de IDLE: já encostado numa lateral, sobe; senão, anda até a lateral
-        /// mais próxima e sobe quando chegar. Com a toon force (DEC-023), as duas laterais servem,
-        /// mesmo a que encosta em outro monitor.
-        /// </summary>
+        // Encostado numa lateral, sobe; senão anda até a mais próxima (toon force: as duas servem).
         private void PlanejarEscalada()
         {
             if (!Mundo(out _, out Superficies sup, out _) || _s.Lugar is null) return;
@@ -2116,10 +1876,7 @@ public static partial class Maquina
             _s = _s with { Movimento = _s.Movimento with { QuerEscalar = true } };
         }
 
-        /// <summary>
-        /// Pulo autônomo: arco balístico com distância e altura do perfil de energia, calculado
-        /// para pousar no chão; sem espaço à frente, pula para o outro lado.
-        /// </summary>
+        // Arco balístico calculado pra pousar no chão; sem espaço à frente, pula pro outro lado.
         private void PlanejarPulo(PerfilDeEnergia perfil)
         {
             if (!Mundo(out _, out Superficies sup, out double escala)) return;
@@ -2143,14 +1900,9 @@ public static partial class Maquina
             _s = _s with { Movimento = _s.Movimento with { VX = vx, VY = vy0 } };
         }
 
-        /// <summary>Expressões de quem está preso pelo usuário e só olha em volta (DEC-024).</summary>
         private static readonly Expressao[] ExpressoesDoPreso = [Expressao.Feliz, Expressao.Curioso, Expressao.Travesso, Expressao.Rindo, Expressao.Pensativo];
 
-        /// <summary>
-        /// A cara de quem está preso e olha em volta, num único sorteio: com a onda de um item, uma das caras da fase
-        /// (DEC-028); com a emoção dominante, ela ou uma companheira (DEC-027); na automática, uma das caras de quem está
-        /// preso.
-        /// </summary>
+        // Prioridade: cara da onda, emoção dominante, ou uma das caras do preso.
         private Expressao SortearCaraDoPreso()
         {
             if (FaseEmVigor is { } fase) return SortearCaraDaFase(fase);
@@ -2160,18 +1912,15 @@ public static partial class Maquina
             return ExpressoesDoPreso[cara];
         }
 
-        /// <summary>
-        /// Preso pelo usuário (DEC-024): a agenda nunca o tira de lá. Ou ele fica, trocando de cara,
-        /// ou passeia um pouco pela mesma superfície: sobe ou desce pela parede, vai para um lado ou
-        /// outro pelo cipó. O passeio para agarrado, e o relógio desliga.
-        /// </summary>
+        // A agenda nunca tira o preso de lá: ou fica trocando de cara, ou passeia um pouco pela mesma superfície
+        // e para agarrado (aí o relógio desliga).
         private void DecidirPreso()
         {
             bool naParede = _s.Estado == Estado.Climbing;
             (int escolha, Aleatorio a) = _s.Aleatorio.Ponderado([2, 2, 2]);
             (int dip, Aleatorio a2) = a.Entre(_cfg.Fisica.PasseioPresoMinimo, _cfg.Fisica.PasseioPresoMaximo);
             _s = _s with { Aleatorio = a2 };
-            // A cara é sorteada sempre, num único sorteio, e só vale quando ele fica e olha em volta.
+            // Sorteia a cara sempre (mantém a sequência do gerador), mas só usa se ele ficar.
             Expressao cara = SortearCaraDoPreso();
             string onde = naParede ? "CLIMBING preso pelo usuário" : "HANGING preso pelo usuário no cipó";
             if (escolha == 0)
@@ -2191,7 +1940,7 @@ public static partial class Maquina
                 : $"{onde} + AUTONOMY_TIMER: passeia pela borda, para a {(escolha == 1 ? "direita" : "esquerda")}"));
         }
 
-        /// <summary>A agenda decidiu pular da parede: salta para longe dela, de costas para a parede.</summary>
+        // Salta pra longe da parede, de costas pra ela.
         private void SaltarDaParede()
         {
             if (!Mundo(out _, out _, out double escala)) return;
@@ -2207,7 +1956,7 @@ public static partial class Maquina
             };
         }
 
-        /// <summary>A agenda decidiu pendurado: continua pela borda, desce pela parede da quina, salta ou solta.</summary>
+        // Ajusta direção/velocidade depois que a agenda escolheu descer pela quina ou saltar do cipó.
         private void SairDoTeto()
         {
             if (!Mundo(out _, out Superficies sup, out double escala)) return;
@@ -2224,19 +1973,10 @@ public static partial class Maquina
 
         // ---------------------------------------------------------------- validação (SETTLING)
 
-        /// <summary>
-        /// <c>SETTLING</c> (ARCHITECTURE.md 2.7, passos 4 e 5): escolhe o monitor da âncora (ou o mais
-        /// próximo, num vão), prende o sprite na área útil dele e decide pelo apoio. Sem apoio, cai
-        /// (<see cref="ConfiguracaoDoNucleo.QuedaFisica"/>) ou, antes da Fase 4, vai direto ao chão.
-        /// </summary>
-        /// <param name="pelaMaoDoUsuario">
-        /// O usuário acabou de soltar o personagem (DRAG_END, DRAG_CANCEL do arraste). Se ele agarrar
-        /// uma lateral ou o cipó, fica preso lá até o usuário tirá-lo (DEC-024).
-        /// </param>
-        /// <param name="apoio">
-        /// O apoio em que ele usou um item (DEC-028): no fim do uso, na quina, ao alcance da parede e do cipó, ele agarra o
-        /// mesmo de antes. Nulo, o mais próximo, como sempre.
-        /// </param>
+        // SETTLING: monitor da âncora (ou o mais próximo, num vão), prende na área útil e decide pelo apoio.
+        // Sem apoio, cai; sem QuedaFisica, vai direto pro chão.
+        // pelaMaoDoUsuario: acabou de ser solto; se agarrar parede/cipó, fica preso até tirarem ele.
+        // apoio: onde usou o item; na quina, ao alcance dos dois, agarra o mesmo de antes.
         private void Acomodar(PontoPx desejada, string regra, PosicaoDoPersonagem? preferida = null, bool pelaMaoDoUsuario = false, ApoioDoUso? apoio = null)
         {
             IrPara(Estado.Settling, regra);
@@ -2244,7 +1984,7 @@ public static partial class Maquina
             _s = _s with { Lugar = lugar, Posicao = posicao };
             _reagendar = true;
 
-            // Escondido (DEC-025): toda acomodação o devolve ao esconderijo, na mesma borda.
+            // Escondido: toda acomodação o devolve ao esconderijo, na mesma borda.
             if (_s.Esconderijo != LadoDoEsconderijo.Nenhum)
             {
                 Posicionamento escondido = EsconderijoPara(lugar, _s.Esconderijo);
@@ -2253,8 +1993,8 @@ public static partial class Maquina
                 return;
             }
 
-            // Solto no alto ou junto a uma lateral, agarra ali em vez de cair (DEC-024). Quem já
-            // estava preso pelo usuário continua preso: um clique ou uma revalidação não o tiram.
+            // Solto no alto ou junto a uma lateral, agarra em vez de cair. Quem já estava preso continua
+            // preso: clique ou revalidação não o tiram.
             if (!comApoio && _cfg.Movimento && OndeAgarrar(lugar, apoio) is { } agarre)
             {
                 bool preso = pelaMaoDoUsuario || _s.PresoPeloUsuario;
@@ -2262,7 +2002,7 @@ public static partial class Maquina
                 IrPara(agarre.Estado, agarre.Estado == Estado.Hanging
                     ? "SETTLING: solto perto da borda de cima, agarra o cipó"
                     : "SETTLING: solto junto a uma lateral, fica grudado na parede");
-                // IrPara recomeça o movimento quando o estado muda: parado, agarrado, sem relógio.
+                // Depois do IrPara, que zera o movimento: parado, agarrado, sem relógio.
                 _s = _s with { Movimento = _s.Movimento with { Agarrado = true } };
                 return;
             }
@@ -2276,14 +2016,9 @@ public static partial class Maquina
                 IrPara(Estado.Idle, "SETTLING sem apoio: preso no chão (a queda animada é da Fase 4)");
         }
 
-        /// <summary>
-        /// Onde agarrar um personagem sem apoio (DEC-024): o cipó da borda de cima, se o topo do sprite
-        /// está perto dela; a lateral, se a âncora está perto dela; a mais próxima das duas, em
-        /// proporção ao alcance de cada uma, ou, com as duas ao alcance, a <paramref name="preferido"/>
-        /// (o apoio do uso de um item, DEC-028). Perto do chão, nenhuma: ele cai. A exceção é o fim do
-        /// uso de um item na parede ou no cipó: ele já estava lá, e volta ao mesmo apoio mesmo perto do
-        /// chão (tabela 4.6 e invariante 24), como quem escalava os primeiros passos de uma parede.
-        /// </summary>
+        // Cipó ou lateral, o que estiver mais perto em proporção ao alcance de cada um; com os dois ao alcance,
+        // vale o preferido. Perto do chão não agarra e cai, exceto no fim de um uso na parede/cipó: ele já
+        // estava lá e volta pro mesmo apoio.
         private (Estado Estado, Posicionamento Lugar, Direcao Direcao)? OndeAgarrar(Posicionamento lugar, ApoioDoUso? preferido = null)
         {
             if (_s.Topologia is not { } topologia) return null;
@@ -2322,10 +2057,7 @@ public static partial class Maquina
             return new Posicionamento(monitor, ancora, tamanho, Posicionador.RetanguloDoSprite(ancora, tamanho));
         }
 
-        /// <summary>
-        /// A validação de SETTLING sem transição: monitor da âncora (ou o mais próximo), sprite
-        /// preso na área útil, apoio no chão e posição relativa resultante.
-        /// </summary>
+        // A validação do SETTLING, sem registrar transição.
         private (Posicionamento Lugar, PosicaoDoPersonagem Posicao, bool ComApoio) Validar(PontoPx desejada, PosicaoDoPersonagem? preferida)
         {
             Topologia topologia = _s.Topologia ?? throw new InvalidOperationException("Validação sem topologia.");
@@ -2342,10 +2074,7 @@ public static partial class Maquina
             return (lugar, posicao, comApoio);
         }
 
-        /// <summary>
-        /// Esconder ou sair no meio do arraste encerra o gesto onde ele está, como um cancelamento
-        /// (ARCHITECTURE.md 2.7): a posição do cursor é validada e passa a ser a escolha do usuário.
-        /// </summary>
+        // Esconder/sair no meio do arraste conta como cancelamento: o ponto atual é validado e vira a escolha.
         private void FixarArrasteInterrompido()
         {
             if (_s.Estado != Estado.Dragging || _s.Lugar is null || _s.Topologia is null) return;
@@ -2353,7 +2082,7 @@ public static partial class Maquina
             _s = _s with { Lugar = lugar, Posicao = posicao, RetornoDaTelaCheia = null };
         }
 
-        /// <summary>Posicionamento durante o arraste: segue a âncora sem prender, com o tamanho do DPI do monitor dela.</summary>
+        // Durante o arraste: não prende na área útil; tamanho pelo DPI do monitor da âncora.
         private Posicionamento LugarLivre(Topologia topologia, PontoPx ancora)
         {
             MonitorDoDesktop monitor = MonitorDaAncora(topologia, ancora);
@@ -2366,15 +2095,13 @@ public static partial class Maquina
             Estado de = _s.Estado;
             _transicoes.Add(new Transicao(de, novo, regra));
             _s = _s with { Estado = novo, Motivo = novo == Estado.Hidden ? _s.Motivo : MotivoDoOcultamento.Nenhum };
-            // Sair de USING, pelo fim ou por uma interrupção, acaba o uso (DEC-028); a onda continua.
+            // Sair de USING acaba o uso (fim ou interrupção); a onda continua.
             if (de == Estado.Using && novo != Estado.Using) _s = _s with { Uso = null };
-            // Sair de REACTING acaba a variante da reação (DEC-037, item 8).
             if (de == Estado.Reacting && novo != Estado.Reacting) _s = _s with { Reacao = VarianteDaReacao.Padrao };
-            // Sair da caminhada desfaz a travessia em curso (passo P13; C15 da crítica).
+            // Trocar de estado desfaz a travessia em curso.
             if (novo != de && _s.Movimento.Travessia is not null) _s = _s with { Movimento = _s.Movimento with { Travessia = null } };
             if (novo != de && DecideNoEstado(novo)) _reagendar = true;
-            // Ao entrar num estado de movimento, a física parte da âncora atual, parada; quem
-            // chamou ajusta velocidade e plano depois (DEC-022).
+            // Entrando em movimento, parte parado da âncora; quem chamou ajusta velocidade e plano depois.
             if (novo != de && novo.EmMovimento() && _s.Lugar is { } lugar)
                 _s = _s with { Movimento = new EstadoDoMovimento(lugar.Ancora.X, lugar.Ancora.Y, 0, 0, double.PositiveInfinity, -1, false) };
         }
@@ -2386,10 +2113,8 @@ public static partial class Maquina
             var janela = new List<Efeito>();
             var tempo = new List<Efeito>();
 
-            // Com calma, quem está agarrado sem estar preso desce ou se solta (DEC-022), antes de o relógio ser decidido.
+            // Antes de decidir o relógio.
             SoltarOAgarreComCalma();
-
-            // Um item que cai e deixou de aparecer vai direto ao chão (L5): o relógio nunca corre por ele.
             AssentarOsInvisiveis();
 
             bool visivelAntes = _inicio.Estado.Visivel();
@@ -2400,13 +2125,12 @@ public static partial class Maquina
                     janela.Add(new MoverJanela(_s.Lugar));
                 if (!visivelAntes && visivelDepois) janela.Add(new MostrarJanela());
                 if (visivelAntes && !visivelDepois) janela.Add(new EsconderJanela());
-                // As janelas dos itens (DEC-028), depois da do personagem; saindo, a raiz fecha todas.
+                // Itens depois do personagem; saindo, a raiz fecha todas.
                 EfeitosDosItens(janela);
             }
 
-            // Relógio: só com movimento, reação, uso de um item, pouso, gesto ou um item à vista caindo (DEC-011;
-            // critério 3 da Fase 2; invariante 29). Agarrado à parede ou ao cipó (DEC-024), nada se move: o relógio fica
-            // desligado.
+            // Relógio só roda quando algo se mexe: movimento, reação, uso, gesto ou item visível caindo.
+            // Agarrado nada se move, então fica desligado.
             bool agarrado = _s.Estado is Estado.Climbing or Estado.Hanging && _s.Movimento.Agarrado;
             bool relogio = (_s.Estado.EmMovimento() && !agarrado) || _s.Estado is Estado.Reacting or Estado.Using
                 || (_s.Estado == Estado.Idle && _s.Gesto != Gesto.Nenhum) || ItemVisivelCaindo;
@@ -2416,8 +2140,8 @@ public static partial class Maquina
                 _s = _s with { RelogioAtivo = relogio };
             }
 
-            // Agenda autônoma: um temporizador único até a próxima decisão. Com o usuário segurando um item
-            // (DEC-028), a agenda pausa; quando o item sai da mão, volta depois do intervalo de acomodação.
+            // Agenda: um timer único até a próxima decisão. Com item na mão ela pausa e volta depois do
+            // intervalo de acomodação.
             bool querDecisao = DecideNoEstado(_s.Estado) && _s.Gesto == Gesto.Nenhum && !_s.AutonomiaPausada && !_s.PainelAberto && !AtentoAoItem;
             if (querDecisao && (_reagendar || !_s.DecisaoAgendada))
             {
@@ -2432,8 +2156,7 @@ public static partial class Maquina
                 _s = _s with { DecisaoAgendada = false };
             }
 
-            // Onda do tamagotchi (DEC-028): o próprio temporizador único, depois do da agenda. Antes, sem onda de substância, a
-            // carga da paranoia volta a 0 (pedido do usuário de 2026-10-01).
+            // Timer da onda depois do da agenda. Antes zera a carga da paranoia se não sobrou onda de substância.
             ZerarACargaSemSubstancia();
             EfeitosDaOnda(tempo);
             EfeitosDaCuriosidade(tempo);
@@ -2452,16 +2175,14 @@ public static partial class Maquina
             (TimeSpan minimo, TimeSpan maximo) = _s.Estado switch
             {
                 Estado.Resting => (perfil.DescansoMinimo, perfil.DescansoMaximo),
-                // Fase 4: tempo na parede e tempo pendurado ("por pouco tempo") do perfil de energia.
+                // Na parede e pendurado fica pouco tempo.
                 Estado.Climbing when _cfg.Movimento => (perfil.TempoNaParedeMinimo, perfil.TempoNaParedeMaximo),
                 Estado.Hanging when _cfg.Movimento => (perfil.TempoPenduradoMinimo, perfil.TempoPenduradoMaximo),
                 _ => (perfil.DecisaoMinima, perfil.DecisaoMaxima),
             };
             (TimeSpan atraso, Aleatorio a) = _s.Aleatorio.Duracao(minimo, maximo);
             _s = _s with { Aleatorio = a };
-            // Depois de uma interação (soltar, fechar o painel, retomar a autonomia, em qualquer
-            // estado que decide), a autonomia só volta após o intervalo de acomodação; é também o
-            // menor intervalo entre duas decisões autônomas.
+            // O intervalo de acomodação é o piso: depois de qualquer interação e entre duas decisões.
             return atraso < _cfg.IntervaloDeAcomodacao ? _cfg.IntervaloDeAcomodacao : atraso;
         }
     }

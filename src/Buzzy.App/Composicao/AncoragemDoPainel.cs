@@ -3,19 +3,12 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// Onde o painel compacto de energia abre (Fase 8; DEC-038, item 4): ao lado do personagem, do lado com mais espaço, com uma
-/// folga, centrado na vertical com o sprite; no esconderijo de baixo, acima, e no de cima, abaixo; sempre inteiro na área útil
-/// do monitor da âncora. Nunca sobre o sprite, a não ser que não caiba em lugar nenhum: aí, no canto de cima e da esquerda da
-/// área útil. Tudo em pixels físicos. Função pura.
-/// </summary>
+// Posição do painel de energia, em px físicos: ao lado do personagem, do lado com
+// mais espaço, centrado na vertical; escondido embaixo abre acima, escondido em cima
+// abre abaixo. Nunca sobre o sprite; se não couber em lugar nenhum, canto superior esquerdo.
 internal static class AncoragemDoPainel
 {
-    /// <param name="personagem">O retângulo da janela do personagem.</param>
-    /// <param name="painel">O tamanho do painel no DPI do monitor.</param>
-    /// <param name="area">A área útil do monitor da âncora.</param>
-    /// <param name="folga">A folga entre o painel e o sprite.</param>
-    /// <param name="esconderijo">A borda do esconderijo, se ele estiver escondido.</param>
+    // painel já no DPI do monitor; area é a área útil do monitor da âncora.
     internal static RetanguloPx Calcular(RetanguloPx personagem, TamanhoPx painel, RetanguloPx area, int folga, LadoDoEsconderijo esconderijo = LadoDoEsconderijo.Nenhum)
     {
         int w = painel.Largura, h = painel.Altura;
@@ -40,7 +33,7 @@ internal static class AncoragemDoPainel
         return new RetanguloPx(area.Esquerda, area.Topo, area.Esquerda + w, area.Topo + h);
     }
 
-    /// <summary>O retângulo deslocado para dentro da área, sem mudar o tamanho (maior que ela, encostado à esquerda e ao topo).</summary>
+    // Empurra pra dentro sem mudar o tamanho; se for maior que a área, encosta à esquerda e no topo.
     internal static RetanguloPx Preso(RetanguloPx r, RetanguloPx area)
     {
         int x = Math.Max(area.Esquerda, Math.Min(r.Esquerda, area.Direita - r.Largura));

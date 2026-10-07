@@ -1,22 +1,14 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Lista de permissões EXPLÍCITA do Buzzy.exe de arquivo único (F9-P10, DEC-042; revisão da DEC-016).
-///
-/// No .exe único autocontido, o Buzzy.exe é o singlefilehost.exe do pacote Microsoft.NETCore.App.Host.win-x64: o
-/// lançador (o mesmo código do apphost), o hostfxr, o hostpolicy e o runtime CoreCLR, ligados estaticamente num só
-/// PE. No build dependente do framework, essas mesmas importações já existem, só que nas DLLs do runtime instalado
-/// (coreclr.dll, hostfxr.dll, hostpolicy.dll), que o portão nunca leu. A <see cref="ProcedenciaDoHost"/> exige que o
-/// host seja byte a byte o do pacote da Microsoft (menos a posição do pacote, o nome do aplicativo e os recursos); esta
-/// lista registra, com o motivo, cada importação dele que coincide com a lista proibida.
-///
-/// Levantamento de 2026-10-05, lendo as tabelas de importação (SDK 10.0.401, host 10.0.12): o singlefilehost importa
-/// 441 funções; 33 coincidem com a lista proibida. As do lançador são as quatro de <see cref="PermissoesDoApphost"/>;
-/// LoadLibraryExA, CreateProcessW e as 27 do OLEAUT32 por ordinal estão todas no coreclr.dll do pacote
-/// Microsoft.NETCore.App.Runtime.win-x64 10.0.12 (os nomes dos ordinais saem da tabela de exportação do oleaut32.dll do
-/// Windows). Regras de uso: só para o &lt;aplicativo&gt;.exe de um pacote de arquivo único (--pacote), nunca para as DLLs;
-/// módulo e função (ou ordinal) exatos; uma importação nova de um SDK novo reprova até alguém revisar e acrescentar aqui.
-/// </summary>
+// Exceções explícitas pro Buzzy.exe de arquivo único. Ali ele é o singlefilehost.exe: lançador,
+// hostfxr, hostpolicy e CoreCLR ligados estaticamente num PE só. No build normal essas mesmas
+// importações estão nas DLLs do runtime instalado, que o portão nem lê. ProcedenciaDoHost garante
+// que o host é byte a byte o da Microsoft; aqui fica o motivo de cada importação proibida dele.
+//
+// SDK 10.0.401, host 10.0.12: 441 funções importadas, 33 batem com a lista proibida. Quatro são
+// as do apphost; LoadLibraryExA, CreateProcessW e os 27 ordinais do OLEAUT32 vêm do coreclr.dll
+// (nomes dos ordinais tirados da tabela de exportação do oleaut32.dll). Só vale pro .exe de um
+// pacote (--pacote), com módulo e função/ordinal exatos. Importação nova reprova até ser revisada.
 internal static class PermissoesDoHostDeArquivoUnico
 {
     private const string ComInterop =
@@ -38,7 +30,7 @@ internal static class PermissoesDoHostDeArquivoUnico
         Ordinal(228, "VarCyFromDec"), Ordinal(323, "GetRecordInfoFromTypeInfo"), Ordinal(411, "SafeArrayCreateVector"),
     ];
 
-    /// <summary>Permissão para esta importação exata (função ou "#ordinal"), ou nulo.</summary>
+    // funcao pode ser "#ordinal".
     public static PermissaoDoApphost? Procurar(string modulo, string funcao)
     {
         string moduloNormalizado = ListaProibida.NormalizarModulo(modulo);

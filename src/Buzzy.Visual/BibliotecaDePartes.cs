@@ -7,16 +7,12 @@ using System.Xml.Linq;
 
 namespace Buzzy.Visual;
 
-/// <summary>Estilo de uma classe CSS da paleta: preenchimento e traço.</summary>
+// Uma classe CSS da paleta.
 internal sealed record EstiloSvg(Color? Preenchimento, Color? Traco, double Espessura, bool PontaRedonda, bool JuncaoRedonda);
 
-/// <summary>
-/// Biblioteca de partes do boneco, lida de um subconjunto de SVG (docs/IDENTIDADE_VISUAL.md, seção 9):
-/// cada <c>&lt;g id="..."&gt;</c> dentro de <c>&lt;defs&gt;</c> é uma parte, desenhada em coordenadas
-/// locais com o pivô em (0,0). Suporta <c>g</c>, <c>path</c>, <c>circle</c>, <c>ellipse</c>, os
-/// atributos <c>class</c>, <c>fill</c>, <c>stroke</c>, <c>stroke-width</c>, <c>transform</c> e as regras
-/// de classe simples do bloco <c>&lt;style&gt;</c>. Recursos fora disso são ignorados.
-/// </summary>
+// Subconjunto de SVG: cada <g id> dentro de <defs> é uma parte, com pivô em (0,0). Entende g,
+// path, circle, ellipse, class/fill/stroke/stroke-width/transform e regras de classe simples do
+// <style>. O resto é ignorado.
 public sealed class BibliotecaDePartes
 {
     private static readonly XNamespace Svg = "http://www.w3.org/2000/svg";
@@ -31,14 +27,14 @@ public sealed class BibliotecaDePartes
         Estilos = estilos;
     }
 
-    /// <summary>Estilos por classe, como lidos do bloco style (a paleta).</summary>
+    // A paleta, por classe.
     internal IReadOnlyDictionary<string, EstiloSvg> Estilos { get; }
 
     public IReadOnlyCollection<string> Nomes => _partes.Keys;
 
     public bool Contem(string nome) => _partes.ContainsKey(nome);
 
-    /// <summary>Desenho congelado da parte, em coordenadas locais.</summary>
+    // Congelado, em coordenadas locais.
     public Drawing Parte(string nome)
         => _partes.TryGetValue(nome, out Drawing? d) ? d : throw new KeyNotFoundException($"Parte ausente na biblioteca: {nome}");
 
@@ -131,7 +127,7 @@ public sealed class BibliotecaDePartes
             }
         }
 
-        // Atributos soltos sobrepõem a classe (o arquivo-fonte não os usa, mas o formato aceita).
+        // Atributo solto ganha da classe (o arquivo não usa, mas o formato aceita).
         Color? fill = baseEstilo.Preenchimento, stroke = baseEstilo.Traco;
         double largura = baseEstilo.Espessura;
         if ((string?)e.Attribute("fill") is { } f) fill = Cor(f);
@@ -175,7 +171,6 @@ public sealed class BibliotecaDePartes
         throw new InvalidDataException($"Cor não suportada no subconjunto de SVG: {valor}");
     }
 
-    /// <summary>Lê a lista de transformações SVG (aplicadas da direita para a esquerda, como no SVG).</summary>
     internal static Transform? LerTransformacao(string? texto)
     {
         if (string.IsNullOrWhiteSpace(texto)) return null;

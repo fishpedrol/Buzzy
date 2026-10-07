@@ -1,18 +1,9 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Troca por espaços os comentários de um arquivo C#, sem tocar nos literais de texto.
-///
-/// Preserva o comprimento e as quebras de linha, para que linha e coluna no resultado sejam as
-/// do original. Reconhece comentários de linha e de bloco; textos comuns, verbatim (@"..."),
-/// interpolados ($"..." e $@"...", com comentários dentro das expressões), brutos ("""...""");
-/// caracteres ('"', '\''); e diretivas de pré-processador, cujas mensagens (#region, #error e
-/// afins) também são tratadas como comentário.
-///
-/// Não valida o código. Num arquivo que não compila, ou nas expressões de um texto bruto
-/// interpolado, o pior caso é sobrar comentário no resultado, o que só pode gerar achado a mais,
-/// nunca esconder código.
-/// </summary>
+// Troca comentários C# por espaços sem mexer em strings. Mantém comprimento e quebras, então
+// linha e coluna batem com o original. Entende strings comuns, verbatim, interpoladas, brutas,
+// chars e diretivas (mensagem de #region/#error vira comentário).
+// Não valida nada: no pior caso sobra comentário, o que só dá achado a mais, nunca esconde código.
 internal static class RemovedorDeComentarios
 {
     public static string Remover(string fonte)
@@ -27,8 +18,7 @@ internal static class RemovedorDeComentarios
 
     private sealed class Varredura(string fonte)
     {
-        // Textos interpolados dentro de expressões de textos interpolados, além deste limite,
-        // ficam como texto: evita estourar a pilha com um arquivo patológico.
+        // Interpolação aninhada além disso fica como texto, pra não estourar a pilha.
         private const int AninhamentoMaximo = 64;
 
         private readonly string _f = fonte;
@@ -44,10 +34,7 @@ internal static class RemovedorDeComentarios
             return k < _f.Length ? _f[k] : '\0';
         }
 
-        /// <summary>
-        /// Percorre código. Dentro da expressão de um texto interpolado, para no '}' que fecha a
-        /// expressão, sem consumi-lo; o especificador de formato depois de ':' é texto.
-        /// </summary>
+        // Dentro de interpolação, para no '}' que fecha sem consumi-lo; o formato depois de ':' é texto.
         public void Codigo(bool dentroDeInterpolacao)
         {
             int profundidade = 0;
@@ -91,7 +78,6 @@ internal static class RemovedorDeComentarios
             }
         }
 
-        /// <summary>Consome o literal de texto que começa em _i, se houver um.</summary>
         private bool Texto()
         {
             int j = _i;
@@ -147,7 +133,7 @@ internal static class RemovedorDeComentarios
             }
         }
 
-        /// <summary>Em '{' de texto interpolado: "{{" é texto; senão percorre a expressão até o '}'.</summary>
+        // "{{" é texto; senão percorre a expressão até o '}'.
         private bool Expressao()
         {
             if (Adiante(1) == '{') { _i += 2; return true; }
@@ -160,8 +146,8 @@ internal static class RemovedorDeComentarios
             return true;
         }
 
-        // Texto bruto (C# 11): termina na primeira sequência de pelo menos tantas aspas quantas
-        // abriram. As expressões de um texto bruto interpolado ficam como texto.
+        // Termina na primeira sequência com pelo menos tantas aspas quanto abriram. Expressões de
+        // string bruta interpolada ficam como texto.
         private void TextoBruto(int aspas)
         {
             while (_i < _f.Length)
@@ -211,9 +197,8 @@ internal static class RemovedorDeComentarios
             }
         }
 
-        // Diretiva de pré-processador: vai até o fim da linha. Aspas não abrem texto aqui
-        // (#line "arquivo", #pragma checksum). As mensagens de #region, #endregion, #error e
-        // #warning são texto livre e viram espaço, como comentário.
+        // Vai até o fim da linha; aspas não abrem string aqui (#line "arquivo"). Mensagem de
+        // #region, #endregion, #error e #warning vira espaço, como comentário.
         private void Diretiva()
         {
             _i++;

@@ -2,47 +2,37 @@ using Buzzy.App.Composicao;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// A porta do início com o Windows (Q-04; DEC-038, item 12): o adaptador real (<see cref="InicioComOWindows"/>), o simulado
-/// (<see cref="InicioSimulado"/>) ou nenhum, pela regra única <see cref="InicioComOWindows.DaExecucao"/>.
-/// </summary>
+// Real, simulado ou indisponível; quem escolhe é InicioComOWindows.DaExecucao.
 internal interface IInicioComOWindows
 {
     ModoDoInicio Modo { get; }
 
-    /// <summary>O estado agora; nunca grava.</summary>
+    // Nunca grava.
     EstadoDoInicio Ler();
 
-    /// <summary>Grava o valor Run desta cópia; só pelo pedido do usuário.</summary>
     ResultadoDoInicio Ligar();
 
-    /// <summary>Apaga o valor Run, só se for desta cópia; só pelo pedido do usuário.</summary>
+    // Só apaga se o valor for desta cópia.
     ResultadoDoInicio Desligar();
 
-    /// <summary>O código do Windows da última leitura ou ação que falhou, ou nulo (só o número vai ao log, nunca o caminho).</summary>
+    // Só o número vai pro log, nunca o caminho.
     int? UltimoErro { get; }
 }
 
-/// <summary>
-/// O início com o Windows simulado, só em memória (DEC-038, item 12): o Buzzy com perfil de teste nunca toca o registro. Começa
-/// desligado a cada abertura; os testes o constroem em qualquer estado. Segue as mesmas regras do real
-/// (<see cref="RegrasDoInicio"/>): ligar grava o caminho desta cópia, desligar só apaga o desta cópia, e a aprovação do
-/// Windows só é lida.
-/// </summary>
+// Em memória, pra perfil de teste nunca tocar o registro. Começa desligado a cada
+// abertura e segue as mesmas RegrasDoInicio do real.
 internal sealed class InicioSimulado(string? caminhoAtual, string? valorRun = null, byte[]? aprovacao = null) : IInicioComOWindows
 {
-    /// <summary>O valor Run simulado.</summary>
     internal string? ValorRun { get; private set; } = valorRun;
 
-    /// <summary>A marca do StartupApproved simulada (só lida pelo Buzzy).</summary>
     internal byte[]? AprovacaoDoWindows { get; set; } = aprovacao;
 
-    /// <summary>Quantas vezes cada ação rodou (para os testes de contenção).</summary>
+    // Contadores pros testes de contenção.
     internal int Ligacoes { get; private set; }
 
     internal int Desligamentos { get; private set; }
 
-    /// <summary>Com um código, a próxima ação falha com ele (para os testes da falha mostrada ao usuário).</summary>
+    // Se setado, a próxima ação falha com esse código.
     internal int? FalharCom { get; set; }
 
     public ModoDoInicio Modo => ModoDoInicio.Simulado;
@@ -73,7 +63,6 @@ internal sealed class InicioSimulado(string? caminhoAtual, string? valorRun = nu
     }
 }
 
-/// <summary>Sem início com o Windows nesta execução: tudo indisponível, nada tentado.</summary>
 internal sealed class InicioIndisponivel : IInicioComOWindows
 {
     public ModoDoInicio Modo => ModoDoInicio.Indisponivel;

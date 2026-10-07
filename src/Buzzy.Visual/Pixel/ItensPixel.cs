@@ -1,6 +1,6 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>Como o Buzzy usa um item do tamagotchi (DEC-028): cada verbo tem as suas poses de uso.</summary>
+// Cada verbo tem as suas poses de uso.
 public enum Verbo
 {
     Comer,
@@ -11,20 +11,12 @@ public enum Verbo
     Inalar,
 }
 
-/// <summary>
-/// Carimbo de um item na mão, numa variante (em pé, no gole, mordido...). Coordenadas em pixels do
-/// carimbo. <see cref="Pega"/> é onde fica o centro da mão que o segura: a palma é desenhada por cima
-/// desse ponto, que fica fora do desenho quando o item vai na ponta dos dedos (a pílula, a bala) ou em
-/// cima da palma (o espelho à vista). <see cref="Ponta"/> é o pixel que encosta no rosto nas poses de uso que levam o item até lá
-/// (a boca da garrafa, o filtro, a mordida, o meio do lenço, a borda de cima do espelho); nula quando a
-/// variante não vai ao rosto (a casca, o frasco).
-/// </summary>
+// Em pixels do carimbo. Pega = centro da mão (a palma vai por cima); pode ficar fora do desenho
+// quando o item vai na ponta dos dedos ou em cima da palma. Ponta = pixel que encosta no rosto
+// (boca da garrafa, filtro, mordida...); nula se a variante não vai ao rosto.
 public sealed record ItemNaMao(Carimbo Desenho, (int X, int Y) Pega, (int X, int Y)? Ponta)
 {
-    /// <summary>
-    /// Girado 90° no sentido anti-horário, sem perda: (x, y) vai para (y, Largura − 1 − x), e o que
-    /// estava na linha de cima (a boca da garrafa, o filtro) vai para a coluna da esquerda, rumo à boca.
-    /// </summary>
+    // 90° anti-horário: a linha de cima (boca da garrafa, filtro) vai pra coluna da esquerda, rumo à boca.
     public ItemNaMao Girado()
     {
         int largura = Desenho.Largura;
@@ -32,28 +24,22 @@ public sealed record ItemNaMao(Carimbo Desenho, (int X, int Y) Pega, (int X, int
     }
 }
 
-/// <summary>
-/// Os 13 itens do tamagotchi (DEC-028) em pixel art, na mesma densidade do boneco (1 pixel = 2 DIP):
-/// o desenho do chão, que também é o ícone do menu, numa grade de 24 × 24, e o carimbo de cada item
-/// na mão, nas variantes que as poses de uso pedem. Genéricos e de desenho animado: sem texto, sem
-/// marca e sem folha de maconha. As chaves são os nomes do enum <c>Item</c> do núcleo em minúsculas,
-/// na ordem do menu.
-/// </summary>
+// Itens do tamagotchi na mesma densidade do boneco (1 px = 2 DIP): o desenho do chão em 24x24
+// (também é o ícone do menu) e os carimbos na mão. Genéricos, de desenho animado: sem texto,
+// marca nem folha de maconha. Chave = nome do enum Item do núcleo em minúsculas, na ordem do menu.
 public static class ItensPixel
 {
-    /// <summary>Lado da grade do item, em pixels de arte.</summary>
+    // Em pixels de arte.
     public const int Lado = 24;
 
-    /// <summary>Lado da janela do item a 100%: 24 pixels de arte × 2 DIP.</summary>
+    // 24 px de arte x 2 DIP.
     public const double TamanhoLogicoDip = 48;
 
     private sealed record Definicao(Verbo Verbo, Carimbo Chao, (string Nome, ItemNaMao Mao)[] NaMao);
 
-    // Os carimbos são só o preenchimento, sem contorno externo: o contorno de 1 pixel vem do
-    // Contornar (no chão) e da linha interna do boneco (na mão). Luz de cima e da esquerda: realce em
-    // cima e à esquerda, sombra embaixo e à direita. Desenhados e retocados olhando as prévias a 8×,
-    // 2× e 1× (assets/identidade/pixel/previa/). Os itens do mesmo verbo têm as mesmas variantes na
-    // mão, na ordem em que a animação as usa.
+    // Só preenchimento: o contorno vem do Contornar (no chão) e da linha interna do boneco (na mão).
+    // Luz de cima e da esquerda. Retocados olhando as prévias a 8x, 2x e 1x. Itens do mesmo verbo
+    // têm as mesmas variantes na mão, na ordem da animação.
     private static readonly (string Chave, Definicao Definicao)[] Tabela =
     [
         // Banana deitada, curva para cima, com o cabinho à direita.
@@ -131,9 +117,8 @@ public static class ItensPixel
                 "ggggggggggGG....",
                 ".GGGGGGGGGG....."),
             Maos.Cerveja)),
-        // Cone de papel com a piteira de papelão à esquerda, pontinhos verdes e a ponta larga acesa, com
-        // cinza e brasa. Sem folha. (Apagado, o cone branco lia como uma cunha de papel: revisão da arte,
-        // achado 8.)
+        // Cone de papel, piteira à esquerda, pontinhos verdes e ponta acesa com cinza e brasa. Sem
+        // folha. (Apagado, parecia uma cunha de papel.)
         ("baseado", new(Verbo.Fumar,
             new Carimbo(
                 ".................z..",
@@ -144,8 +129,8 @@ public static class ItensPixel
                 "cccwwwwJwwwwwwwwxz..",
                 "sssxxxxxxxxxxxxx...."),
             Maos.Baseado)),
-        // Cigarro reto: filtro laranja, papel branco, cinza e brasa na ponta. Com 6 linhas, para ter 8
-        // pixels de altura com o contorno: mais fino, ficava difícil de agarrar (crítica, L14).
+        // Filtro laranja, papel branco, cinza e brasa. 6 linhas = 8 px com contorno; mais fino ficava
+        // difícil de agarrar com o mouse.
         ("cigarro", new(Verbo.Fumar,
             new Carimbo(
                 ".tTtwwwwwwwwwwwwzz.",
@@ -155,9 +140,8 @@ public static class ItensPixel
                 "TTTTxxxxxxxxxxxxzzq",
                 ".TTTxxxxxxxxxxxxzz."),
             Maos.Cigarro)),
-        // Espelhinho deitado, em perspectiva, com moldura dourada, o vidro com brilho de espelho (duas
-        // faixas claras) e duas carreiras brancas curtas. (Com o vidro liso e as carreiras de ponta a
-        // ponta, lia como um cartão ou um livro azul: revisão da arte, achado 8.)
+        // Espelhinho deitado em perspectiva, moldura dourada, brilho de espelho e duas carreiras
+        // curtas. (Com vidro liso e carreiras de ponta a ponta parecia cartão ou livro azul.)
         ("cocaina", new(Verbo.Cheirar,
             new Carimbo(
                 "......2222222222223",
@@ -182,8 +166,8 @@ public static class ItensPixel
                 ".XXXXXXXXXX.",
                 "...XXXXXX..."),
             Maos.Md)),
-        // Frasco fino de vidro com válvula de metal e, ao lado, um lenço dobrado em triângulo, com a barra
-        // azul. (Dobrado em retângulo, com listras, lia como uma pilha de toalhas: revisão da arte, achado 8.)
+        // Frasco fino com válvula e, ao lado, lenço dobrado em triângulo com barra azul. (Em retângulo
+        // listrado parecia pilha de toalhas.)
         ("lancaperfume", new(Verbo.Inalar,
             new Carimbo(
                 ".E................",
@@ -214,9 +198,8 @@ public static class ItensPixel
                 "WWWWWWWWWWWWWWx",
                 ".xxxxxxxxxxxxx."),
             Maos.Cafe)),
-        // Lata fina, genérica, verde-neon com um raio amarelo e as bordas de metal. (Escura, com o raio
-        // verde, lembrava a paleta de uma marca conhecida e tinha as cores do pelo: some no corpo e, na
-        // boca, parecia uma barba. Revisão da arte, achado 12.)
+        // Lata fina verde-neon com raio amarelo. (Escura com raio verde lembrava uma marca conhecida
+        // e tinha a cor do pelo: sumia no corpo e na boca parecia barba.)
         ("energetico", new(Verbo.Beber,
             new Carimbo(
                 ".MMmmE.",
@@ -269,19 +252,15 @@ public static class ItensPixel
 
     private static readonly Dictionary<string, Definicao> PorChave = Tabela.ToDictionary(t => t.Chave, t => t.Definicao, StringComparer.Ordinal);
 
-    /// <summary>As chaves dos 13 itens, na ordem do menu (a do enum <c>Item</c> do núcleo).</summary>
+    // Na ordem do menu, que é a do enum Item do núcleo.
     public static readonly IReadOnlyList<string> Todos = [.. Tabela.Select(t => t.Chave)];
 
-    /// <summary>Os itens de um verbo, na ordem do menu.</summary>
     public static IReadOnlyList<string> DoVerbo(Verbo verbo) => [.. Tabela.Where(t => t.Definicao.Verbo == verbo).Select(t => t.Chave)];
 
-    /// <summary>Como o item é usado.</summary>
     public static Verbo VerboDe(string item) => Achar(item).Verbo;
 
-    /// <summary>
-    /// O item no chão, numa tela nova de 24 × 24: carimbo centrado na horizontal, com o contorno de
-    /// baixo na última linha (o item pousa como os pés) e 1 pixel livre no topo e nas laterais.
-    /// </summary>
+    // Centrado na horizontal, contorno de baixo na última linha (pousa como os pés), 1 px livre
+    // em cima e dos lados.
     public static Tela Desenhar(string item)
     {
         Carimbo chao = Achar(item).Chao;
@@ -291,10 +270,9 @@ public static class ItensPixel
         return tela;
     }
 
-    /// <summary>Os nomes das variantes do item na mão, na ordem em que a animação as usa; a primeira é a padrão.</summary>
+    // Na ordem da animação; a primeira é a padrão.
     public static IReadOnlyList<string> VariantesNaMao(string item) => [.. Achar(item).NaMao.Select(v => v.Nome)];
 
-    /// <summary>O item na mão; sem variante, a primeira de <see cref="VariantesNaMao"/>.</summary>
     public static ItemNaMao NaMao(string item, string? variante = null)
     {
         (string Nome, ItemNaMao Mao)[] variantes = Achar(item).NaMao;
@@ -304,10 +282,7 @@ public static class ItensPixel
         throw new ArgumentException($"Variante desconhecida do item '{item}': '{variante}'.", nameof(variante));
     }
 
-    /// <summary>
-    /// Pontos de teste em pixels de arte do desenho do chão: um opaco no corpo do item (o mais perto
-    /// do centro dos pixels do corpo) e um transparente, no canto de cima à esquerda.
-    /// </summary>
+    // No desenho do chão: um pixel opaco perto do centro do corpo e um transparente no canto (0, 0).
     public static ((int X, int Y) Opaco, (int X, int Y) Transparente) PontosDeTeste(string item)
     {
         Tela t = Desenhar(item);
@@ -325,10 +300,7 @@ public static class ItensPixel
             ? d
             : throw new ArgumentException($"Item desconhecido: '{item}'. Os itens são: {string.Join(", ", Todos)}.", nameof(item));
 
-    /// <summary>
-    /// Os itens na mão, nas variantes que as poses de uso pedem, na ordem em que a animação as usa. A
-    /// pega fica onde a palma cobre o item; a ponta, no pixel que encosta na boca ou no nariz.
-    /// </summary>
+    // Variantes na ordem da animação. Pega onde a palma cobre; ponta no pixel da boca ou do nariz.
     private static class Maos
     {
         // Banana descascada em cima, segura pela casca: a polpa sobe e a casca abre em abas.
@@ -490,8 +462,8 @@ public static class ItensPixel
             "EmmmmE",
             ".EEEE."), pega: (2, 7), ponta: (2, 0), girar: true);
 
-        // Desenhado com a piteira em cima e a brasa embaixo; na mão fica ao contrário, com a brasa para
-        // cima, e na tragada deita com a piteira na boca.
+        // Desenhado com a piteira em cima; na mão inverte (brasa pra cima) e na tragada deita com a
+        // piteira na boca.
         internal static readonly (string, ItemNaMao)[] Baseado = Fumo(
             [
                 ".C..",
@@ -508,7 +480,7 @@ public static class ItensPixel
                 ".qq.",
             ], brasaClara: ".QQ.", pegaAceso: (1, 2), pegaTragando: (1, 4));
 
-        // Comprido o bastante para o papel aparecer dos dois lados dos dedos.
+        // Comprido pro papel aparecer dos dois lados dos dedos.
         internal static readonly (string, ItemNaMao)[] Cigarro = Fumo(
             [
                 "tT",
@@ -527,11 +499,9 @@ public static class ItensPixel
                 "qq",
             ], brasaClara: "QQ", pegaAceso: (0, 2), pegaTragando: (0, 6));
 
-        // O espelhinho numa mão só (revisão da arte, achado 1: seguro pelas duas mãos na altura da
-        // barriga, parecia um biquíni e uma sunga). "cheia": deitado em perspectiva, na palma, como uma
-        // bandeja, à vista ao lado do peito (a pega fica abaixo do desenho, para a mão não o cortar ao
-        // meio). "meia" e "vazia": seguro pela ponta da direita, com o meio da borda de cima no nariz; a
-        // carreira que sobra some na segunda fungada.
+        // Numa mão só (com as duas na barriga parecia biquíni e sunga). "cheia": na palma como
+        // bandeja, com a pega abaixo do desenho pra mão não cortar ele ao meio. "meia"/"vazia": pela
+        // ponta direita, borda de cima no nariz; a carreira que sobra some na segunda fungada.
         internal static readonly (string, ItemNaMao)[] Cocaina =
         [
             ("cheia", new(new Carimbo(
@@ -551,7 +521,7 @@ public static class ItensPixel
                 "2333333333.."), (10, 2), (6, 0))),
         ];
 
-        // Na ponta dos dedos: a pega fica abaixo do comprimido, para a palma não o cobrir. Na boca, o mesmo.
+        // Ponta dos dedos: pega abaixo do comprimido pra palma não cobrir. Na boca, igual.
         private static readonly ItemNaMao Comprimido = new(new Carimbo(
             ".VVV.",
             "VWVWV",
@@ -561,8 +531,8 @@ public static class ItensPixel
 
         internal static readonly (string, ItemNaMao)[] Md = [("normal", Comprimido), ("na-boca", Comprimido)];
 
-        // A bala também vai na ponta dos dedos: embrulhada na mão; na boca, já sem o papel (embrulhada no
-        // rosto, a bala lia como uma gravata-borboleta: revisão da arte, achado 8).
+        // Ponta dos dedos também: embrulhada na mão, sem papel na boca (embrulhada no rosto parecia
+        // gravata-borboleta).
         internal static readonly (string, ItemNaMao)[] Bala =
         [
             ("normal", new(new Carimbo(
@@ -578,7 +548,7 @@ public static class ItensPixel
                 ".SSS."), (2, 8), (2, 2))),
         ];
 
-        // O frasco vai na mão A; o lenço, na B, até o nariz: a ponta é o meio do lenço.
+        // Frasco na mão A; lenço na B, até o nariz (a ponta é o meio do lenço).
         internal static readonly (string, ItemNaMao)[] Lancaperfume =
         [
             ("frasco", new(new Carimbo(
@@ -605,24 +575,17 @@ public static class ItensPixel
                 ".xxxxxx."), (6, 5), (3, 3))),
         ];
 
-        /// <summary>
-        /// As duas variantes de uma bebida: "normal", em pé, segura pela <paramref name="pega"/>, à vista, e
-        /// "gole", com a <paramref name="ponta"/> na boca: a garrafa e a lata deitam para a boca
-        /// (<paramref name="girar"/>), a caneca e a xícara continuam em pé.
-        /// </summary>
+        // "normal" em pé, à vista; "gole" com a ponta na boca. Garrafa e lata deitam (girar), caneca
+        // e xícara ficam em pé.
         private static (string, ItemNaMao)[] Bebida(Carimbo emPe, (int X, int Y) pega, (int X, int Y) ponta, bool girar)
         {
             var gole = new ItemNaMao(emPe, pega, ponta);
             return [("normal", gole with { Ponta = null }), ("gole", girar ? gole.Girado() : gole)];
         }
 
-        /// <summary>
-        /// As duas variantes de um fumo desenhado com o filtro em cima: "aceso", de cabeça para baixo, com
-        /// a brasa para cima e o filtro entre os dedos (<paramref name="pegaAceso"/>), e "tragando", deitado
-        /// com o filtro na boca, a palma longe o bastante para o filtro aparecer (<paramref name="pegaTragando"/>)
-        /// e a última linha (a brasa) trocada por <paramref name="brasaClara"/>. As pegas são do desenho com o
-        /// filtro em cima.
-        /// </summary>
+        // Recebe o desenho com o filtro em cima (as pegas são nesse referencial). "aceso": invertido,
+        // brasa pra cima, filtro entre os dedos. "tragando": deitado com o filtro na boca, a palma longe
+        // o bastante pro filtro aparecer e a última linha trocada pela brasa acesa.
         private static (string, ItemNaMao)[] Fumo(string[] filtroEmCima, string brasaClara, (int X, int Y) pegaAceso, (int X, int Y) pegaTragando)
         {
             int altura = filtroEmCima.Length;

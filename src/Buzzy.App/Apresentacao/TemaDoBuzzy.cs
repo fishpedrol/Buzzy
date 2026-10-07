@@ -11,17 +11,14 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Apresentacao;
 
-/// <summary>
-/// O tema "chapéu de palha" das configurações e do painel de energia (DEC-039, escolha do usuário): as cores da paleta do
-/// Buzzy (IDENTIDADE_VISUAL.md, seção 3) — fundo creme, faixa azul-marinho do pelo no topo com o retrato em pixel art e a
-/// aba de palha com a faixa vermelha do chapéu embaixo, marcas em palha, foco em vermelho. Só a aparência muda: os controles,
-/// os nomes, a ordem do teclado e os peers são os mesmos, e a fonte é a do sistema. No alto contraste do Windows, o tema sai
-/// e tudo volta às cores do sistema, também com a janela aberta. Montado em código, sem XAML, como o resto do aplicativo.
-/// Nada periódico: só o aviso de mudança das configurações do sistema.
-/// </summary>
+// Tema "chapéu de palha" das configurações e do painel de energia: fundo creme,
+// faixa azul-marinho com o retrato, aba de palha e faixa vermelha do chapéu, marcas
+// em palha, foco em vermelho. Só muda a aparência: controles, nomes, ordem do Tab e
+// peers são os mesmos. No alto contraste volta às cores do sistema, mesmo com a
+// janela aberta. Montado em código, sem XAML.
 internal static class TemaDoBuzzy
 {
-    // Paleta (IDENTIDADE_VISUAL.md, seção 3), e dois tons derivados para o fundo e o texto de ajuda.
+    // Paleta do Buzzy, mais dois tons derivados pro fundo e o texto de ajuda.
     internal static readonly Color Contorno = Rgb(0x12, 0x18, 0x30);
     internal static readonly Color PeloEscuro = Rgb(0x1B, 0x27, 0x48);
     internal static readonly Color Pelo = Rgb(0x28, 0x3A, 0x5F);
@@ -34,7 +31,7 @@ internal static class TemaDoBuzzy
     internal static readonly Color TextoSuave = Rgb(0x6A, 0x34, 0x19);
     internal static readonly Color Branco = Rgb(0xFF, 0xFF, 0xFF);
 
-    // Chaves dos pincéis que as janelas usam por referência dinâmica (o alto contraste troca o dicionário inteiro).
+    // Referência dinâmica porque o alto contraste troca o dicionário inteiro.
     internal const string ChaveFundo = "Buzzy.Fundo";
     internal const string ChaveTexto = "Buzzy.Texto";
     internal const string ChaveTextoSuave = "Buzzy.TextoSuave";
@@ -44,16 +41,12 @@ internal static class TemaDoBuzzy
     internal const string ChaveFaixa = "Buzzy.Faixa";
     internal const string ChaveBorda = "Buzzy.Borda";
 
-    /// <summary>A chave do estilo do seletor sem título visível (o painel já tem o título na faixa de cima).</summary>
+    // Pro painel, que já mostra o título na faixa de cima.
     internal const string ChaveSeletorSemTitulo = "Buzzy.SeletorSemTitulo";
 
-    /// <summary>Se o tema está em uso agora (fora do alto contraste).</summary>
     internal static bool Ativo => !SystemParameters.HighContrast;
 
-    /// <summary>
-    /// Aplica à janela o dicionário certo (o tema ou as cores do sistema) e o troca quando o alto contraste muda, enquanto a
-    /// janela existir.
-    /// </summary>
+    // Troca o dicionário sozinho quando o alto contraste muda, enquanto a janela existir.
     internal static void Aplicar(Window janela)
     {
         ArgumentNullException.ThrowIfNull(janela);
@@ -72,10 +65,8 @@ internal static class TemaDoBuzzy
         janela.SetResourceReference(Control.ForegroundProperty, ChaveTexto);
     }
 
-    /// <summary>
-    /// A faixa de cima: azul-marinho, com o retrato do Buzzy e o título, e embaixo a aba de palha e a faixa vermelha do chapéu.
-    /// É um enfeite, fora da árvore do leitor de tela: o título já é o da janela, e o retrato não diz nada.
-    /// </summary>
+    // Faixa de cima com retrato e título. Só enfeite, fora da árvore do leitor de
+    // tela: o título já é o da janela.
     internal static FrameworkElement Cabecalho(string titulo, double tamanhoDoTitulo)
     {
         var retrato = new Image { Margin = new Thickness(0, 0, 10, 0), VerticalAlignment = VerticalAlignment.Bottom, SnapsToDevicePixels = true };
@@ -109,16 +100,13 @@ internal static class TemaDoBuzzy
         return new Decoracao { Child = pilha };
     }
 
-    /// <summary>Um enfeite: fora das árvores de controle e de conteúdo do leitor de tela, sem filhos (o peer vazio).</summary>
     private sealed class Decoracao : Border
     {
         protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer() => new PeerVazio(this);
     }
 
-    /// <summary>
-    /// O retrato em múltiplos inteiros da arte de 64 px no DPI da janela (nítido, sem pixel desigual): 64 px a 100% e 125%,
-    /// 128 px a 150% e 200%, e assim por diante.
-    /// </summary>
+    // Múltiplo inteiro de 64 px no DPI da janela, pra não ter pixel desigual:
+    // 64 px a 100% e 125%, 128 px a 150% e 200%, etc.
     private static void DesenharRetrato(Image retrato)
     {
         double escala = VisualTreeHelper.GetDpi(retrato).DpiScaleX;
@@ -129,10 +117,9 @@ internal static class TemaDoBuzzy
         retrato.Height = px / escala;
     }
 
-    /// <summary>O dicionário do tema (fora do alto contraste) ou o das cores do sistema.</summary>
     internal static ResourceDictionary Dicionario(bool tema) => tema ? Tema() : Sistema();
 
-    /// <summary>No alto contraste: só os pincéis, apontando para as cores do sistema, e nenhum estilo (os controles nativos).</summary>
+    // Alto contraste: só pincéis com as cores do sistema e nenhum estilo (controles nativos).
     private static ResourceDictionary Sistema()
     {
         var d = new ResourceDictionary();
@@ -175,7 +162,7 @@ internal static class TemaDoBuzzy
         return d;
     }
 
-    /// <summary>O foco do teclado: um contorno vermelho da faixa, por fora do controle (só pelo teclado, como no Windows).</summary>
+    // Contorno vermelho por fora do controle; como no Windows, só aparece pelo teclado.
     private static Style EstiloDoFoco()
     {
         var contorno = new FrameworkElementFactory(typeof(Rectangle));
@@ -189,7 +176,7 @@ internal static class TemaDoBuzzy
         return estilo;
     }
 
-    /// <summary>A caixa: quadrado de contorno grosso; marcada, cheia de palha com o visto em azul-marinho.</summary>
+    // Quadrado de contorno grosso; marcada, fundo palha com o visto azul-marinho.
     private static Style EstiloDaCaixa(Style foco)
     {
         var marca = new FrameworkElementFactory(typeof(Polyline), "marca");
@@ -217,7 +204,7 @@ internal static class TemaDoBuzzy
         ]);
     }
 
-    /// <summary>O botão de opção: um círculo "em pixel" (octógono); marcado, o miolo vermelho da faixa.</summary>
+    // Círculo "em pixel" (octógono); marcado, miolo vermelho.
     private static Style EstiloDoRadio(Style foco)
     {
         var miolo = new FrameworkElementFactory(typeof(Path), "miolo");
@@ -248,7 +235,7 @@ internal static class TemaDoBuzzy
         ]);
     }
 
-    /// <summary>O molde comum da caixa e do rádio: o marcador à esquerda e o rótulo (com a tecla de acesso) à direita.</summary>
+    // Molde comum da caixa e do rádio: marcador à esquerda, rótulo à direita.
     private static Style EstiloComMarcador(Type tipo, FrameworkElementFactory marcador, Style foco, IEnumerable<Trigger> gatilhos)
     {
         var rotulo = new FrameworkElementFactory(typeof(ContentPresenter));
@@ -280,7 +267,7 @@ internal static class TemaDoBuzzy
         return estilo;
     }
 
-    /// <summary>O botão: azul-marinho do pelo com texto creme, contorno grosso, cantos retos.</summary>
+    // Azul-marinho com texto creme, contorno grosso, cantos retos.
     private static Style EstiloDoBotao(Style foco)
     {
         var rotulo = new FrameworkElementFactory(typeof(ContentPresenter));
@@ -311,7 +298,7 @@ internal static class TemaDoBuzzy
         return estilo;
     }
 
-    /// <summary>O grupo de fora (Comportamento, Aparência, Windows): o título forte e, embaixo, um pedaço da faixa vermelha.</summary>
+    // Grupos de fora (Comportamento, Aparência, Windows): título forte com um traço vermelho embaixo.
     private static Style EstiloDoGrupo()
     {
         var titulo = new FrameworkElementFactory(typeof(ContentPresenter));
@@ -342,7 +329,7 @@ internal static class TemaDoBuzzy
         return estilo;
     }
 
-    /// <summary>O seletor (energia, tamanho): o título num tom só, sem faixa; no painel, sem título à vista (o nome continua).</summary>
+    // Seletores: título simples, sem traço. No painel, título escondido (o nome na UIA continua).
     private static Style EstiloDoSeletor(bool mostrarTitulo)
     {
         var conteudo = new FrameworkElementFactory(typeof(ContentPresenter));

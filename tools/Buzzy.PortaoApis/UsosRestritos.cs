@@ -1,40 +1,19 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// Uso de uma função da lista proibida pelo próprio Buzzy, com decisão aprovada e restrito a um lugar só.
-/// </summary>
-/// <param name="Modulo">Módulo normalizado (<see cref="ListaProibida.NormalizarModulo"/>).</param>
-/// <param name="Funcao">
-/// Nome exato da entrada no binário (com o sufixo A ou W, quando a função tem variantes: <c>RegSetValueExW</c>); na fonte,
-/// vale a família inteira da função, a regra que a lista proibida acha por esse nome (DEC-038, item 11).
-/// </param>
-/// <param name="Assembly">O assembly que pode declarar o P/Invoke, sem extensão.</param>
-/// <param name="Tipo">O tipo que declara o P/Invoke: ele ou um tipo aninhado nele (<c>Tipo+Nativo</c>).</param>
-/// <param name="Arquivo">O único arquivo de fonte que pode citar a função, relativo à raiz do repositório.</param>
-/// <param name="Motivo">A decisão e os limites; aparece no relatório.</param>
+// Funcao é o nome exato no binário (RegSetValueExW); na fonte vale a família toda. Tipo pode ter
+// aninhados (Tipo+Nativo). Arquivo é relativo à raiz do repositório.
 internal sealed record UsoRestrito(string Modulo, string Funcao, string Assembly, string Tipo, string Arquivo, string Motivo);
 
-/// <summary>Um P/Invoke que coincide com a lista proibida e está na lista de usos restritos.</summary>
-/// <param name="Arquivo">O binário.</param>
-/// <param name="Api">Como aparece nos metadados: <c>user32.dll!SetWinEventHook</c>.</param>
-/// <param name="Onde">O método que declara o P/Invoke.</param>
+// Api como nos metadados (user32.dll!SetWinEventHook); Onde é o método que declara o P/Invoke.
 internal sealed record UsoRestritoVisto(string Arquivo, string Api, string Onde, Categoria Categoria, UsoRestrito Uso);
 
-/// <summary>
-/// Os usos restritos (SECURITY.md 3.1 e 8, item 1): funções que continuam na lista proibida, para o resto do produto, e que
-/// um único tipo do Buzzy pode usar, com decisão aprovada: o observador de tela cheia (DEC-013, DEC-034 e DEC-037), que
-/// assina, fora do processo, a troca da janela em primeiro plano e a mudança de geometria dela, e lê só o retângulo dela; e o
-/// adaptador do início com o Windows (Q-04, DEC-038), que grava e apaga só o valor <c>Buzzy</c> da chave Run do usuário, e
-/// só pelo pedido explícito dele.
-///
-/// Regras de uso:
-/// - nos binários, vale só para o P/Invoke do módulo e da função exatos, declarado no tipo indicado, ou num tipo aninhado
-///   nele, do assembly indicado; declarado em outro tipo ou outro assembly, o P/Invoke reprova;
-/// - na fonte, vale só no arquivo indicado (o caminho completo termina nele, sem diferenciar maiúsculas nem o tipo da
-///   barra), para a família da função (a mesma regra da lista proibida); citada em outro arquivo, reprova, como sempre;
-/// - cada P/Invoke permitido aparece no relatório como "uso restrito";
-/// - outra função, outro tipo ou outro arquivo exigem decisão nova e uma entrada aqui, com o motivo.
-/// </summary>
+// Funções proibidas que um único tipo do Buzzy pode usar: o observador de tela cheia (assina a
+// troca de janela em primeiro plano e a geometria dela, lê só o retângulo) e o "iniciar com o
+// Windows" (grava/apaga só o valor Buzzy da chave Run, a pedido do usuário).
+//
+// No binário vale só pro P/Invoke exato, declarado no tipo (ou aninhado) e assembly indicados.
+// Na fonte vale só no arquivo indicado. Fora disso reprova como sempre. Qualquer uso novo
+// precisa de entrada aqui com o motivo.
 internal static class UsosRestritos
 {
     private const string Observador = "Buzzy.App.Plataforma.ObservadorDeTelaCheia";
@@ -56,7 +35,6 @@ internal static class UsosRestritos
             "Q-04 e DEC-038: apaga só o valor Buzzy da chave Run do usuário, quando ele aponta para esta cópia, e só pelo pedido explícito dele"),
     ];
 
-    /// <summary>O uso restrito deste P/Invoke, ou nulo: módulo e função exatos, no assembly e no tipo indicados.</summary>
     public static UsoRestrito? NoBinario(string assembly, string modulo, string funcao, string tipoQueDeclara)
     {
         ArgumentNullException.ThrowIfNull(assembly);
@@ -72,7 +50,6 @@ internal static class UsosRestritos
                 || tipoQueDeclara.StartsWith(u.Tipo + "+", StringComparison.Ordinal)));
     }
 
-    /// <summary>O uso restrito que permite citar a função desta regra neste arquivo de fonte, ou nulo.</summary>
     public static UsoRestrito? NaFonte(string arquivo, Regra regra)
     {
         ArgumentNullException.ThrowIfNull(arquivo);

@@ -7,23 +7,20 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// A parte da raiz de composição do tamagotchi adulto (DEC-028, passo T8): as janelas dos itens
-/// (<see cref="GerenteDosItens"/>), os gestos sobre elas, num árbitro próprio (<see cref="GestosDosItens"/>), e o
-/// temporizador da onda (<see cref="TemporizadorDaOnda"/>). A configuração do aplicativo liga a chave do tamagotchi desde o
-/// passo T9; com ela desligada no núcleo, nenhum efeito novo chega aqui e nenhuma janela de item é criada.
-/// </summary>
+// Tamagotchi adulto: janelas dos itens, gestos sobre elas (árbitro próprio) e o timer
+// da onda. Com o tamagotchi desligado no núcleo, nenhum desses efeitos chega e nenhuma
+// janela de item é criada.
 internal sealed partial class Aplicacao
 {
     private readonly GestosDosItens _gestosDosItens = new();
 
-    /// <summary>M5 do arraste do item em curso, só com <c>--diagnostico</c>: ms de cada movimento até a janela no lugar.</summary>
+    // Só com --diagnostico: ms de cada movimento do arraste até a janela no lugar.
     private readonly List<double> _latenciasDoArrasteDoItem = [];
 
     private GerenteDosItens? _itens;
     private TemporizadorDaOnda? _onda;
 
-    /// <summary>Logo depois de criar a janela do personagem: o gerente das janelas dos itens e o temporizador da onda.</summary>
+    // Chamar logo depois de criar a janela do personagem.
     private void IniciarItens()
     {
         _itens = new GerenteDosItens(CriarJanelaDoItem, () => _personagem?.Hwnd ?? 0, ItemParadoNoChao);
@@ -31,7 +28,6 @@ internal sealed partial class Aplicacao
         _onda = new TemporizadorDaOnda(AoDispararOnda);
     }
 
-    /// <summary>A janela de um item, criada escondida, no tamanho do item do núcleo.</summary>
     private IJanelaDoItem CriarJanelaDoItem(int id)
     {
         var janela = new JanelaDoItem(id, _nucleo?.Configuracao.TamanhoDoItem ?? SpriteDoItem.TamanhoLogico);
@@ -41,11 +37,8 @@ internal sealed partial class Aplicacao
 
     private bool ItemParadoNoChao(int id) => _nucleo?.Estado.Itens.PorId(id) is { Situacao: SituacaoDoItem.NoChao };
 
-    /// <summary>
-    /// Ponteiro sobre uma janela de item, ou capturado num gesto começado num item: o árbitro dos itens decide o gesto,
-    /// a captura fica só na janela do item do gesto (no topo, durante ele; crítica, L17), e o núcleo aplica cada evento
-    /// no mesmo tratamento da mensagem — um movimento do arraste vira o lugar da janela antes de a mensagem acabar.
-    /// </summary>
+    // O núcleo processa cada evento dentro da mesma mensagem: no arraste, a janela já
+    // está no lugar novo antes de a mensagem terminar.
     private void AoPonteiroDoItem(int id, EventoDePonteiro evento)
     {
         if (_encerrando || _nucleo is null || _itens is null) return;
@@ -68,11 +61,8 @@ internal sealed partial class Aplicacao
             _latenciasDoArrasteDoItem.Add(Stopwatch.GetElapsedTime(recebido).TotalMilliseconds);
     }
 
-    /// <summary>
-    /// Só com <c>--diagnostico</c>: o fim do gesto sobre um item. "Sobre" é a regra do núcleo (crítica, C14:
-    /// <see cref="Maquina.SobreOPersonagem"/> com o retângulo do item já preso na área útil); "usado", se ele usou o item
-    /// (a janela some). Com o resumo do arraste do item (M5), como o do personagem.
-    /// </summary>
+    // Só com --diagnostico. "sobre" usa a mesma regra do núcleo (Maquina.SobreOPersonagem);
+    // "usado" quando o personagem usou o item e a janela sumiu.
     private void RegistrarSoltura(Evento fim, int id)
     {
         double[] ms = [.. _latenciasDoArrasteDoItem.Order()];
@@ -100,22 +90,19 @@ internal sealed partial class Aplicacao
         Diagnostico.Evento("ITEM", [.. campos]);
     }
 
-    /// <summary>Os efeitos novos do núcleo (DEC-028): janelas dos itens, captura do item e temporizador da onda.</summary>
     private void ExecutarEfeitoDoTamagotchi(Efeito efeito)
     {
-        // O gesto sobre o item acabou por conta do núcleo: o resumo do arraste dele (M5) não sai.
+        // Gesto encerrado pelo núcleo: o resumo do arraste não sai.
         if (efeito is LiberarCapturaDoItem) _latenciasDoArrasteDoItem.Clear();
         LigacaoDosItens.Executar(efeito, _gestosDosItens, _itens, _onda);
     }
 
-    /// <summary>O temporizador da onda disparou: ITEM_EFFECT_TIMER com a geração agendada.</summary>
     private void AoDispararOnda(long geracao)
     {
         Diagnostico.Evento("ONDA", ("disparada", "sim"), ("geracao", geracao));
         Enviar(new ItemEffectTimer(geracao), $"onda geração {geracao}");
     }
 
-    /// <summary>Encerramento: o temporizador da onda para, o gesto sobre um item é esquecido e todas as janelas dos itens fecham.</summary>
     private void EncerrarItens()
     {
         _onda?.Parar();
@@ -125,20 +112,13 @@ internal sealed partial class Aplicacao
     }
 }
 
-/// <summary>
-/// A ligação da raiz com os itens do tamagotchi (DEC-028), separada do resto da raiz para ser testada sem ela e sem janela
-/// de verdade: o que um evento de ponteiro numa janela de item faz com a captura e a ordem Z (<see cref="ReceberPonteiro"/>)
-/// e o que cada efeito novo do núcleo faz com o árbitro dos itens, as janelas e o temporizador da onda
-/// (<see cref="Executar"/>). Só na thread da interface.
-/// </summary>
+// Separado da Aplicacao pra testar sem ela e sem janela de verdade.
+// Só na thread da interface.
 internal static class LigacaoDosItens
 {
-    /// <summary>
-    /// Um evento de ponteiro na janela do item <paramref name="id"/>: o árbitro dos itens decide o gesto, e a captura
-    /// acompanha o gesto. A janela do item em que ele acabou (ou de onde ele passou para outro item) solta o mouse sem virar
-    /// captura perdida e volta para baixo do personagem; a do botão pressionado captura e vai ao topo (crítica, L17).
-    /// Devolve o gesto, com os eventos para a fila do núcleo.
-    /// </summary>
+    // A captura acompanha o gesto: a janela onde ele acabou (ou de onde passou pra
+    // outro item) solta e volta pra baixo do personagem; a do botão pressionado
+    // captura e vai pro topo.
     internal static GestoDoItem ReceberPonteiro(GestosDosItens gestos, GerenteDosItens itens, int id, EventoDePonteiro evento)
     {
         ArgumentNullException.ThrowIfNull(gestos);
@@ -150,11 +130,7 @@ internal static class LigacaoDosItens
         return gesto;
     }
 
-    /// <summary>
-    /// Um efeito novo do núcleo (DEC-028): as janelas dos itens (<paramref name="itens"/>), o fim do gesto sobre um item
-    /// e o temporizador da onda (<paramref name="onda"/>). Sem as janelas ou o temporizador (antes de criados), a parte
-    /// deles não faz nada. Um efeito que não é do tamagotchi lança.
-    /// </summary>
+    // itens e onda podem ser nulos antes de criados; aí a parte deles não faz nada.
     internal static void Executar(Efeito efeito, GestosDosItens gestos, GerenteDosItens? itens, TemporizadorDaOnda? onda)
     {
         ArgumentNullException.ThrowIfNull(gestos);
@@ -165,15 +141,14 @@ internal static class LigacaoDosItens
                 break;
 
             case RemoverItem remover:
-                // Um item que sai no meio do próprio gesto (o núcleo solta a captura antes; aqui, por defesa): o árbitro esquece.
+                // Item removido no meio do próprio gesto: o núcleo já solta antes, isto é só defesa.
                 if (gestos.ItemEmGesto == remover.Id) gestos.Reiniciar();
                 itens?.Executar(remover);
                 break;
 
             case LiberarCapturaDoItem liberar:
-                // O núcleo encerrou por conta própria o gesto sobre o item (esconder, minimizar, bloquear a sessão, sair,
-                // recolher ou pegar outro no meio dele): o árbitro dos itens esquece o gesto, sem gerar ITEM_RELEASE, e a
-                // janela solta o mouse. Um soltar que chegue depois não vira nada.
+                // O núcleo encerrou o gesto (esconder, minimizar, bloquear, sair, recolher, pegar
+                // outro item): esquece sem gerar ITEM_RELEASE, e um soltar que chegue depois não vira nada.
                 if (gestos.ItemEmGesto == liberar.Id) gestos.Reiniciar();
                 itens?.Executar(liberar);
                 break;
@@ -193,14 +168,9 @@ internal static class LigacaoDosItens
         }
     }
 
-    /// <summary>
-    /// A linha de diagnóstico do sorteio da paranoia (pedidos do usuário de 2026-10-01; DEC-028), só com
-    /// <c>--diagnostico</c>: o núcleo não escreve o sorteio que não sai na regra do soltar, para a linha canônica e as
-    /// reproduções gravadas não mudarem, e a raiz o registra à parte. Houve sorteio no evento se o gerador da paranoia mudou:
-    /// só o sorteio dela o usa, um passo cada, no uso que fecha a mistura com droga sintética, uma vez por episódio; e saiu
-    /// se esse uso começou a paranoia. Devolve os campos da linha <c>PARANOIA</c> (o item do uso, a chance, se saiu e a carga
-    /// do episódio: as substâncias e os itens distintos), ou nulo sem sorteio.
-    /// </summary>
+    // Linha PARANOIA do log (só com --diagnostico). Fica aqui, fora do núcleo, pra não
+    // mudar a linha canônica nem as reproduções gravadas. Teve sorteio se o gerador da
+    // paranoia andou (só ele usa, um passo por sorteio, uma vez por episódio). Nulo sem sorteio.
     internal static (string Campo, object? Valor)[]? SorteioDaParanoia(EstadoDoNucleo antes, EstadoDoNucleo depois, Chance chance)
     {
         ArgumentNullException.ThrowIfNull(antes);
@@ -218,31 +188,21 @@ internal static class LigacaoDosItens
     }
 }
 
-/// <summary>
-/// O resultado de um evento de ponteiro sobre uma janela de item.
-/// </summary>
-/// <param name="Eventos">Os eventos para a fila do núcleo, na ordem.</param>
-/// <param name="Capturar">Se a janela do item do gesto fica com a captura do mouse depois deste evento.</param>
-/// <param name="ItemEmGesto">O item do gesto do botão esquerdo em curso depois deste evento, ou nulo.</param>
+// Eventos vão pra fila do núcleo na ordem. ItemEmGesto: o do botão esquerdo, ou nulo.
 internal readonly record struct GestoDoItem(IReadOnlyList<Evento> Eventos, bool Capturar, int? ItemEmGesto);
 
-/// <summary>
-/// Os gestos sobre as janelas dos itens do tamagotchi (DEC-028; desenho do núcleo, 2.4; D9 do desenho do app): uma
-/// segunda instância de <see cref="ArbitroDeGestos"/>, só para os itens, com as mesmas regras do personagem (limiar de
-/// arraste do sistema, clique duplo, ClickLock, captura perdida). Cada gesto vira o evento do item em que o botão
-/// esquerdo foi pressionado: Press → ITEM_PRESS, DragStart → ITEM_DRAG_START, DragMove → ITEM_DRAG_MOVE, DragEnd →
-/// ITEM_DRAG_END, e Click, DoubleClick ou DragCancel → ITEM_RELEASE (o item cai de onde está). O botão direito solto num
-/// item é o CONTEXT_MENU de sempre: abre o mesmo menu do personagem (crítica, C15). Um botão pressionado noutro item sem o
-/// soltar do anterior (mensagens postadas) larga o anterior antes de pegar o novo, nessa ordem. Só na thread da interface.
-/// </summary>
+// Um segundo ArbitroDeGestos só pros itens, com as mesmas regras do personagem (limiar
+// de arraste, clique duplo, ClickLock, captura perdida). Cada gesto vira evento do item
+// onde o botão esquerdo desceu; Click, DoubleClick e DragCancel viram ITEM_RELEASE (o
+// item cai de onde está). Botão direito abre o mesmo menu do personagem. Botão
+// pressionado em outro item sem soltar o anterior larga o anterior antes de pegar o novo.
+// Só na thread da interface.
 internal sealed class GestosDosItens
 {
     private readonly ArbitroDeGestos _arbitro = new();
 
-    /// <summary>O item do gesto do botão esquerdo em curso, ou nulo.</summary>
     internal int? ItemEmGesto { get; private set; }
 
-    /// <summary>Um evento de ponteiro que chegou à janela do item <paramref name="id"/>.</summary>
     internal GestoDoItem Receber(int id, EventoDePonteiro evento)
     {
         Arbitragem arbitragem = _arbitro.Receber(evento);
@@ -250,8 +210,8 @@ internal sealed class GestosDosItens
         int? doGesto = ItemEmGesto;
         foreach (Evento gesto in arbitragem.Gestos)
         {
-            // O botão pressionado começa o gesto no item da janela; o resto do gesto é do item em que ele começou, mesmo
-            // que a mensagem chegue por outra janela. O cancelamento que antecede um Press é do gesto anterior.
+            // O gesto pertence ao item onde começou, mesmo que a mensagem venha por outra
+            // janela. O cancelamento que vem antes de um Press é do gesto anterior.
             if (gesto is Press) doGesto = id;
             eventos.Add(Traduzir(gesto, doGesto ?? id));
         }
@@ -259,17 +219,13 @@ internal sealed class GestosDosItens
         return new GestoDoItem(eventos, arbitragem.Capturar, ItemEmGesto);
     }
 
-    /// <summary>
-    /// Esquece o gesto em curso sem emitir nada (LIBERAR_CAPTURA_DO_ITEM): o núcleo já o encerrou, ao esconder, sair ou
-    /// recolher os itens no meio dele, e a janela solta a captura. Um soltar que chegue depois não vira ITEM_RELEASE.
-    /// </summary>
+    // Esquece o gesto sem emitir nada; um soltar que chegue depois não vira ITEM_RELEASE.
     internal void Reiniciar()
     {
         _arbitro.Reiniciar();
         ItemEmGesto = null;
     }
 
-    /// <summary>Um gesto do árbitro como evento do item <paramref name="id"/>; o CONTEXT_MENU fica como está.</summary>
     internal static Evento Traduzir(Evento gesto, int id) => gesto switch
     {
         Press p => new ItemPress(id, p.Cursor),
@@ -282,20 +238,15 @@ internal sealed class GestosDosItens
     };
 }
 
-/// <summary>
-/// O temporizador da onda do tamagotchi (DEC-028; crítica, C2): um segundo DispatcherTimer, ao lado do da agenda
-/// autônoma, só de disparo único. <see cref="Agendar"/> (efeito AGENDAR_ONDA) substitui o pendente; o disparo para o
-/// temporizador antes de avisar, para nunca virar periódico (DEC-011), e entrega a geração agendada, que a raiz manda ao
-/// núcleo como ITEM_EFFECT_TIMER. <see cref="Cancelar"/> (CANCELAR_ONDA) e <see cref="Parar"/> (encerramento) não deixam
-/// disparar; depois de parado, nada mais é agendado. Só na thread da interface.
-/// </summary>
+// Timer de disparo único da onda (também usado pela curiosidade). Agendar substitui o
+// pendente; o disparo entrega a geração agendada. Depois de Parar, nada mais é agendado.
+// Só na thread da interface.
 internal sealed class TemporizadorDaOnda
 {
     private readonly DispatcherTimer _temporizador = new(DispatcherPriority.Background);
     private readonly Action<long> _disparar;
     private bool _parado;
 
-    /// <param name="disparar">Chamado uma vez por agendamento, com a geração dele.</param>
     internal TemporizadorDaOnda(Action<long> disparar)
     {
         ArgumentNullException.ThrowIfNull(disparar);
@@ -303,16 +254,14 @@ internal sealed class TemporizadorDaOnda
         _temporizador.Tick += AoDisparar;
     }
 
-    /// <summary>Se há um disparo agendado.</summary>
     internal bool Pendente => GeracaoPendente is not null;
 
-    /// <summary>A geração do disparo agendado, ou nula.</summary>
     internal long? GeracaoPendente { get; private set; }
 
-    /// <summary>Se o DispatcherTimer está ligado: só entre um agendamento e o disparo dele (nunca em repouso).</summary>
+    // Só ligado entre o agendamento e o disparo; parado, nunca.
     internal bool Ligado => _temporizador.IsEnabled;
 
-    /// <summary>Um disparo único depois de <paramref name="atraso"/> (no mínimo 1 ms), no lugar do que estiver pendente.</summary>
+    // Mínimo de 1 ms.
     internal void Agendar(TimeSpan atraso, long geracao)
     {
         if (_parado) return;
@@ -322,7 +271,7 @@ internal sealed class TemporizadorDaOnda
         _temporizador.Start();
     }
 
-    /// <summary>Cancela o disparo pendente; devolve se havia um.</summary>
+    // Devolve se havia um pendente.
     internal bool Cancelar()
     {
         bool havia = Pendente;
@@ -331,7 +280,6 @@ internal sealed class TemporizadorDaOnda
         return havia;
     }
 
-    /// <summary>Encerramento: cancela o pendente e ignora os agendamentos seguintes.</summary>
     internal void Parar()
     {
         _parado = true;
@@ -340,7 +288,7 @@ internal sealed class TemporizadorDaOnda
 
     private void AoDisparar(object? remetente, EventArgs e)
     {
-        // Disparo único: o DispatcherTimer continuaria disparando a cada intervalo.
+        // Sem o Stop, o DispatcherTimer continua disparando a cada intervalo.
         _temporizador.Stop();
         if (GeracaoPendente is not { } geracao) return;
         GeracaoPendente = null;

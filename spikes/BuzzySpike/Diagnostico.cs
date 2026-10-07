@@ -6,10 +6,7 @@ using System.Text;
 
 namespace BuzzySpike;
 
-/// <summary>
-/// Registro de evidência dos protótipos. Escreve num arquivo de texto dentro de
-/// spikes/resultados/ e em nenhum outro lugar. Não usa rede nem pasta de dados do usuário.
-/// </summary>
+// Log dos protótipos. Só escreve em spikes/resultados/; nada de rede nem pasta do usuário.
 internal static class Diagnostico
 {
     private static readonly object _trava = new();
@@ -20,8 +17,7 @@ internal static class Diagnostico
 
     internal static void Iniciar(string modo)
     {
-        // A pasta de resultados fica ao lado do projeto do protótipo, subindo a partir de
-        // bin/<config>/<tfm>/. Se o caminho esperado não existir, cai para a pasta do binário.
+        // Sobe de bin/<config>/<tfm>/ até spikes/resultados; se não existir, usa a pasta do binário.
         string baseDir = AppContext.BaseDirectory;
         string? candidato = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "resultados"));
         string destino = Directory.Exists(candidato) ? candidato : baseDir;
@@ -77,7 +73,7 @@ internal static class Diagnostico
         }
     }
 
-    /// <summary>Resolução do timer global, em milissegundos, ou null se a consulta falhar.</summary>
+    // Em ms; null se a consulta falhar.
     internal static double? ResolucaoTimerMs()
         => Interop.NtQueryTimerResolution(out _, out _, out uint atual) == 0 ? atual / 10000.0 : null;
 }

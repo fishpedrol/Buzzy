@@ -1,16 +1,12 @@
 ﻿<#
-    auto-p1.ps1 — sonda de clique SINTÉTICO para P1.
+    auto-p1.ps1 — clica via SendInput em cada faixa da figura de teste, com o protótipo
+    por cima do Bloco de Notas, e diz quais cliques chegaram ao Buzzy.
 
-    Injeta clique real via SendInput em cada faixa da figura, com a janela do protótipo
-    sobre o Bloco de Notas. É uma FERRAMENTA DE TESTE, fora do executável do produto;
-    SECURITY.md 3.2 permite injeção nesse caso e a proíbe dentro do Buzzy.
+    Uso: .\auto-p1.ps1 [-SemBlocoDeNotas]
 
-    Diferença honesta em relação ao clique humano: o evento do SendInput carrega a marca
-    de injetado (LLMHF_INJECTED). Para P1 isso quase não pesa, porque o teste de acerto
-    da janela layered é determinístico e depende do alfa do pixel, não de quem clicou.
-    Ainda assim, o resultado é rotulado como "clique sintético", separado do clique humano.
-
-    O cursor do mouse é movido de verdade e restaurado ao final.
+    Ferramenta de teste; SendInput nunca vai pro produto. O evento sai marcado como injetado,
+    mas o teste de acerto da janela layered só depende do alfa do pixel. O cursor se move de
+    verdade e volta pro lugar no fim.
 #>
 
 [CmdletBinding()]
@@ -92,7 +88,7 @@ if (-not $SemBlocoDeNotas) {
     Start-Sleep -Seconds 2
 }
 
-# Abrir o protótipo P1 no centro do monitor primário
+# Protótipo no centro do monitor primário
 if (Test-Path $log) { Remove-Item $log -Force }
 $X = 760; $Y = 380
 $proc = Start-Process -FilePath $exe -ArgumentList '--modo','p1','--x',$X,'--y',$Y -PassThru
@@ -111,7 +107,6 @@ Write-Host ""
 Write-Host "ATENCAO: o cursor vai se mover sozinho. Nao toque no mouse." -ForegroundColor Yellow
 for ($i = 5; $i -ge 1; $i--) { Write-Host "  clicando em $i..." -ForegroundColor DarkGray; Start-Sleep -Seconds 1 }
 
-# Guardar e restaurar a posição do cursor
 $cursor0 = New-Object Inj+POINT
 [void][Inj]::GetCursorPos([ref]$cursor0)
 
@@ -128,7 +123,7 @@ Write-Host ("Eventos de input aceitos pelo Windows: " + $aceitosTotal + " de " +
 [void][Inj]::SetCursorPos($cursor0.X, $cursor0.Y)
 Start-Sleep -Milliseconds 400
 
-# Ler o resultado: quais cliques chegaram ao Buzzy, e onde o alfa 0 caiu
+# Quais cliques chegaram ao Buzzy e onde caiu o de alfa 0
 $linhas = Get-Content $log -Encoding UTF8
 $recebidos = @{}
 foreach ($l in ($linhas | Where-Object { $_ -match 'P1\|CLIQUE\|' })) {
@@ -163,7 +158,7 @@ $rel = @("---- Sonda de clique sintetico (SendInput), $(Get-Date -Format 'yyyy-M
 foreach ($r in $tabela) { $rel += ("     faixa {0,-8} alfa {1,-3} chegou={2} hit={3} {4}" -f $r.Faixa,$r.Alfa,$r.ChegouAoBuzzy,$r.HitTestAtual,$r.Veredito) }
 Add-Content -Path $log -Value $rel -Encoding UTF8
 
-# Encerrar o protótipo pelo HWND
+# Fecha o protótipo pelo HWND
 Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public static class K{[DllImport("user32.dll")]public static extern bool PostMessage(IntPtr h,int m,IntPtr w,IntPtr l);}'
 [void][K]::PostMessage($hSpike, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
 Start-Sleep -Milliseconds 800

@@ -2,23 +2,18 @@ using System.Text;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// A procedência do host de um executável de arquivo único (F9-P10, DEC-042): o Buzzy.exe empacotado é o
-/// singlefilehost.exe do pacote Microsoft.NETCore.App.Host.win-x64 que o SDK usou, com só o que o SDK grava nele.
-/// Levantamento de 2026-10-05 (SDK 10.0.401, host 10.0.12), comparando byte a byte:
-/// - nos cabeçalhos, mudam só SizeOfInitializedData, Subsystem (de console para GUI: o Buzzy é WinExe), o tamanho do
-///   diretório de recursos e, na tabela de seções, o VirtualSize e o SizeOfRawData da .rsrc e o PointerToRawData das
-///   seções depois dela (a .rsrc cresce). Se o crescimento passar do alinhamento, mudam também o VirtualAddress dessas
-///   seções, os diretórios que apontam para elas e o SizeOfImage, sempre pelo mesmo deslocamento; o CheckSum pode mudar.
-///   O resto (ponto de entrada, DllCharacteristics, características e nomes das seções, os outros diretórios, o
-///   cabeçalho DOS) é idêntico (revisão adversarial do F9-P10, achado de alta: o ponto de entrada desviado para a .rsrc);
-/// - nas seções, todas idênticas, menos a .data (só os 8 bytes da posição do cabeçalho do pacote e o espaço reservado
-///   do nome do aplicativo) e a .rsrc, que tem de continuar não executável, só com os tipos de recurso que o SDK grava
-///   (o RCDATA do próprio host, igual, a versão, o ícone e um manifesto só), e cujo manifesto o portão confere à parte.
-/// </summary>
+// Confere que o Buzzy.exe empacotado é o singlefilehost.exe da Microsoft com só o que o SDK grava.
+// Comparando byte a byte (SDK 10.0.401, host 10.0.12):
+// - Cabeçalhos: mudam só SizeOfInitializedData, Subsystem (console -> GUI), tamanho do diretório
+//   de recursos, VirtualSize/SizeOfRawData da .rsrc e PointerToRawData das seções seguintes (a
+//   .rsrc cresce). Se passar do alinhamento, VirtualAddress dessas seções, diretórios que apontam
+//   pra elas e SizeOfImage mudam pelo mesmo deslocamento; CheckSum pode mudar. O resto tem que ser
+//   idêntico, senão dá pra desviar o ponto de entrada pra .rsrc, por exemplo.
+// - Seções: todas iguais, menos a .data (8 bytes da posição do pacote e o espaço do nome) e a
+//   .rsrc, que segue não executável e só com os tipos que o SDK grava. O manifesto é conferido à parte.
 internal static class ProcedenciaDoHost
 {
-    /// <summary>O espaço reservado do nome do aplicativo no host: o SHA-256 de "foobar" em hexadecimal, em 1024 bytes.</summary>
+    // SHA-256 de "foobar" em hex, num espaço de 1024 bytes.
     public const string EspacoDoNome = "c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2";
     private const int TamanhoDoEspacoDoNome = 1024;
     private const ushort SubsistemaGui = 2;
@@ -29,11 +24,8 @@ internal static class ProcedenciaDoHost
 
     private sealed record Pe(byte[] Bytes, int Opcional, int Diretorios, int QuantosDiretorios, List<Secao> Secoes);
 
-    /// <summary>
-    /// As diferenças entre o host do pacote e o do SDK que não são as permitidas; lista vazia quando o host é o do pacote
-    /// da Microsoft. <paramref name="nomeDoPrincipal"/> é o que o espaço reservado do nome deve conter (Buzzy.dll).
-    /// PE malformado lança <see cref="InvalidDataException"/>.
-    /// </summary>
+    // Diferenças fora das permitidas; vazia se o host é o da Microsoft. nomeDoPrincipal é o que deve
+    // estar no espaço do nome (Buzzy.dll). PE malformado lança InvalidDataException.
     public static IReadOnlyList<string> Comparar(string empacotado, string hostDoSdk, PacoteDeArquivoUnico pacote, string nomeDoPrincipal)
     {
         ArgumentNullException.ThrowIfNull(empacotado);
@@ -59,11 +51,8 @@ internal static class ProcedenciaDoHost
         }
     }
 
-    /// <summary>
-    /// O manifesto do aplicativo dos recursos do PE: exige um tipo RT_MANIFEST só, com um id só (1) e um idioma só, como
-    /// o SDK grava; nulo se não houver. Outra forma lança <see cref="InvalidDataException"/> (o Windows poderia escolher
-    /// um manifesto que o portão não leu).
-    /// </summary>
+    // Exige um RT_MANIFEST só, id 1, um idioma, como o SDK grava; nulo se não houver. Qualquer outra
+    // forma lança, porque o Windows poderia escolher um manifesto que o portão não leu.
     public static string? Manifesto(string arquivo)
     {
         ArgumentNullException.ThrowIfNull(arquivo);
@@ -101,7 +90,7 @@ internal static class ProcedenciaDoHost
         if (BitConverter.ToInt32(a.Bytes, a.Opcional + 60) != BitConverter.ToInt32(b.Bytes, b.Opcional + 60))
             diferencas.Add("SizeOfHeaders diferente");
 
-        // O deslocamento virtual das seções depois da .rsrc (0 quando a .rsrc cresceu dentro do alinhamento).
+        // Deslocamento virtual das seções depois da .rsrc; 0 se ela cresceu dentro do alinhamento.
         long deslocamento = a.Secoes.Count > recursos + 1 ? (long)a.Secoes[recursos + 1].EnderecoVirtual - b.Secoes[recursos + 1].EnderecoVirtual : 0;
         uint inicioDepois = recursos + 1 < b.Secoes.Count ? b.Secoes[recursos + 1].EnderecoVirtual : uint.MaxValue;
 
@@ -141,7 +130,7 @@ internal static class ProcedenciaDoHost
         if (BitConverter.ToUInt16(a.Bytes, a.Opcional + 68) != SubsistemaGui) diferencas.Add("Subsystem não é o de janelas (GUI)");
         if (rsrc.Caracteristicas != b.Secoes[recursos].Caracteristicas || (rsrc.Caracteristicas & (SecaoExecutavel | SecaoDeCodigo)) != 0)
             diferencas.Add(".rsrc com características diferentes do host do SDK, ou executável");
-        // Os tamanhos e posições que podiam mudar têm de ser coerentes com o arquivo.
+        // O que podia mudar ainda tem que bater com o arquivo.
         long ponteiro = a.Secoes[recursos].Inicio + a.Secoes[recursos].Tamanho;
         for (int i = recursos + 1; i < a.Secoes.Count; i++)
         {
@@ -168,7 +157,7 @@ internal static class ProcedenciaDoHost
                 continue;
             }
 
-            // Na .data, só a posição do cabeçalho e o espaço reservado do nome podem mudar.
+            // Na .data só podem mudar a posição do cabeçalho e o espaço do nome.
             long posicao = pacote.PosicaoDaAssinatura - 8 - x.Inicio;
             int espaco = db.IndexOf(Encoding.ASCII.GetBytes(EspacoDoNome));
             if (espaco < 0) { diferencas.Add(".data: o host do SDK não tem o espaço reservado do nome"); continue; }
@@ -189,7 +178,7 @@ internal static class ProcedenciaDoHost
         }
     }
 
-    /// <summary>Na .rsrc: só os tipos que o SDK grava, e o RCDATA do host igual ao do host do SDK.</summary>
+    // Só os tipos que o SDK grava, e o RCDATA igual ao do host original.
     private static void CompararRecursos(Pe a, Pe b, List<string> diferencas)
     {
         int? raizA = RaizDosRecursos(a), raizB = RaizDosRecursos(b);
@@ -205,7 +194,7 @@ internal static class ProcedenciaDoHost
         }
     }
 
-    /// <summary>Os dados de todas as folhas de um tipo, na ordem do diretório.</summary>
+    // Na ordem do diretório.
     private static List<byte[]> Folhas(Pe pe, int raiz, int tipo)
     {
         var folhas = new List<byte[]>();

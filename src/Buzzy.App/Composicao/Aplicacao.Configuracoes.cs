@@ -5,21 +5,17 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// A ligação da janela de configurações (Fase 8; DEC-038, item 5). O efeito <c>AbrirConfiguracoes</c> abre a janela, uma só
-/// (aberta, só é ativada), com as preferências lidas do núcleo na abertura, posicionada longe do sprite
-/// (<see cref="LugarDasConfiguracoes"/>). Cada pedido vira o comando do seu campo; o núcleo grava, e a marca volta pelo
-/// conteúdo do <c>GravarPreferencias</c> (<see cref="AtualizarJanelasDasPreferencias"/>). O app nunca constrói
-/// <c>SETTINGS_CHANGED</c>. Fechar não envia nada ao núcleo, que não tem estado "configurações abertas".
-/// </summary>
+// Janela de configurações: uma só (se já aberta, só ativa), longe do sprite. Cada
+// controle vira o comando do seu campo; o núcleo grava e a marca volta pelo
+// GravarPreferencias. O app nunca monta SETTINGS_CHANGED, e fechar não avisa o núcleo.
 internal sealed partial class Aplicacao
 {
     private JanelaDeConfiguracoes? _configuracoes;
 
-    /// <summary>A porta do início com o Windows desta execução (DEC-038, item 12), escolhida na partida sem tocar o registro.</summary>
+    // Escolhida na partida, sem tocar o registro.
     private IInicioComOWindows _inicio = new InicioIndisponivel();
 
-    /// <summary>O tamanho com que o Buzzy abriu nesta execução, lido das configurações na partida (DEC-038, item 9).</summary>
+    // Tamanho lido na partida; mudar a escala só vale na próxima abertura.
     private EscalaDoPersonagem _escalaEmVigor = EscalaDoPersonagem.Media;
 
     private void AbrirConfiguracoesPeloNucleo()
@@ -42,7 +38,7 @@ internal sealed partial class Aplicacao
         janela.PediuTravessia += ligado => Enviar(new CmdSetCrossMonitors(ligado), "configurações");
         janela.PediuEscala += escala => Enviar(new CmdSetScale(escala), "configurações");
         janela.PediuTopo += ligado => Enviar(new CmdSetAlwaysOnTop(ligado), "configurações");
-        // O início com o Windows não passa pelo núcleo: a caixa fala com a porta, só pelo pedido do usuário.
+        // O início com o Windows não passa pelo núcleo: a caixa fala direto com a porta, só no clique.
         var inicio = new ControleDoInicio(janela.Inicio, janela.EstadoDoInicio, _inicio, campos => Diagnostico.Evento("INICIO", campos));
         inicio.Atualizar("aberta");
         janela.Ativada += () => inicio.Atualizar("ativada");
@@ -53,7 +49,7 @@ internal sealed partial class Aplicacao
         };
         _configuracoes = janela;
 
-        // Antes de mostrar, o HWND no monitor (o DPI de lá) e a altura limitada à área útil; depois, o lugar pelo tamanho real.
+        // Põe o HWND no monitor antes do Show pra pegar o DPI de lá; o lugar final só depois, com o tamanho real.
         var ajudante = new System.Windows.Interop.WindowInteropHelper(janela);
         ajudante.EnsureHandle();
         MonitorDoDesktop monitor = MonitorDasJanelas();
@@ -63,13 +59,12 @@ internal sealed partial class Aplicacao
         janela.Show();
         PosicionarConfiguracoes(janela);
         janela.DpiChanged += (_, _) => PosicionarConfiguracoes(janela);
-        // A janela cresce com a linha do início ou o aviso do tamanho: continua presa na área útil.
+        // Cresce com a linha do início ou o aviso do tamanho; tem que continuar dentro da área útil.
         janela.SizeChanged += (_, _) => PosicionarConfiguracoes(janela);
         janela.Activate();
         Diagnostico.Evento("CONFIGURACOES", ("aberta", "sim"), ("hwnd", ajudante.Handle), ("ret", janela.RetanguloNaTela()?.ToString() ?? "-"), ("dpi", monitor.Dpi));
     }
 
-    /// <summary>O monitor das janelas do Buzzy, pela topologia atual (<see cref="LugarDasConfiguracoes.Monitor"/>).</summary>
     private MonitorDoDesktop MonitorDasJanelas()
         => LugarDasConfiguracoes.Monitor(_topologia, _posicionamento.Monitor, _posicionamento.Retangulo);
 
@@ -85,7 +80,6 @@ internal sealed partial class Aplicacao
             Win32.SWP_NOSIZE | Win32.SWP_NOZORDER | Win32.SWP_NOACTIVATE);
     }
 
-    /// <summary>Encerramento: a janela de configurações fecha.</summary>
     private void FecharConfiguracoes()
     {
         JanelaDeConfiguracoes? janela = _configuracoes;

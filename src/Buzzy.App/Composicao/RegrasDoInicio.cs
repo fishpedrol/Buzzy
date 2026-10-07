@@ -2,78 +2,68 @@ using System.IO;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>O estado do início com o Windows, como a janela de configurações o mostra (DEC-038, item 10).</summary>
 internal enum EstadoDoInicio
 {
-    /// <summary>Sem o valor Buzzy na chave Run.</summary>
+    // Sem o valor Buzzy na chave Run.
     Desligado,
 
-    /// <summary>O valor aponta para esta cópia, e o Windows não o desativou.</summary>
+    // Aponta pra esta cópia e o Windows não desativou.
     Ligado,
 
-    /// <summary>O valor aponta para esta cópia, mas o usuário o desativou nas Configurações do Windows.</summary>
+    // Aponta pra esta cópia, mas foi desativado nas Configurações do Windows.
     DesativadoPeloWindows,
 
-    /// <summary>O valor Buzzy aponta para outra cópia (movida ou em outra pasta).</summary>
+    // Aponta pra outra cópia (movida ou em outra pasta).
     OutroCaminho,
 
-    /// <summary>Sem como ler ou gravar nesta execução (erro, caminho inválido, chave ausente, sem pasta ou perfil inválido).</summary>
+    // Erro, caminho inválido, chave ausente, sem pasta ou perfil inválido.
     Indisponivel,
 }
 
-/// <summary>O resultado de uma ação no início com o Windows.</summary>
 internal enum ResultadoDoInicio
 {
     Ok,
     Erro,
 
-    /// <summary>Desligar com o valor de outra cópia: nada é apagado.</summary>
+    // Desligar com o valor de outra cópia: nada é apagado.
     NaoEDestaCopia,
 
-    /// <summary>Indisponível nesta execução: nada foi tentado.</summary>
+    // Nada foi tentado.
     Indisponivel,
 }
 
-/// <summary>De onde vem o início com o Windows nesta execução (DEC-038, item 12).</summary>
 internal enum ModoDoInicio
 {
-    /// <summary>O registro do usuário: só o Buzzy de verdade, sem perfil de teste.</summary>
+    // Registro de verdade: só sem perfil de teste.
     Registro,
 
-    /// <summary>Um simulado só em memória: com perfil de teste válido.</summary>
+    // Só em memória, com perfil de teste válido.
     Simulado,
 
-    /// <summary>Nenhum: perfil inválido, persistência desligada ou sem a pasta do Buzzy.</summary>
+    // Perfil inválido, persistência desligada ou sem a pasta do Buzzy.
     Indisponivel,
 }
 
-/// <summary>Como o Windows marcou o valor em <c>StartupApproved\Run</c>: só lido, nunca gravado.</summary>
+// Marca do Windows em StartupApproved\Run. Só lida, nunca gravada.
 internal enum AprovacaoDoInicio
 {
-    /// <summary>Sem marca: vale aprovado.</summary>
+    // Sem marca conta como aprovado.
     Ausente,
     Ligada,
     Desligada,
 
-    /// <summary>Um formato que o Buzzy não conhece: vale aprovado (o Windows decide), e o log diz.</summary>
+    // Formato desconhecido: conta como aprovado (o Windows decide) e vai pro log.
     Desconhecida,
 }
 
-/// <summary>
-/// As regras puras do início com o Windows (Q-04; DEC-038, itens 10 e 12), sem Win32: o dado gravado no valor Run, a validação
-/// do caminho desta cópia, a comparação de cópias e o estado a partir do que foi lido. Testadas por tabela.
-/// </summary>
+// Regras puras do início com o Windows, sem Win32, testadas por tabela.
 internal static class RegrasDoInicio
 {
-    /// <summary>O maior caminho aceito para o executável.</summary>
     internal const int CaminhoMaximo = 1024;
 
-    /// <summary>
-    /// Se o caminho do executável desta cópia serve para o valor Run: absoluto, de um arquivo <c>Buzzy*.exe</c> (sem diferenciar
-    /// maiúsculas: o <c>Buzzy.exe</c> da pasta e o <c>Buzzy-&lt;versão&gt;-win-x64.exe</c> de download, DEC-042, item 12), sem aspas
-    /// nem caractere de controle e com até <see cref="CaminhoMaximo"/> caracteres. Rodando por <c>dotnet Buzzy.dll</c>, o
-    /// caminho é o do dotnet e é recusado.
-    /// </summary>
+    // Absoluto, arquivo Buzzy*.exe (o Buzzy.exe da pasta ou o Buzzy-<versão>-win-x64.exe
+    // do download), sem aspas nem caractere de controle. Rodando por "dotnet Buzzy.dll"
+    // o caminho é o do dotnet, e é recusado.
     internal static bool CaminhoValido(string? caminho)
         => caminho is { Length: > 0 and <= CaminhoMaximo }
            && Path.IsPathFullyQualified(caminho)
@@ -82,13 +72,11 @@ internal static class RegrasDoInicio
            && nome.StartsWith("Buzzy", StringComparison.OrdinalIgnoreCase)
            && nome.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>O dado gravado: o caminho entre aspas, sem argumentos (evita o caminho sem aspas sequestrável).</summary>
+    // Entre aspas e sem argumentos: caminho sem aspas pode ser sequestrado.
     internal static string DadoDoRun(string caminho) => $"\"{caminho}\"";
 
-    /// <summary>
-    /// Se o valor Run aponta para esta cópia: sem as aspas, um caminho absoluto (um relativo dependeria da pasta atual do
-    /// processo e nunca é desta cópia), pelo caminho completo normalizado, sem diferenciar maiúsculas.
-    /// </summary>
+    // Caminho relativo nunca conta como desta cópia (dependeria da pasta atual do processo).
+    // Compara o caminho completo normalizado, sem diferenciar maiúsculas.
     internal static bool DestaCopia(string? valorRun, string caminho)
     {
         if (string.IsNullOrWhiteSpace(valorRun)) return false;
@@ -105,10 +93,8 @@ internal static class RegrasDoInicio
         }
     }
 
-    /// <summary>
-    /// A marca do <c>StartupApproved</c>: ausente vale aprovada; com 12 bytes, primeiro byte par, ligada, e ímpar, desligada (o
-    /// observado comum é 0x02 e 0x03; UNCERTAIN, sem documentação); outro formato, desconhecida.
-    /// </summary>
+    // 12 bytes: primeiro byte par = ligada, ímpar = desligada. Na prática aparece 0x02 e
+    // 0x03, mas não é documentado, então não dá pra ter certeza.
     internal static AprovacaoDoInicio Aprovacao(byte[]? dados)
         => dados switch
         {
@@ -117,7 +103,6 @@ internal static class RegrasDoInicio
             _ => AprovacaoDoInicio.Desconhecida,
         };
 
-    /// <summary>O estado a partir do que foi lido; sem leitura possível ou com o caminho desta cópia inválido, indisponível.</summary>
     internal static EstadoDoInicio Avaliar(bool leuComSucesso, string? valorRun, byte[]? aprovacao, string? caminhoAtual)
     {
         if (!leuComSucesso || !CaminhoValido(caminhoAtual)) return EstadoDoInicio.Indisponivel;
@@ -126,7 +111,7 @@ internal static class RegrasDoInicio
         return Aprovacao(aprovacao) == AprovacaoDoInicio.Desligada ? EstadoDoInicio.DesativadoPeloWindows : EstadoDoInicio.Ligado;
     }
 
-    /// <summary>A ação que um pedido da caixa causa no estado dado, ou nenhuma: marcar liga; desmarcar desliga; o resto, nada.</summary>
+    // true liga, false desliga, null não faz nada.
     internal static bool? AcaoDoPedido(EstadoDoInicio estado, bool marcar)
         => (estado, marcar) switch
         {

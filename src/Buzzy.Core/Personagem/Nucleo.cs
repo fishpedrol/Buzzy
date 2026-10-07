@@ -1,11 +1,7 @@
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// O núcleo do personagem com a fila de eventos (ARCHITECTURE.md 2.2 e 2.3). A raiz de
-/// composição enfileira eventos normalizados e processa a fila; os eventos saem do mais
-/// prioritário para o menos, e na ordem de chegada dentro da mesma prioridade. Não é seguro
-/// para uso por várias threads: a raiz só o usa na thread da interface.
-/// </summary>
+// Fila de eventos do personagem: sai o mais prioritário primeiro e, empatando,
+// o que chegou antes. Não é thread-safe; só a thread da UI mexe aqui.
 public sealed class Nucleo
 {
     private readonly List<(Evento Evento, long Ordem)> _fila = [];
@@ -30,17 +26,12 @@ public sealed class Nucleo
 
     public Retrato Retrato => Estado.Retrato();
 
-    /// <summary>Eventos na fila, ainda não aplicados.</summary>
     public int Pendentes => _fila.Count;
 
-    /// <summary>Eventos autônomos descartados por chegarem com o usuário no controle.</summary>
+    // Autônomos que chegaram com o personagem sob controle do usuário.
     public long Descartados { get; private set; }
 
-    /// <summary>
-    /// Enfileira o evento. Um evento autônomo que chega enquanto o personagem está sob
-    /// controle do usuário é descartado, não enfileirado (ARCHITECTURE.md 2.3).
-    /// </summary>
-    /// <returns>Falso se o evento foi descartado.</returns>
+    // Evento autônomo com o usuário no controle é descartado (devolve false).
     public bool Enfileirar(Evento evento)
     {
         ArgumentNullException.ThrowIfNull(evento);
@@ -53,10 +44,7 @@ public sealed class Nucleo
         return true;
     }
 
-    /// <summary>
-    /// Aplica todos os eventos pendentes e devolve os efeitos, na ordem em que devem ser
-    /// executados. <paramref name="aoAplicar"/> recebe cada evento aplicado e o resultado.
-    /// </summary>
+    // Esvazia a fila e devolve os efeitos já na ordem de execução.
     public IReadOnlyList<Efeito> Processar(Action<Evento, Resultado>? aoAplicar = null)
     {
         var efeitos = new List<Efeito>();

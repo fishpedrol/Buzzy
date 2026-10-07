@@ -3,20 +3,13 @@ using Buzzy.App.Composicao;
 
 namespace Buzzy.App.Plataforma;
 
-/// <summary>
-/// O adaptador do início com o Windows (Q-04; DEC-038, itens 10 a 12): o único tipo do Buzzy que grava e apaga no registro,
-/// e só o valor <c>Buzzy</c> da chave Run do usuário, sempre pelo pedido explícito dele nas configurações (usos restritos do
-/// portão de APIs: <c>RegSetValueExW</c> e <c>RegDeleteValueW</c> só neste tipo e neste arquivo).
-/// <list type="bullet">
-/// <item>ligar: abre a chave Run só se ela existir (sem criá-la) e grava o caminho deste Buzzy.exe entre aspas, em REG_SZ;</item>
-/// <item>desligar: relê o valor e só o apaga quando ele aponta para esta cópia; o de outra cópia nunca é apagado;</item>
-/// <item>ler: o valor Run e a marca do Windows em <c>StartupApproved\Run</c>, que só é lida, nunca gravada nem apagada: o
-/// Buzzy nunca religa o que o usuário desligou no Windows; sem a chave Run, indisponível (ela nunca é criada); um valor
-/// grande demais para ser um caminho é de outra cópia;</item>
-/// <item>chave, nome e tipo são constantes; não há parâmetro de caminho; o caminho do executável nunca vai ao log.</item>
-/// </list>
-/// O construtor é privado: só <see cref="DaExecucao"/> cria a porta, e um perfil de teste nunca chega aqui.
-/// </summary>
+// Único lugar do Buzzy que grava/apaga no registro (RegSetValueExW e RegDeleteValueW
+// só aqui), e só o valor "Buzzy" da chave Run do usuário, quando ele liga nas configurações.
+// - Ligar: abre a Run só se existir (nunca cria) e grava o caminho do exe entre aspas, REG_SZ.
+// - Desligar: relê e só apaga se apontar pra esta cópia.
+// - StartupApproved\Run só é lida: nunca religamos o que foi desligado no Windows.
+// Chave, nome e tipo são constantes e o caminho do exe nunca vai pro log.
+// Construtor privado: só DaExecucao cria, e perfil de teste nunca chega aqui.
 internal sealed class InicioComOWindows : IInicioComOWindows
 {
     private const string ChaveRun = @"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -36,16 +29,13 @@ internal sealed class InicioComOWindows : IInicioComOWindows
 
     private InicioComOWindows(string? caminho) => _caminho = caminho;
 
-    /// <summary>O código do Windows da última leitura ou ação que falhou, ou nulo; o controle da caixa o leva ao log.</summary>
     public int? UltimoErro { get; private set; }
 
     public ModoDoInicio Modo => ModoDoInicio.Registro;
 
-    /// <summary>
-    /// A porta desta execução, por uma regra só, com a falha fechada (DEC-038, item 12): com um perfil de teste, o simulado
-    /// em memória se o nome for válido, e nenhum se não for; com a persistência desligada ou sem a pasta do Buzzy, nenhum; só
-    /// sem perfil, o registro. Nada é lido aqui: a partida nunca toca o registro.
-    /// </summary>
+    // Falha fechado: perfil de teste válido -> simulado em memória; perfil inválido,
+    // persistência desligada ou sem pasta -> indisponível. Registro de verdade só sem perfil.
+    // Nada é lido aqui: a partida nunca toca o registro.
     internal static IInicioComOWindows DaExecucao(string? perfilDeTeste, bool persistenciaDesligada, string? pastaDoBuzzy, string? caminhoDoExecutavel)
     {
         if (perfilDeTeste is not null)
@@ -63,9 +53,9 @@ internal sealed class InicioComOWindows : IInicioComOWindows
             UltimoErro = erro;
             return EstadoDoInicio.Indisponivel;
         }
-        // Sem o valor, a chave Run pode faltar também: aí ligar sempre falharia (a chave nunca é criada).
+        // Sem a chave Run, ligar sempre falharia (a gente não cria a chave).
         if (erro == ERROR_FILE_NOT_FOUND && ChaveRunAusente()) return EstadoDoInicio.Indisponivel;
-        // Um valor maior que qualquer caminho aceito nunca é desta cópia, mas o Windows o executa: outra cópia.
+        // Maior que qualquer caminho aceito: não é desta cópia, mas o Windows roda, então é outra cópia.
         if (grandeDemais) return RegrasDoInicio.CaminhoValido(_caminho) ? EstadoDoInicio.OutroCaminho : EstadoDoInicio.Indisponivel;
         byte[]? aprovacao = LerAprovacao();
         return RegrasDoInicio.Avaliar(true, erro == ERROR_FILE_NOT_FOUND ? null : valor, aprovacao, _caminho);
@@ -125,10 +115,7 @@ internal sealed class InicioComOWindows : IInicioComOWindows
         }
     }
 
-    /// <summary>
-    /// O valor Run, em texto (REG_SZ, sem expandir variáveis); o código do Windows. Maior que qualquer caminho aceito, não é
-    /// lido: <paramref name="grandeDemais"/> diz que ele existe.
-    /// </summary>
+    // REG_SZ sem expandir variáveis. Grande demais nem é lido, só marca grandeDemais.
     private static int LerTexto(out string? valor, out bool grandeDemais)
     {
         valor = null;
@@ -148,7 +135,7 @@ internal sealed class InicioComOWindows : IInicioComOWindows
         return ERROR_SUCCESS;
     }
 
-    /// <summary>Se a chave Run do usuário não existe (aberta só para consulta; nada é criado).</summary>
+    // Abre só pra consulta, nada é criado.
     private static bool ChaveRunAusente()
     {
         int erro = Nativo.RegOpenKeyExW(HKEY_CURRENT_USER, ChaveRun, 0, KEY_QUERY_VALUE, out nint chave);
@@ -156,7 +143,7 @@ internal sealed class InicioComOWindows : IInicioComOWindows
         return erro == ERROR_FILE_NOT_FOUND;
     }
 
-    /// <summary>A marca do Windows em StartupApproved (REG_BINARY), só lida; nula sem ela ou com qualquer erro.</summary>
+    // StartupApproved (REG_BINARY); nulo se faltar ou der qualquer erro.
     private static byte[]? LerAprovacao()
     {
         int tamanho = 0;

@@ -6,27 +6,17 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.App.Composicao;
 
-/// <summary>
-/// Quando a raiz grava o settings.json (Fase 5, passo P7; DEC-029, item 9; ARCHITECTURE.md 2.12), pela política do núcleo
-/// (<see cref="PoliticaDeGravacao"/>), com o arquivo desta execução (<see cref="ArquivoDeConfiguracoes"/>):
-/// <list type="bullet">
-/// <item>a partida lê o arquivo uma vez (<see cref="NaPartida"/>), protegida contra qualquer exceção: em falha, a
-/// persistência fica desligada nesta execução, e o log leva só o tipo e o código;</item>
-/// <item>cada efeito GravarPosicao ou GravarPreferencias vira um pedido (<see cref="Pedir(Efeito, Evento)"/>) com o
-/// conteúdo desejado; com o mesmo conteúdo do disco, nada é gravado nem agendado;</item>
-/// <item>com atraso: um disparo único 2 s depois do último pedido, reiniciado a cada pedido. Se o disparo chega durante um
-/// gesto do usuário, ele não rearma a espera, o que seria periódico com o ClickLock (L5 da crítica): o fim do gesto
-/// grava (<see cref="ConferirFimDoGesto"/>);</item>
-/// <item>na hora, quando o evento que gerou o pedido é de suspensão, fim de sessão, saída ou bloqueio, com as tentativas
-/// do caminho imediato; e ao descarregar (<see cref="Descarregar"/>), no encerramento e no erro não tratado;</item>
-/// <item>depois de uma falha de E/S, novas tentativas únicas em 2, 10 e 60 s; depois delas, só no próximo pedido;</item>
-/// <item>um defeito (exceção que não é de E/S) desliga a gravação nesta execução, sem derrubar o Buzzy.</item>
-/// </list>
-/// Nada é periódico: só eventos do usuário ou do sistema geram pedidos (invariante 18), e todo agendamento é um disparo
-/// único, parado no encerramento (<see cref="Parar"/>). A E/S é síncrona, na thread da interface: o arquivo tem menos de
-/// 1 KiB, e o tempo vai para o log. As linhas CONFIG levam só enums, contagens e tempos (DEC-029, item 12): nunca a pasta,
-/// valores do arquivo nem o texto automático dos registros, que imprime a chave e a tela. Só na thread da interface.
-/// </summary>
+// Quando gravar o settings.json, seguindo a PoliticaDeGravacao do núcleo.
+// - Lê uma vez na partida; qualquer exceção desliga a persistência nesta execução.
+// - Pedido com o mesmo conteúdo do disco não grava nem agenda.
+// - Com atraso: 2 s depois do último pedido. Se o disparo cai no meio de um gesto,
+//   não rearma (com ClickLock viraria periódico); o fim do gesto grava.
+// - Na hora em suspensão, fim de sessão, saída ou bloqueio, e ao descarregar.
+// - Falha de E/S: novas tentativas em 2, 10 e 60 s; depois, só no próximo pedido.
+// - Exceção que não é de E/S desliga a gravação nesta execução, sem derrubar o Buzzy.
+// E/S síncrona na thread da interface: o arquivo tem menos de 1 KiB. As linhas CONFIG
+// levam só enums, contagens e tempos, nunca a pasta nem valores do arquivo (o ToString
+// automático dos records imprimiria a chave e a tela).
 internal sealed class AgendaDeGravacao
 {
     private readonly ArquivoDeConfiguracoes? _arquivo;
@@ -34,19 +24,16 @@ internal sealed class AgendaDeGravacao
     private readonly Func<TimeSpan, Action, Action> _agendarUmaVez;
     private readonly Action<(string Campo, object? Valor)[]> _registrar;
 
-    /// <summary>O que se sabe estar no disco, normalizado; nulo quando não se sabe, e então a próxima necessidade grava.</summary>
+    // Normalizado. Nulo quando não se sabe o que tem no disco: aí o próximo pedido grava.
     private ConfiguracoesSalvas? _noDisco;
 
-    /// <summary>Cancela o disparo único pendente; nulo sem nenhum.</summary>
     private Action? _cancelar;
 
-    /// <summary>Gravações com atraso que falharam seguidas: escolhem a espera da nova tentativa.</summary>
+    // Falhas seguidas; escolhe a espera da nova tentativa.
     private int _falhas;
 
-    /// <summary>
-    /// Se já houve algum pedido nesta execução. Sem nenhum, nada está pendente, mesmo sem saber o que o disco tem (a
-    /// partida não grava nada sozinha: um descarregar sem pedido não recria o principal).
-    /// </summary>
+    // Sem nenhum pedido, nada está pendente: a partida nunca grava sozinha, e
+    // descarregar sem pedido não recria o principal.
     private bool _houvePedido;
 
     private bool _parada;
@@ -61,53 +48,35 @@ internal sealed class AgendaDeGravacao
         _registrar = registrar;
         Lidas = leitura?.Configuracoes ?? ConfiguracoesSalvas.Padrao;
         Desejadas = Lidas;
-        // Só um principal válido, lido agora e na versão atual, é o que se sabe estar no disco. Vindo da reserva ou dos
-        // padrões, a primeira necessidade grava e recria o principal (e guarda um ilegível como cópia de diagnóstico); de uma
-        // versão anterior, o primeiro pedido grava na versão atual, mesmo com o mesmo conteúdo (a migração no disco, DEC-038,
-        // item 3), e a anterior vira a reserva. Sem pedido, nada é gravado: a partida continua sem gravar.
+        // Só um principal válido e na versão atual conta como "no disco". Vindo da reserva ou
+        // dos padrões, o primeiro pedido recria o principal (o ilegível vira cópia de
+        // diagnóstico). De versão anterior, o primeiro pedido grava mesmo sem mudança, pra
+        // migrar o arquivo, e o antigo vira a reserva.
         _noDisco = leitura is { Origem: OrigemDasConfiguracoes.Principal, Principal: EstadoDoArquivo.Valido } && !(leitura.Versao < EsquemaDeConfiguracoes.VersaoAtual)
             ? EsquemaDeConfiguracoes.Normalizar(leitura.Configuracoes)
             : null;
     }
 
-    /// <summary>
-    /// As configurações lidas na partida, que viram a carga do núcleo (<see cref="ConfiguracoesSalvas.ParaACarga"/>): a
-    /// posição salva com a tela do monitor da época, a postura e as preferências (a emoção dominante e a travessia
-    /// inclusive). Sem arquivo, ou com a leitura falha, as padrão.
-    /// </summary>
+    // Viram a carga do núcleo. Sem arquivo ou com leitura falha, os padrões.
     internal ConfiguracoesSalvas Lidas { get; }
 
-    /// <summary>O conteúdo que se deseja no disco: o lido, com o que os pedidos trouxeram depois.</summary>
+    // O lido mais o que os pedidos trouxeram depois.
     internal ConfiguracoesSalvas Desejadas { get; private set; }
 
-    /// <summary>Se a gravação está ligada nesta execução: com arquivo, sem bloqueio (versão futura, principal inacessível) e sem um defeito.</summary>
+    // Bloqueada = versão futura ou principal inacessível.
     internal bool Ligada => _arquivo is { GravacaoBloqueada: false } && !_desligadaPorDefeito;
 
-    /// <summary>
-    /// Se há um pedido cujo conteúdo não se sabe estar no disco (só com a gravação ligada): o desejado difere do que foi
-    /// lido de um principal válido ou gravado depois. Vindo da reserva ou dos padrões, o primeiro pedido grava.
-    /// </summary>
     internal bool Pendente => Ligada && _houvePedido && EsquemaDeConfiguracoes.Normalizar(Desejadas) != _noDisco;
 
-    /// <summary>Se o disparo chegou durante um gesto do usuário e a gravação espera o fim dele.</summary>
     internal bool EsperandoOGesto { get; private set; }
 
     private string Situacao => _arquivo is null || _desligadaPorDefeito ? "desligada" : _arquivo.GravacaoBloqueada ? "bloqueada" : "ligada";
 
-    /// <summary>
-    /// A agenda desta execução, com a leitura da partida: o arquivo que a regra da pasta escolheu
-    /// (<see cref="ArquivoDeConfiguracoes.DaExecucao"/>, uma instância por execução, porque o bloqueio não volta atrás),
-    /// lido uma vez. Sem arquivo, a persistência está desligada (pela linha de comando ou sem a pasta). Qualquer exceção da
-    /// leitura, também a que não é de E/S (um link plantado para algo que não é arquivo, um defeito), desliga a
-    /// persistência nesta execução, sem derrubar a partida; o log leva só o tipo e o código.
-    /// </summary>
-    /// <param name="arquivo">O arquivo desta execução; nulo, sem persistência.</param>
-    /// <param name="persistenciaDesligada">Se a linha de comando desligou a persistência (só para o motivo no log).</param>
-    /// <param name="perfil">Se a pasta é a de um perfil de teste (só para o log: a pasta nunca vai para ele).</param>
-    /// <param name="gestoDoUsuarioEmCurso">Se o usuário está no meio de um gesto (botão pressionado, arraste, item na mão).</param>
-    /// <param name="agendarUmaVez">Agenda um disparo único e devolve o que o cancela (<see cref="AgendarNoDispatcher"/>).</param>
-    /// <param name="registrar">Recebe os campos de cada linha CONFIG; nulo, o log de diagnóstico.</param>
-    /// <param name="ler">Só para testes: a leitura no lugar de <see cref="ArquivoDeConfiguracoes.Ler"/>.</param>
+    // Uma instância de arquivo por execução, porque o bloqueio não volta atrás. Arquivo
+    // nulo = persistência desligada. Qualquer exceção na leitura (até um link plantado
+    // apontando pra algo que não é arquivo) desliga a persistência sem derrubar a partida.
+    // persistenciaDesligada e perfil só servem pro log (a pasta nunca vai pra ele).
+    // ler: só pra testes.
     internal static AgendaDeGravacao NaPartida(ArquivoDeConfiguracoes? arquivo, bool persistenciaDesligada, bool perfil, Func<bool> gestoDoUsuarioEmCurso,
         Func<TimeSpan, Action, Action> agendarUmaVez, Action<(string Campo, object? Valor)[]>? registrar = null, Func<ArquivoDeConfiguracoes, LeituraDoArquivo>? ler = null)
     {
@@ -134,11 +103,7 @@ internal sealed class AgendaDeGravacao
         return new AgendaDeGravacao(arquivo, leitura, gestoDoUsuarioEmCurso, agendarUmaVez, registrar);
     }
 
-    /// <summary>
-    /// Um efeito do núcleo que pede gravação, vindo de <paramref name="evento"/>: o GravarPosicao troca a posição e a
-    /// postura (a borda do esconderijo e a marca de preso) do desejado; o GravarPreferencias, as preferências. Grava na
-    /// hora se a política diz que o evento é imediato (<see cref="PoliticaDeGravacao.Imediata"/>); senão, com atraso.
-    /// </summary>
+    // Grava na hora se a política diz que o evento é imediato; senão, com atraso.
     internal void Pedir(Efeito efeito, Evento evento)
     {
         ArgumentNullException.ThrowIfNull(efeito);
@@ -155,7 +120,7 @@ internal sealed class AgendaDeGravacao
         _registrar([("pedido", tipo), ("evento", nome), ("imediata", PoliticaDeGravacao.Imediata(evento) ? "sim" : "nao"), ("gravacao", Situacao)]);
         if (!Ligada) return;
 
-        // Um pedido novo recomeça: a espera pelo fim do gesto e as novas tentativas ficam para trás.
+        // Pedido novo zera a espera do gesto e as novas tentativas.
         EsperandoOGesto = false;
         _falhas = 0;
         if (!Pendente)
@@ -170,11 +135,8 @@ internal sealed class AgendaDeGravacao
             Armar(PoliticaDeGravacao.Atraso, "atraso");
     }
 
-    /// <summary>
-    /// Grava agora o pendente, com as tentativas do caminho imediato, e cancela o disparo; sem pendente, não toca no disco.
-    /// Vale também depois de <see cref="Parar"/>: o encerramento descarrega e depois para, e o erro não tratado descarrega
-    /// o que der. Devolve se gravou.
-    /// </summary>
+    // Funciona mesmo depois de Parar: o erro não tratado descarrega o que der.
+    // Sem pendente, não toca no disco.
     internal bool Descarregar(string motivo)
     {
         CancelarDisparo();
@@ -182,10 +144,7 @@ internal sealed class AgendaDeGravacao
         return Pendente && GravarAgora(PoliticaDeGravacao.TentativasImediatas, motivo);
     }
 
-    /// <summary>
-    /// Depois de cada processamento do núcleo: se um disparo chegou durante o gesto do usuário e o gesto acabou, grava o
-    /// pendente agora (L5 da crítica), em vez de rearmar a espera a cada 2 s durante o gesto.
-    /// </summary>
+    // Chamado depois de cada processamento do núcleo.
     internal void ConferirFimDoGesto()
     {
         if (!EsperandoOGesto || _gestoDoUsuarioEmCurso()) return;
@@ -193,7 +152,7 @@ internal sealed class AgendaDeGravacao
         if (!_parada && Pendente) GravarAgora(1, "fimDoGesto");
     }
 
-    /// <summary>Encerramento: cancela o disparo pendente, e nada mais é agendado (um descarregar ainda grava).</summary>
+    // Nada mais é agendado, mas Descarregar ainda grava.
     internal void Parar()
     {
         _parada = true;
@@ -201,19 +160,11 @@ internal sealed class AgendaDeGravacao
         CancelarDisparo();
     }
 
-    /// <summary>
-    /// O agendador do aplicativo: um <see cref="DispatcherTimer"/> de disparo único, na prioridade de fundo, que para antes
-    /// de chamar a ação (sem o Stop, dispararia a cada intervalo). Devolve o que o cancela; cancelado, ou já disparado, não
-    /// dispara mais.
-    /// </summary>
     internal static Action AgendarNoDispatcher(TimeSpan espera, Action acao)
         => DisparoUnico.NoDispatcher(espera, acao, DispatcherPriority.Background);
 
-    /// <summary>
-    /// Os campos da linha CONFIG da partida: de onde vieram as configurações, os estados dos arquivos e contagens. A versão do
-    /// arquivo é um valor lido dele: vai como <c>atual</c>, <c>anterior</c> ou <c>futura</c>, comparada com a do esquema, e
-    /// nunca o número (DEC-029, item 12; revisão de segurança do bloco P6-P9, achado 2).
-    /// </summary>
+    // A versão é um valor vindo do arquivo, então vai pro log só como atual/anterior/futura,
+    // nunca o número.
     internal static (string Campo, object? Valor)[] CamposDaLeitura(LeituraDoArquivo lida, bool perfil)
     {
         ArgumentNullException.ThrowIfNull(lida);
@@ -236,11 +187,7 @@ internal sealed class AgendaDeGravacao
         ];
     }
 
-    /// <summary>
-    /// Os campos da linha CONFIG de uma gravação: se gravou, o motivo, o tamanho, o tempo, o estado do principal antes, se
-    /// guardou a cópia de diagnóstico, as tentativas, o erro (o tipo e o código, nunca a mensagem) e a espera da nova
-    /// tentativa, em ms.
-    /// </summary>
+    // Do erro vai só o tipo e o código, nunca a mensagem.
     internal static (string Campo, object? Valor)[] CamposDaGravacao(ResultadoDaGravacao r, string motivo, double ms, TimeSpan? novaTentativa)
     {
         ArgumentNullException.ThrowIfNull(r);
@@ -260,11 +207,8 @@ internal sealed class AgendaDeGravacao
 
     private static string Erro(Exception e) => $"{e.GetType().Name} 0x{e.HResult:X8}";
 
-    /// <summary>
-    /// Grava o desejado em até <paramref name="tentativas"/> tentativas. Gravou: é o que está no disco. Falhou por E/S, com
-    /// a gravação ainda ligada: uma nova tentativa única, na espera da vez (2, 10 e 60 s), e depois desiste até o próximo
-    /// pedido. Um defeito desliga a gravação nesta execução, sem lançar.
-    /// </summary>
+    // Falha de E/S agenda nova tentativa (2, 10, 60 s) e depois desiste até o próximo
+    // pedido. Qualquer outra exceção desliga a gravação, sem lançar.
     private bool GravarAgora(int tentativas, string motivo)
     {
         ConfiguracoesSalvas alvo = Desejadas;
@@ -276,7 +220,7 @@ internal sealed class AgendaDeGravacao
         }
         catch (Exception e)
         {
-            // A gravação nunca derruba o Buzzy; um defeito não se repete a cada pedido.
+            // Gravar nunca derruba o Buzzy, e um defeito não se repete a cada pedido.
             _desligadaPorDefeito = true;
             CancelarDisparo();
             _registrar([("gravado", "nao"), ("motivo", motivo), ("erro", Erro(e)), ("gravacao", "desligada")]);
@@ -299,7 +243,7 @@ internal sealed class AgendaDeGravacao
         return r.Gravou;
     }
 
-    /// <summary>Um disparo único depois de <paramref name="espera"/>, no lugar do pendente; parada, nada é agendado.</summary>
+    // Substitui o pendente.
     private void Armar(TimeSpan espera, string motivo)
     {
         CancelarDisparo();
@@ -313,7 +257,7 @@ internal sealed class AgendaDeGravacao
         if (_parada || !Pendente) return;
         if (_gestoDoUsuarioEmCurso())
         {
-            // L5: durante o gesto, não rearma: o fim dele grava (ConferirFimDoGesto).
+            // Não rearma durante o gesto; ConferirFimDoGesto grava quando ele acabar.
             EsperandoOGesto = true;
             _registrar([("adiado", "gesto"), ("motivo", motivo)]);
             return;

@@ -1,10 +1,7 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>
-/// Cores da pixel art do Buzzy. Os tons-base vêm das pranchas de referência do usuário (fora do repositório desde a
-/// DEC-044, item 1): azul-marinho do pelo #283A5F, creme #FDD5A6, pêssego #F6996D e castanho
-/// #9A5236, lidos da paleta da prancha, e o chapéu de palha com a faixa vermelha #B83A37 (DEC-019).
-/// </summary>
+// Tons-base tirados das pranchas de referência: pelo #283A5F, creme #FDD5A6, pêssego #F6996D,
+// castanho #9A5236, e a faixa vermelha do chapéu de palha #B83A37.
 public enum Cor : byte
 {
     Nada = 0,
@@ -36,7 +33,7 @@ public enum Cor : byte
     Folha,
     FolhaEscura,
 
-    // Tamagotchi (DEC-028): sempre acrescentadas aqui no fim, para os bytes acima não mudarem.
+    // Cores novas sempre no fim, pros bytes de cima não mudarem.
     Banana,
     BananaClara,
     BananaEscura,
@@ -76,7 +73,7 @@ public enum Cor : byte
 
 public static class Paleta
 {
-    /// <summary>Cor em ARGB (0xAARRGGBB). <see cref="Cor.Nada"/> é totalmente transparente.</summary>
+    // 0xAARRGGBB.
     public static uint Argb(Cor cor) => cor switch
     {
         Cor.Nada => 0x00000000,
@@ -102,13 +99,13 @@ public static class Paleta
         Cor.PalhaEscura => 0xFFC27F45,
         Cor.Faixa => 0xFFB83A37,
         Cor.FaixaEscura => 0xFF862A2B,
-        // Cipó da borda de cima (DEC-024): verde-oliva de mata, com folhas mais vivas.
+        // Cipó: verde-oliva de mata, folhas mais vivas.
         Cor.Cipo => 0xFF6B8A34,
         Cor.CipoEscuro => 0xFF46601F,
         Cor.CipoClaro => 0xFF93B24F,
         Cor.Folha => 0xFF4EA24A,
         Cor.FolhaEscura => 0xFF2E6B2E,
-        // Itens do tamagotchi (DEC-028), genéricos e sem marca.
+        // Itens do tamagotchi, genéricos e sem marca.
         Cor.Banana => 0xFFF7D548,
         Cor.BananaClara => 0xFFFFF08A,
         Cor.BananaEscura => 0xFFC9A227,
@@ -148,6 +145,6 @@ public static class Paleta
         _ => throw new ArgumentOutOfRangeException(nameof(cor), cor, "Cor fora da paleta."),
     };
 
-    /// <summary>Nome da cor e o valor em hexadecimal, para a folha de modelo.</summary>
+    // Pra folha de modelo.
     public static string Hex(Cor cor) => $"#{Argb(cor) & 0xFFFFFF:X6}";
 }

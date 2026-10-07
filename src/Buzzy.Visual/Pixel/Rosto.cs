@@ -1,12 +1,7 @@
 namespace Buzzy.Visual.Pixel;
 
-/// <summary>
-/// Um rosto: olhos, sobrancelhas, boca, topete e bochechas, para as vistas de frente e de perfil.
-/// Com <see cref="Corado"/>, as bochechas ganham rubor de frente, na cor <see cref="Rubor"/>
-/// (a <see cref="Cor.Bochecha"/> se nula); <see cref="RuborGrande"/> troca os 4 pixels por uma
-/// mancha de 3 × 2 em cada bochecha, que aparece também de perfil. Com <see cref="Gota"/>, uma gota de
-/// suor fica na têmpora, de frente e de perfil (<see cref="BonecoPixel.CantoDaGota"/>).
-/// </summary>
+// Corado põe rubor de frente (Rubor nulo = Cor.Bochecha). RuborGrande troca os 4 px por uma
+// mancha 3x2 por bochecha, que aparece também de perfil. Gota põe suor na têmpora.
 public sealed record Rosto(
     string OlhoE,
     string OlhoD,
@@ -20,10 +15,7 @@ public sealed record Rosto(
     bool RuborGrande = false,
     bool Gota = false);
 
-/// <summary>
-/// Estado do tufo de pelo do alto da cabeça e do chapéu, que reagem à emoção. <see cref="Torto"/>
-/// é o chapéu do bêbado, inclinado, com o tufo normal.
-/// </summary>
+// Tufo e chapéu reagem juntos à emoção. Torto = chapéu do bêbado inclinado, tufo normal.
 public enum Topete
 {
     Normal,
@@ -32,30 +24,22 @@ public enum Topete
     Torto,
 }
 
-/// <summary>
-/// Carimbos do rosto na escala nativa (1 pixel = 2 DIP a 100%): as 14 expressões de humor de
-/// docs/IDENTIDADE_VISUAL.md, as 8 caras de efeito do tamagotchi e as 7 caras passageiras das poses
-/// de uso (DEC-028). Os olhos grandes, castanhos e com dois brilhos seguem as pranchas.
-/// </summary>
+// Carimbos do rosto em escala nativa (1 px = 2 DIP a 100%): caras de humor, de efeito e as
+// passageiras das poses de uso. Olhos grandes, castanhos e com dois brilhos, como nas pranchas.
 public static class Rostos
 {
-    /// <summary>As 14 caras de humor, na ordem de expressoes.png e do enum <c>Expressao</c> do núcleo.</summary>
+    // Na ordem de expressoes.png e do enum Expressao do núcleo.
     public static readonly IReadOnlyList<string> DeHumor =
         ["neutro", "feliz", "rindo", "curioso", "surpreso", "assustado", "sonolento", "bocejando", "dormindo", "travesso", "entediado", "pensativo", "empolgado", "determinado"];
 
-    /// <summary>
-    /// As 8 caras de efeito do tamagotchi, na ordem em que o núcleo as acrescenta no fim do enum
-    /// <c>Expressao</c>; a chave é o nome do valor em minúsculas. A "paranoico" (onda Paranoico, adicional
-    /// de 2026-10-01) entrou por último, depois de "viajando".
-    /// </summary>
+    // Na ordem em que o núcleo acrescenta no fim do enum Expressao (nome em minúsculas).
     public static readonly IReadOnlyList<string> DeEfeito = ["bebado", "enjoado", "chapado", "eletrico", "apaixonado", "tonto", "viajando", "paranoico"];
 
-    /// <summary>Caras das poses de uso (morder, mastigar, engolir, tragar...): só existem aqui, não no núcleo.</summary>
+    // Só existem aqui; o núcleo não conhece.
     public static readonly IReadOnlyList<string> Passageiras = ["mordendo", "mastigando", "engolindo", "tragando", "soltando", "fungando", "tossindo"];
 
     // ------------------------------------------------------------------ olhos de frente (7 × 8)
-    // Olho da esquerda da tela; o da direita usa o mesmo desenho (o brilho fica do mesmo lado nos
-    // dois, como a luz das pranchas).
+    // Os dois olhos usam o mesmo desenho, então o brilho fica do mesmo lado (luz das pranchas).
     public static readonly IReadOnlyDictionary<string, Carimbo> Olhos = new Dictionary<string, Carimbo>
     {
         ["aberto"] = new(
@@ -149,7 +133,7 @@ public static class Rostos
             ".......",
             "......."),
 
-        // Caras de efeito do tamagotchi (DEC-028), de desenho animado.
+        // Caras de efeito, de desenho animado.
         ["semicerrado-vermelho"] = new(
             ".......",
             ".......",
@@ -232,9 +216,7 @@ public static class Rostos
             "....KK.",
             "......."),
 
-        // Paranoico ("os cara tá no teto"): arregalado, sem íris, com a pupila pequena colada no alto,
-        // olhando para cima (o "pontinho" do elétrico olha para a frente; o "cima" do pensativo tem a íris
-        // grande).
+        // Paranoico: arregalado, sem íris, pupila pequena colada no alto, olhando pra cima.
         ["arregalado-cima"] = new(
             ".KKKKK.",
             "KWWuuWK",
@@ -286,7 +268,7 @@ public static class Rostos
             "KWiWK",
             ".KKK."),
 
-        // Caras de efeito do tamagotchi (DEC-028).
+        // Caras de efeito.
         ["semicerrado-vermelho"] = new(
             ".....",
             ".....",
@@ -305,7 +287,7 @@ public static class Rostos
             "KWiuK",
             "KWiIK",
             ".KKK."),
-        // Tonto de perfil: olho revirado. Uma espiral em 3 × 6 pixels lê como algarismo (2, 5, 0, 8).
+        // Tonto de perfil: olho revirado, porque espiral em 3x6 px parece algarismo (2, 5, 0, 8).
         ["revirado"] = new(
             ".KKK.",
             "KiuIK",
@@ -342,7 +324,7 @@ public static class Rostos
             ".111.",
             "..1..",
             "....."),
-        // Paranoico: a pupila colada no alto, para a frente (o "revirado" do tonto tem a íris no alto).
+        // Paranoico: pupila colada no alto, pra frente.
         ["arregalado-cima"] = new(
             ".KKK.",
             "KWuuK",
@@ -355,7 +337,7 @@ public static class Rostos
     };
 
     // ------------------------------------------------------------------ sobrancelhas (pares, 17 × 3)
-    // Desenhadas sobre a máscara do rosto, acima dos olhos, como um só carimbo.
+    // Um carimbo só pro par, por cima da máscara do rosto.
     public static readonly IReadOnlyDictionary<string, Carimbo> Sobrancelhas = new Dictionary<string, Carimbo>
     {
         ["neutras"] = new(
@@ -387,7 +369,7 @@ public static class Rostos
             ".vvvv.....vvvv.",
             "..............."),
         ["nenhuma"] = new("..............."),
-        // Paranoico: preocupadas (a ponta de dentro mais alta) e erguidas (a linha de baixo fica livre).
+        // Paranoico: preocupadas e erguidas (linha de baixo livre).
         ["aflitas"] = new(
             "....vv...vv....",
             "..vv.......vv..",
@@ -453,7 +435,7 @@ public static class Rostos
             ".KbblbbK.",
             "..KKKKK.."),
 
-        // Caras de efeito do tamagotchi (DEC-028).
+        // Caras de efeito.
         ["bobo"] = new(
             "K.......K",
             ".KbbbbbK.",
@@ -469,7 +451,7 @@ public static class Rostos
             ".K.......",
             "..KK...K.",
             "....KKK.."),
-        // Paranoico: pequena e tensa, os dentes cerrados (os "dentes" do elétrico são um sorriso largo).
+        // Paranoico: pequena, dentes cerrados (os "dentes" do elétrico são sorriso largo).
         ["tensa"] = new(
             ".........",
             "..KKKKK..",
@@ -500,7 +482,7 @@ public static class Rostos
             ".KKKK",
             ".....",
             "....."),
-        // Paranoico: os dentes cerrados, de lado.
+        // Paranoico: dentes cerrados, de lado.
         ["tensa"] = new(
             ".....",
             "..KKK",
@@ -508,10 +490,7 @@ public static class Rostos
             "..KKK"),
     };
 
-    /// <summary>
-    /// Todas as caras pela chave: as 14 de humor (docs/IDENTIDADE_VISUAL.md, seção 6), as 8 de
-    /// efeito e as 7 passageiras, nesta ordem.
-    /// </summary>
+    // Humor, efeito e passageiras, nessa ordem.
     public static readonly IReadOnlyDictionary<string, Rosto> Expressoes = new Dictionary<string, Rosto>
     {
         ["neutro"] = new("aberto", "aberto", "neutras", "sorriso", Topete.Normal, "aberto", "sorriso"),
@@ -529,7 +508,7 @@ public static class Rostos
         ["empolgado"] = new("estrela", "estrela", "erguidas", "aberta", Topete.Ericado, "aberto", "aberta", Corado: true),
         ["determinado"] = new("aberto", "aberto", "bravas", "firme", Topete.Normal, "concentrado", "reta"),
 
-        // Caras de efeito (DEC-028): o núcleo as escolhe durante as ondas dos itens.
+        // De efeito: o núcleo escolhe durante as ondas dos itens.
         ["bebado"] = new("bebado-e", "bebado-d", "uma-erguida", "torta", Topete.Torto, "semicerrado", "sorriso", Corado: true, Rubor: Cor.BochechaForte, RuborGrande: true),
         ["enjoado"] = new("apertado-e", "apertado-d", "preocupadas", "ondulada", Topete.Caido, "semicerrado", "reta", Corado: true, Rubor: Cor.Enjoo, RuborGrande: true),
         ["chapado"] = new("semicerrado-vermelho", "semicerrado-vermelho", "caidas", "bobo", Topete.Caido, "semicerrado-vermelho", "sorriso"),
@@ -537,10 +516,10 @@ public static class Rostos
         ["apaixonado"] = new("coracao", "coracao", "neutras", "sorriso", Topete.Normal, "coracao", "sorriso", Corado: true),
         ["tonto"] = new("espiral", "espiral", "preocupadas", "ondulada", Topete.Ericado, "revirado", "o"),
         ["viajando"] = new("arco-iris", "arco-iris", "erguidas", "aberta", Topete.Ericado, "arco-iris", "aberta"),
-        // Paranoico ("os cara tá no teto"): medo de algo lá em cima, com o chapéu eriçado.
+        // Paranoico ("os cara tá no teto"): medo de algo lá em cima, chapéu eriçado.
         ["paranoico"] = new("arregalado-cima", "arregalado-cima", "aflitas", "tensa", Topete.Ericado, "arregalado-cima", "tensa", Gota: true),
 
-        // Caras passageiras das poses de uso (DEC-028): a pose escolhe, o núcleo não as conhece.
+        // Passageiras: a pose de uso escolhe, o núcleo não conhece.
         ["mordendo"] = new("fechado", "fechado", "erguidas", "risada", Topete.Ericado, "feliz", "aberta"),
         ["mastigando"] = new("feliz", "feliz", "neutras", "ondulada", Topete.Normal, "feliz", "reta", Corado: true),
         ["engolindo"] = new("fechado", "fechado", "caidas", "firme", Topete.Normal, "feliz", "reta"),

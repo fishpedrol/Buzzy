@@ -1,19 +1,11 @@
 ﻿<#
-    testar.ps1 — build e verificações automáticas do Buzzy.
-
-    Sem -Integracao, NADA abre na tela:
-      1. compila a solução (o portão de APIs proibidas roda depois do build do app);
-      2. roda as suítes de teste que não abrem janelas;
-      3. roda o portão de APIs proibidas de novo, explicitamente, com relatório;
-      4. audita pacotes NuGet vulneráveis (o repositório não usa nenhum pacote).
-
-    Com -Integracao, roda também os testes que iniciam o Buzzy.exe na tela. Avise o usuário
-    antes: janelas aparecem e somem. A verificação com cliques e teclas sintéticos fica à
-    parte e só age na tela com a opção explícita:
+    Build e testes do Buzzy. Sem -Integracao nada abre na tela: compila, roda as suítes
+    sem janela, o portão de APIs proibidas (com relatório) e a auditoria do NuGet.
+    -Integracao também roda os testes que abrem o Buzzy.exe (janelas aparecem e somem).
+    A verificação que clica e tecla na tela é à parte:
       tests\Buzzy.Verificacao\bin\<Configuracao>\net10.0-windows\Buzzy.Verificacao.exe --injetar-input-na-tela
 
-    Cada etapa que falha, inclusive por executável ausente, é registrada e o script segue
-    para a próxima; no fim, o código de saída é 1 se alguma etapa falhou.
+    Etapa que falha não para o script; sai com 1 se alguma falhou.
 
     Uso:
       .\tools\testar.ps1 [-Configuracao Release|Debug]
@@ -39,7 +31,7 @@ function Etapa([string] $nome, [scriptblock] $bloco) {
     try {
         & $bloco
     } catch {
-        # Um erro dentro da etapa a reprova, mas não aborta o script.
+        # Erro reprova a etapa, mas não aborta o script.
         Write-Host "Erro: $($_.Exception.Message)" -ForegroundColor Red
         $global:LASTEXITCODE = 1
     }
@@ -51,16 +43,15 @@ function Etapa([string] $nome, [scriptblock] $bloco) {
     }
 }
 
-# Roda um executável compilado. Ausente (build falhou, caminho mudou), a etapa falha com
-# código 1 em vez de abortar o script.
+# Exe ausente (build falhou, caminho mudou) reprova a etapa em vez de abortar.
 function Executar([string] $exe, [string[]] $argumentos = @()) {
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
         Write-Host "Executável não encontrado: $exe" -ForegroundColor Red
         $global:LASTEXITCODE = 1
         return
     }
-    # O Windows PowerShell 5.1 transforma linhas do stderr de programas nativos em erros quando a
-    # saída é redirecionada; aqui só o código de saída decide.
+    # O PS 5.1 transforma stderr de nativo em erro quando a saída é redirecionada;
+    # aqui só o código de saída decide.
     $ErrorActionPreference = 'Continue'
     & $exe @argumentos
 }
@@ -69,8 +60,7 @@ $binApp = Join-Path $raiz "src\Buzzy.App\bin\$Configuracao\net10.0-windows"
 $argsIntegracao = @()
 if ($Integracao) { $argsIntegracao = @('--integracao') }
 
-# O dotnet procura o global.json (SDK fixado) a partir da pasta atual: roda da raiz do
-# repositório e devolve a pasta de quem chamou no fim.
+# O dotnet acha o global.json (SDK fixado) pela pasta atual, então roda da raiz.
 Push-Location $raiz
 try {
     Etapa 'build da solução (inclui o portão de APIs no build do app)' {
@@ -81,7 +71,7 @@ try {
         Executar (Join-Path $raiz "tests\Buzzy.Core.Testes\bin\$Configuracao\net10.0\Buzzy.Core.Testes.exe")
     }
 
-    # O projeto compila para net10.0-windows (usa WPF e Windows Forms nas amostras).
+    # net10.0-windows porque as amostras usam WPF e Windows Forms.
     Etapa 'testes do portão de APIs (Buzzy.PortaoApis.Testes)' {
         Executar (Join-Path $raiz "tests\Buzzy.PortaoApis.Testes\bin\$Configuracao\net10.0-windows\Buzzy.PortaoApis.Testes.exe")
     }
@@ -90,7 +80,7 @@ try {
         Executar (Join-Path $raiz "tests\Buzzy.App.Testes\bin\$Configuracao\net10.0-windows\Buzzy.App.Testes.exe") $argsIntegracao
     }
 
-    # As mesmas fontes que o portão do build (Buzzy.App.csproj) confere: aplicativo, núcleo e pixel art.
+    # Mesmas fontes que o portão do build confere: app, núcleo e pixel art.
     Etapa 'portão de APIs proibidas (relatório)' {
         Executar (Join-Path $raiz "tools\Buzzy.PortaoApis\bin\$Configuracao\net10.0\Buzzy.PortaoApis.exe") @(
             '--binarios', $binApp,
@@ -101,7 +91,7 @@ try {
     }
 
     Etapa 'auditoria de pacotes vulneráveis' {
-        # stderr descartado (ver Executar); só a saída JSON e o código de saída importam.
+        # stderr descartado (ver Executar); só o JSON e o código de saída importam.
         $ErrorActionPreference = 'Continue'
         $json = dotnet list (Join-Path $raiz 'Buzzy.slnx') package --vulnerable --include-transitive --format json 2>$null | Out-String
         if ($LASTEXITCODE -ne 0) { Write-Host "dotnet list package falhou" -ForegroundColor Red; return }
@@ -115,15 +105,15 @@ try {
                 }
             }
         }
-        # Propriedade ausente no JSON vira $null, e @($null).Count é 1: os nulos ficam de fora.
+        # Propriedade ausente vira $null e @($null).Count é 1, então filtra os nulos.
         $pacotes = 0
         foreach ($p in @($dados.projects)) { foreach ($f in @($p.frameworks)) { $pacotes += @(@($f.topLevelPackages) + @($f.transitivePackages) | Where-Object { $_ }).Count } }
         Write-Host "Projetos: $(@($dados.projects).Count); pacotes NuGet referenciados: $pacotes; vulneráveis: $($vulneraveis.Count)"
-        # DEC-040, item 8: o runtime é a dependência real do Buzzy; fica registrado a cada bateria, para conferir contra a
-        # página de suporte do .NET no gate de cada fase. Com pacotes e sem rede, a consulta não aconteceu: aviso.
+        # O runtime é a dependência real do Buzzy; registra a versão pra conferir com a
+        # página de suporte do .NET.
         Write-Host "SDK: $(dotnet --version); runtimes de desktop: $((dotnet --list-runtimes | Select-String 'WindowsDesktop') -join '; ')"
         if ($pacotes -gt 0) {
-            # Só um aviso: sem rede, a auditoria pode não ter consultado nada. A resolução de nomes serve no PowerShell 5.1 e no 7.
+            # Sem rede a auditoria pode não ter consultado nada; só avisa. Dns funciona no PS 5.1 e no 7.
             $alcanca = $true
             try { [void][System.Net.Dns]::GetHostAddresses('api.nuget.org') } catch { $alcanca = $false }
             if (-not $alcanca) { Write-Host "AVISO: há pacotes e o api.nuget.org não resolve; a auditoria pode não ter consultado nada." -ForegroundColor Yellow }

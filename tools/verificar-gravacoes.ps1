@@ -1,27 +1,23 @@
 ﻿<#
 .SYNOPSIS
-    Analisa um registro do Process Monitor e confere que o Buzzy só grava na pasta de dados e no valor Run\Buzzy
-    (SECURITY.md 8, item 4; DEC-040, item 10). [MANUAL]: a captura exige administrador; a análise, não.
+    Lê um CSV do Process Monitor e confere que o Buzzy só grava na pasta de dados e no
+    valor Run\Buzzy. A captura precisa de administrador; a análise, não.
 
 .DESCRIPTION
-    Como capturar (uma vez, com um UAC):
-      1. Baixe o Process Monitor da Sysinternals (site da Microsoft) e abra-o como administrador.
-      2. Filtro: "Process Name" "is" "Buzzy.exe" -> Include. Limpe a tela (Ctrl+X) e ligue a captura (Ctrl+E).
-      3. Abra o Buzzy de verdade (sem perfil de teste), use-o alguns minutos: arraste, esconda e mostre, abra o
-         menu, mude a energia, abra as Configurações, marque e desmarque "Iniciar com o Windows", e saia pelo menu.
-      4. Pare a captura (Ctrl+E) e salve: File -> Save -> "Events displayed using current filter", formato CSV.
-      5. Rode: powershell -NoProfile -File tools\verificar-gravacoes.ps1 -Csv <arquivo.csv>
-    O que conta como gravação: WriteFile, SetRenameInformationFile, SetDispositionInformationFile(Ex),
-    SetEndOfFileInformationFile, SetAllocationInformationFile, SetBasicInformationFile, CreateFile que criou ou
-    sobrescreveu um arquivo (OpenResult) ou o abriu com acesso de escrita, e RegSetValue, RegDeleteValue, RegCreateKey
-    e RegDeleteKey com resultado SUCCESS. O RegSetInfoKey só conta fora das marcas de handle (KeySetHandleTagsInformation),
-    que o Windows registra em quase toda chave aberta, mesmo só para ler.
-    Cada uma cai num grupo:
-      - do Buzzy: a pasta de dados (%LOCALAPPDATA%\Buzzy) e o valor HKCU\...\CurrentVersion\Run\Buzzy;
-      - do Windows em nome do processo: caches de shader do driver de vídeo, o prefetch, o MuiCache, o estado da
-        área de notificação e afins, que qualquer aplicativo de janela provoca e que o código do Buzzy não pede;
-      - inesperada: o resto. Com alguma inesperada, sai com o código 1, e o caminho vai para a revisão.
-    O CSV fica onde você o salvou; nada é enviado. Códigos: 0 só gravações esperadas; 1 alguma inesperada; 2 uso.
+    Captura (uma vez, com um UAC):
+      1. Abra o Process Monitor (Sysinternals) como administrador.
+      2. Filtro "Process Name" "is" "Buzzy.exe" -> Include. Ctrl+X limpa, Ctrl+E liga.
+      3. Abra o Buzzy de verdade (sem perfil de teste) e use alguns minutos: arraste,
+         esconda e mostre, menu, energia, Configurações, "Iniciar com o Windows", saia pelo menu.
+      4. Ctrl+E para; File -> Save -> "Events displayed using current filter", CSV.
+      5. powershell -NoProfile -File tools\verificar-gravacoes.ps1 -Csv <arquivo.csv>
+    Conta como gravação (só SUCCESS): WriteFile, os Set*InformationFile, CreateFile que
+    criou/sobrescreveu ou abriu com escrita, RegSetValue/DeleteValue/CreateKey/DeleteKey.
+    RegSetInfoKey só fora do KeySetHandleTagsInformation, que o Windows faz em quase toda
+    chave aberta, mesmo só pra ler.
+    Grupos: do Buzzy (%LOCALAPPDATA%\Buzzy e Run\Buzzy); do Windows em nome do processo
+    (caches de shader, prefetch, MuiCache, área de notificação...); inesperada (o resto).
+    Saída: 0 só esperadas; 1 alguma inesperada; 2 erro de uso. Nada é enviado.
 #>
 [CmdletBinding()]
 param(
@@ -39,9 +35,9 @@ $operacoesDeRegistro = @('RegSetValue', 'RegDeleteValue', 'RegCreateKey', 'RegDe
 $pastaDoBuzzy = [IO.Path]::Combine($PastaLocal, 'Buzzy').TrimEnd('\') + '\'
 $valorRun = 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Buzzy'
 
-# Gravações que o Windows ou o driver fazem em nome de qualquer aplicativo de janela (não vêm do código do Buzzy), por
-# PREFIXO completo: uma pasta com o mesmo nome em outro lugar (Documentos\D3DSCache) ou uma chave vizinha
-# (Explorer\StartupApproved\Run, Explorer\Advanced) continua inesperada.
+# O que o Windows ou o driver gravam por qualquer app de janela. Por PREFIXO completo:
+# mesmo nome em outro lugar (Documentos\D3DSCache) ou chave vizinha
+# (Explorer\StartupApproved\Run) continua inesperada.
 $windir = [Environment]::GetFolderPath('Windows').TrimEnd('\')
 $doWindows = @(
     "$PastaLocal\D3DSCache\", "$PastaLocal\NVIDIA\DXCache\", "$PastaLocal\NVIDIA\GLCache\", "$PastaLocal\NVIDIA Corporation\NV_Cache\",
@@ -54,7 +50,7 @@ $doWindows = @(
 )
 
 function Normalizar([string] $caminho) {
-    # Substituições de texto simples (o -replace com bloco só existe a partir do PowerShell 6.1).
+    # -replace simples: o -replace com bloco só existe a partir do PS 6.1.
     $c = $caminho -replace '^HKEY_CURRENT_USER', 'HKCU'
     $c = $c -replace '^HKU\\S-1-5-21-[0-9-]+_Classes', 'HKCU\Software\Classes'
     $c = $c -replace '^HKU\\S-1-5-21-[0-9-]+', 'HKCU'
@@ -74,8 +70,8 @@ function EhGravacao($linha) {
     if ($operacoesDeArquivo -contains $linha.Operation -or $operacoesDeRegistro -contains $linha.Operation) { return $true }
     if ($linha.Operation -eq 'RegSetInfoKey') { return $linha.Detail -notmatch 'KeySetHandleTagsInformation' }
     if ($linha.Operation -eq 'CreateFile') {
-        # Criou ou sobrescreveu (o OpenResult do Process Monitor), ou abriu com algum direito de escrita: o trecho do
-        # acesso vai de "Desired Access:" até "Disposition:", com os direitos separados por vírgula.
+        # Criou/sobrescreveu (OpenResult) ou abriu com escrita. O acesso vai de
+        # "Desired Access:" até "Disposition:", separado por vírgula.
         if ($linha.Detail -match 'OpenResult: (Created|Overwritten|Superseded)') { return $true }
         if ($linha.Detail -match 'Desired Access: (?<acesso>.*?)(, Disposition:|$)') { return $Matches['acesso'] -match 'Write|Append|Delete' }
     }

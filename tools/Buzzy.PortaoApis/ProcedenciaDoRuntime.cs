@@ -2,13 +2,9 @@ using System.Security.Cryptography;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>
-/// A procedência dos arquivos do runtime num build autocontido (F9-P10, DEC-042): um binário que não é do Buzzy só é
-/// aceito se tiver o mesmo nome e o mesmo SHA-256 de um arquivo dos pacotes de runtime da Microsoft que o SDK usou
-/// (Microsoft.NETCore.App.Runtime.win-x64 e Microsoft.WindowsDesktop.App.Runtime.win-x64, na pasta do NuGet), em
-/// runtimes/&lt;rid&gt;/lib ou runtimes/&lt;rid&gt;/native. Assim, nada de terceiros entra pelo pacote, e um arquivo do runtime
-/// alterado reprova (BZP006), sem precisar ler o código da Microsoft.
-/// </summary>
+// Build autocontido: binário que não é do Buzzy só passa com mesmo nome e SHA-256 de um arquivo
+// dos pacotes de runtime da Microsoft (runtimes/<rid>/lib ou native, na pasta do NuGet). Assim nada
+// de terceiros entra e runtime alterado reprova (BZP006), sem ter que ler código da Microsoft.
 internal sealed class ProcedenciaDoRuntime
 {
     private readonly Dictionary<string, HashSet<string>> _hashesPorNome = new(StringComparer.OrdinalIgnoreCase);
@@ -18,11 +14,11 @@ internal sealed class ProcedenciaDoRuntime
 
     private ProcedenciaDoRuntime(IReadOnlyList<string> pastas) => Pastas = pastas;
 
-    /// <summary>Indexa os pacotes. Pasta sem runtimes/*/lib nem runtimes/*/native é erro de uso: não seria um pacote de runtime.</summary>
+    // Pasta sem runtimes/*/lib nem runtimes/*/native é erro de uso.
     public static ProcedenciaDoRuntime Indexar(IReadOnlyList<string> pastas)
     {
         ArgumentNullException.ThrowIfNull(pastas);
-        // A mesma pasta repetida (o MSBuild pode passar o mesmo pacote duas vezes) conta uma vez só.
+        // O MSBuild pode passar o mesmo pacote duas vezes.
         string[] distintas = [.. pastas.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase)];
         var procedencia = new ProcedenciaDoRuntime(distintas);
         foreach (string pasta in distintas)
@@ -48,7 +44,6 @@ internal sealed class ProcedenciaDoRuntime
         return procedencia;
     }
 
-    /// <summary>Se o conteúdo é, com o mesmo nome, um arquivo de um dos pacotes de runtime.</summary>
     public bool EhDoRuntime(string nome, ReadOnlySpan<byte> conteudo)
         => _hashesPorNome.TryGetValue(Path.GetFileName(nome), out HashSet<string>? hashes) && hashes.Contains(Hash(conteudo));
 

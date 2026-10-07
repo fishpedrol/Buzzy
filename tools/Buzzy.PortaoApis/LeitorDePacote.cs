@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Buzzy.PortaoApis;
 
-/// <summary>Tipo de um arquivo dentro do pacote de arquivo único, como o empacotador do .NET o grava.</summary>
+// Valores como o empacotador do .NET grava.
 internal enum TipoNoPacote : byte
 {
     Desconhecido = 0,
@@ -14,16 +14,10 @@ internal enum TipoNoPacote : byte
     Simbolos = 5,
 }
 
-/// <summary>Um arquivo dentro do pacote.</summary>
-/// <param name="Caminho">Caminho relativo gravado no pacote, com '/' ou '\' como o empacotador gravou.</param>
-/// <param name="Deslocamento">Posição do conteúdo no arquivo do pacote.</param>
-/// <param name="Tamanho">Tamanho do conteúdo descomprimido.</param>
-/// <param name="TamanhoComprimido">Tamanho gravado, comprimido; 0 quando o conteúdo não foi comprimido.</param>
+// Caminho pode vir com '/' ou '\'. Tamanho é o descomprimido; TamanhoComprimido é 0 sem compressão.
 internal sealed record EntradaDoPacote(string Caminho, TipoNoPacote Tipo, long Deslocamento, long Tamanho, long TamanhoComprimido);
 
-/// <summary>O cabeçalho e o índice de um pacote de arquivo único.</summary>
-/// <param name="PosicaoDaAssinatura">Onde a assinatura do pacote está no host (dentro da seção .data).</param>
-/// <param name="Cabecalho">Posição do cabeçalho do pacote, gravada pelo empacotador nos 8 bytes antes da assinatura.</param>
+// A assinatura fica na seção .data do host; a posição do cabeçalho vem nos 8 bytes antes dela.
 internal sealed record PacoteDeArquivoUnico(
     long PosicaoDaAssinatura,
     long Cabecalho,
@@ -32,17 +26,12 @@ internal sealed record PacoteDeArquivoUnico(
     string Id,
     IReadOnlyList<EntradaDoPacote> Entradas);
 
-/// <summary>
-/// Lê o pacote de um executável de arquivo único do .NET (PublishSingleFile; F9-P10, DEC-042) sem carregá-lo nem
-/// executá-lo. O formato é o do empacotador do SDK (Microsoft.NET.HostModel.Bundle): o host nativo traz, na seção .data,
-/// uma assinatura de 32 bytes (o SHA-256 de ".net core bundle") precedida da posição do cabeçalho; o cabeçalho tem a
-/// versão, o número de arquivos, o id do pacote, as posições do deps.json e do runtimeconfig.json e as flags; cada
-/// entrada, a posição, o tamanho, o tamanho comprimido (versão 6 em diante), o tipo e o caminho. Conteúdo comprimido
-/// é Deflate. Só a versão maior 6 foi revisada: outra é erro de leitura, para ninguém aceitar um formato não lido.
-/// </summary>
+// Lê o pacote de um exe PublishSingleFile sem executar nada. Formato do empacotador do SDK
+// (Microsoft.NET.HostModel.Bundle); conteúdo comprimido é Deflate. Só a versão maior 6 foi
+// estudada: outra dá erro em vez de passar um formato que ninguém leu.
 internal static class LeitorDePacote
 {
-    /// <summary>A assinatura do pacote no host: SHA-256 de ".net core bundle".</summary>
+    // SHA-256 de ".net core bundle".
     public static readonly byte[] Assinatura =
     [
         0x8b, 0x12, 0x02, 0xb9, 0x6a, 0x61, 0x20, 0x38, 0x72, 0x7b, 0x93, 0x02, 0x14, 0xd7, 0xa0, 0x32,
@@ -51,18 +40,13 @@ internal static class LeitorDePacote
 
     public const uint VersaoMaiorRevisada = 6;
 
-    /// <summary>Limites do que se lê: o índice e cada arquivo descomprimido, para um pacote adulterado não esgotar a memória.</summary>
+    // Limites pra um pacote adulterado não esgotar a memória.
     public const int MaximoDeEntradas = 4096;
     public const long MaximoPorArquivo = 256L * 1024 * 1024;
 
-    /// <summary>
-    /// O pacote do executável, ou nulo se ele não é um pacote (sem assinatura no host, ou com a posição do cabeçalho 0,
-    /// como no host sem nada empacotado). Índice incoerente lança <see cref="InvalidDataException"/>: arquivo fora do
-    /// pacote, sobreposto ou repetido; caminho absoluto ou com ".."; versão não revisada; bytes que não são zero entre as
-    /// entradas; qualquer byte depois do índice (o pacote termina nele); e as posições do deps.json e do runtimeconfig.json
-    /// no cabeçalho, que são as que o host usa, diferentes das entradas desses tipos no índice, que são as que o portão lê
-    /// (revisão adversarial do F9-P10, achado de alta).
-    /// </summary>
+    // Nulo se não é pacote (sem assinatura, ou cabeçalho 0 no host vazio). Índice incoerente
+    // lança InvalidDataException. Atenção ao deps.json e runtimeconfig.json: o host usa as
+    // posições do cabeçalho e o portão lê as do índice, então as duas têm que bater.
     public static PacoteDeArquivoUnico? Ler(string arquivo)
     {
         ArgumentNullException.ThrowIfNull(arquivo);
@@ -96,7 +80,7 @@ internal static class LeitorDePacote
         int quantidade = leitor.ReadInt32();
         if (quantidade < 1 || quantidade > MaximoDeEntradas) throw new InvalidDataException($"número de arquivos do pacote fora do limite: {quantidade}");
         string id = leitor.ReadString();
-        // Versão 2 em diante: as posições do deps.json e do runtimeconfig.json (o host as usa) e as flags.
+        // Desde a versão 2: posições do deps.json e do runtimeconfig.json, e as flags.
         (long Deslocamento, long Tamanho) deps = (leitor.ReadInt64(), leitor.ReadInt64());
         (long Deslocamento, long Tamanho) configuracao = (leitor.ReadInt64(), leitor.ReadInt64());
         leitor.ReadUInt64();
@@ -128,13 +112,13 @@ internal static class LeitorDePacote
         if (entradas.Select(e => e.Caminho.Replace('\\', '/')).Distinct(StringComparer.OrdinalIgnoreCase).Count() != entradas.Count)
             throw new InvalidDataException("caminho repetido no pacote");
 
-        // O índice é o fim do arquivo: nada anexado depois dele.
+        // Nada pode vir anexado depois do índice.
         if (fluxo.Position != fluxo.Length) throw new InvalidDataException($"{fluxo.Length - fluxo.Position} byte(s) depois do índice do pacote");
 
         ConferirPosicao("deps.json", deps, TipoNoPacote.DepsJson, entradas);
         ConferirPosicao("runtimeconfig.json", configuracao, TipoNoPacote.RuntimeConfigJson, entradas);
 
-        // Do fim da imagem até o cabeçalho, só as entradas e, entre elas, zeros (o alinhamento do empacotador).
+        // Entre o fim da imagem e o cabeçalho só pode ter entradas e zeros de alinhamento.
         long atual = fimDaImagem;
         foreach (EntradaDoPacote e in porPosicao.Append(new EntradaDoPacote("(cabeçalho do pacote)", TipoNoPacote.Desconhecido, cabecalho, 0, 0)))
         {
@@ -145,7 +129,7 @@ internal static class LeitorDePacote
         return new PacoteDeArquivoUnico(assinatura, cabecalho, maior, menor, id, entradas);
     }
 
-    /// <summary>A posição do cabeçalho é exatamente a da única entrada daquele tipo, sem compressão; zero só sem entrada.</summary>
+    // Tem que ser a única entrada do tipo, sem compressão, na mesma posição. Zero só se não houver entrada.
     private static void ConferirPosicao(string nome, (long Deslocamento, long Tamanho) posicao, TipoNoPacote tipo, List<EntradaDoPacote> entradas)
     {
         List<EntradaDoPacote> doTipo = [.. entradas.Where(e => e.Tipo == tipo)];
@@ -163,7 +147,7 @@ internal static class LeitorDePacote
         return !bytes.AsSpan().ContainsAnyExcept((byte)0);
     }
 
-    /// <summary>O conteúdo descomprimido de uma entrada, conferido contra o tamanho do índice.</summary>
+    // Confere o tamanho descomprimido contra o do índice.
     public static byte[] Conteudo(string arquivo, EntradaDoPacote entrada)
     {
         ArgumentNullException.ThrowIfNull(arquivo);
@@ -192,7 +176,7 @@ internal static class LeitorDePacote
         return conteudo;
     }
 
-    /// <summary>Onde termina a imagem PE do host (o fim da última seção no arquivo); a assinatura só é procurada antes dele.</summary>
+    // Fim da última seção no arquivo. A assinatura só é procurada antes disso.
     private static long FimDaImagemPe(FileStream fluxo)
     {
         using var leitor = new BinaryReader(fluxo, Encoding.ASCII, leaveOpen: true);
@@ -217,7 +201,7 @@ internal static class LeitorDePacote
         return Math.Min(fim, fluxo.Length);
     }
 
-    /// <summary>A primeira posição da sequência antes de <paramref name="limite"/>, ou -1.</summary>
+    // -1 se não achar antes do limite.
     private static long Procurar(FileStream fluxo, byte[] sequencia, long limite)
     {
         const int Bloco = 1 << 20;

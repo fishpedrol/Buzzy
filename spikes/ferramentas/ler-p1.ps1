@@ -1,21 +1,16 @@
 ﻿<#
-    ler-p1.ps1 — resume o resultado de P1 a partir do log do protótipo.
+    ler-p1.ps1 — resume o teste de clique a partir do log do protótipo.
 
-    Regra de leitura, que é o ponto todo de P1:
-      faixa alfa 0   -> NENHUMA linha de clique deve existir. O clique atravessou.
-      faixa alfa 1   -> deve existir linha. Alfa 1 já captura o clique.
-      faixa alfa 128 -> deve existir linha.
-      faixa alfa 255 -> deve existir linha.
+    Uso: .\ler-p1.ps1 [-CliqueiTodasAsQuatro]
 
-    Atenção à ambiguidade: a ausência de linha para alfa 0 só vale como aprovação se a
-    faixa alfa 0 foi realmente clicada. Se ninguém clicou nela, a ausência não prova nada.
-    Por isso o script pergunta, e por isso existe também a sonda automatizada, que mede o
-    teste de acerto do Windows sem depender de memória humana.
+    Alfa 0 não pode ter linha de clique (atravessou); alfa 1, 128 e 255 têm que ter.
+    Pegadinha: sem linha pro alfa 0 só prova algo se a faixa foi clicada mesmo. Por isso o
+    switch, e por isso existe a sonda automática.
 #>
 
 [CmdletBinding()]
 param(
-    # Marque quando as quatro faixas foram efetivamente clicadas.
+    # Só quando as quatro faixas foram clicadas de fato.
     [switch] $CliqueiTodasAsQuatro
 )
 
@@ -35,7 +30,7 @@ foreach ($l in ($linhas | Where-Object { $_ -match 'P1\|CLIQUE\|' })) {
 }
 
 $esperado = [ordered]@{
-    'alfa0'   = $false   # NÃO deve chegar à nossa janela
+    'alfa0'   = $false   # não pode chegar na nossa janela
     'alfa1'   = $true
     'alfa128' = $true
     'alfa255' = $true

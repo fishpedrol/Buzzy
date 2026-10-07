@@ -1,13 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Validação do manifesto de clipes no build (Fase 6, passo F6-P3; DEC-036, item 4; critérios 2 e 3 da Fase 6).
-
-    Chamada pelo csproj do aplicativo depois de cada build, como o portão de APIs: lê o manifesto
-    (src/Buzzy.App/Apresentacao/clipes.json) com o leitor estrito de Buzzy.Visual, confere que toda
-    situação tem clipe e que as poses e as caras existem na arte, e desenha cada quadro com cada cara e
-    deformação que ele pode ter, conferindo o alfa só 0 ou 255. Desenha fora da tela: não abre janelas.
-    Código de saída: 0 sem problemas; 1 com problemas; 2 erro de uso ou de leitura do arquivo.
+    Roda depois de cada build do app, como o portão de APIs. Lê o clipes.json com o leitor estrito,
+    confere que toda situação tem clipe e que poses e caras existem na arte, e desenha cada quadro
+    com cada cara e deformação possível checando alfa só 0 ou 255. Desenha fora da tela.
+    Saída: 0 ok, 1 com problemas, 2 erro de uso ou leitura.
   -->
 
   <PropertyGroup>

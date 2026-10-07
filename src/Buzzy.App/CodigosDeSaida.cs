@@ -1,19 +1,16 @@
 namespace Buzzy.App;
 
-/// <summary>Códigos de saída do Buzzy.exe, para testes e diagnóstico.</summary>
+// Códigos de saída do Buzzy.exe, usados pelos testes e no diagnóstico.
 internal static class CodigosDeSaida
 {
     internal const int Normal = 0;
 
-    /// <summary>A topologia dos monitores não pôde ser lida na partida, mesmo após novas tentativas.</summary>
+    // Não deu pra ler os monitores na partida, nem tentando de novo.
     internal const int TopologiaIlegivel = 3;
 
-    /// <summary>
-    /// O processo foi iniciado com privilégio de administrador. O Buzzy recusa rodar elevado
-    /// (SECURITY.md 8, item 5).
-    /// </summary>
+    // Rodando como administrador: o Buzzy se recusa a rodar elevado.
     internal const int Elevado = 5;
 
-    /// <summary>Os objetos da instância única não puderam ser criados nem abertos.</summary>
+    // Não deu pra criar nem abrir os objetos da instância única.
     internal const int InstanciaUnicaIndisponivel = 6;
 }

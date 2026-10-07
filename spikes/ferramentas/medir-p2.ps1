@@ -1,27 +1,19 @@
 ﻿<#
-    medir-p2.ps1 — protocolo de medição do protótipo P2.
-
-    Implementa as métricas M1 a M4 de DEC-011 para um único processo, identificado por PID,
-    e não por nome. Isso importa: pode haver mais de uma instância do protótipo aberta
-    (por exemplo a de P1), e um contador por nome misturaria as duas.
-
-      M1  CPU do processo              -> delta de TotalProcessorTime sobre o tempo de parede
-      M2  acordadas por segundo        -> trocas de contexto somadas das threads do processo
-                                          (o proxy que DEC-011 prescreve)
-      M3  memória privada              -> PrivateMemorySize64 e WorkingSet64
-      M4  GPU por processo             -> soma de UtilizationPercentage das engines do PID
-
-    Também amostra a resolução do timer global, para o critério oficial de DEC-011
-    "nenhum processo muda a resolução do timer do sistema". A resolução é do sistema
-    inteiro, então o script mede antes, durante e depois para permitir atribuição.
-
-    As classes CIM usadas não são traduzidas, ao contrário dos nomes de contador de
-    desempenho, que em Windows em português quebrariam Get-Counter.
+    medir-p2.ps1 — mede CPU, acordadas, memória e GPU de um processo do protótipo.
 
     Uso:
       .\medir-p2.ps1 -Modo p2-repouso -Minutos 60 -IntervaloSegundos 5
       .\medir-p2.ps1 -Modo p2-anim10  -Minutos 10 -IntervaloSegundos 1
       .\medir-p2.ps1 -Modo p2-anim60  -Minutos 10 -IntervaloSegundos 1
+
+    Segue o PID, não o nome: pode ter outra instância aberta e o contador por nome misturaria.
+      M1  CPU       -> delta de TotalProcessorTime sobre o tempo de parede
+      M2  acordadas -> soma das trocas de contexto das threads do processo
+      M3  memória   -> PrivateMemorySize64 e WorkingSet64
+      M4  GPU       -> soma de UtilizationPercentage das engines do PID
+    A resolução do timer é do sistema todo, então mede antes, durante e depois pra saber
+    quem mexeu. Usa CIM porque os nomes de contador vêm traduzidos e quebram o Get-Counter
+    em Windows em português.
 #>
 
 [CmdletBinding()]
@@ -32,11 +24,11 @@ param(
     [int] $Minutos = 60,
     [int] $IntervaloSegundos = 5,
 
-    # Canto da área útil do monitor secundário: longe de onde se está trabalhando.
+    # Canto do monitor secundário, longe de onde se trabalha.
     [int] $X = -1900,
     [int] $Y = 40,
 
-    # Descartado das estatísticas: só a partida do processo custa CPU de verdade.
+    # Fora das estatísticas: a partida do processo puxa CPU de verdade.
     [int] $AquecimentoSegundos = 30
 )
 
@@ -135,7 +127,7 @@ while ((Get-Date) -lt $fim) {
     $segundos = ($agora - $marcaAnterior).TotalSeconds
     if ($segundos -le 0) { continue }
 
-    # M1: percentual de um núcleo e percentual da máquina inteira.
+    # M1: % de um núcleo e % da máquina.
     $usoNucleo = (($cpuAgora - $cpuAnterior).TotalSeconds / $segundos) * 100.0
     $amostrasCpu.Add($usoNucleo)
     $amostrasCpuMaquina.Add($usoNucleo / $nucleos)
@@ -174,8 +166,7 @@ $privFinal = if ($proc.HasExited) { $null } else { $proc.PrivateMemorySize64 / 1
 $cpuTotal = if ($proc.HasExited) { $null } else { $proc.TotalProcessorTime.TotalSeconds }
 $resDurante = Resolucao
 
-# Fechar pela janela, para o protótipo registrar o próprio resumo (contagem de OnRender
-# e quadros por segundo alcançados). O HWND vem do log do próprio protótipo.
+# Fecha pela janela (HWND do log) pro protótipo gravar o resumo dele: OnRender e qps.
 $logApp = Join-Path $raiz "resultados\$Modo.log"
 $fechouLimpo = $false
 

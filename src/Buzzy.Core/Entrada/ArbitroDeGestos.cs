@@ -2,85 +2,49 @@ using Buzzy.Core.Personagem;
 
 namespace Buzzy.Core.Entrada;
 
-/// <summary>
-/// Botão do mouse na convenção das mensagens do Windows: <see cref="Esquerdo"/> é o botão
-/// primário, mesmo com os botões trocados para canhotos.
-/// </summary>
+// Como nas mensagens do Windows: Esquerdo é o primário, mesmo com botões trocados pra canhoto.
 public enum BotaoDoPonteiro
 {
     Esquerdo,
     Direito,
 }
 
-/// <summary>
-/// Métricas do sistema que separam clique, clique duplo e arraste (ARCHITECTURE.md 2.7), já
-/// resolvidas pelo adaptador para o DPI do monitor em que o botão foi pressionado.
-/// </summary>
-/// <param name="ArrasteX">
-/// <c>SM_CXDRAG</c>: pixels que o cursor pode andar para cada lado do ponto de pressão antes de o
-/// gesto virar arraste.
-/// </param>
-/// <param name="ArrasteY"><c>SM_CYDRAG</c>, na vertical.</param>
-/// <param name="CliqueDuploLargura">
-/// <c>SM_CXDOUBLECLK</c>: largura do retângulo centrado no primeiro clique em que o segundo
-/// precisa cair.
-/// </param>
-/// <param name="CliqueDuploAltura"><c>SM_CYDOUBLECLK</c>, na vertical.</param>
-/// <param name="TempoDeCliqueDuploMs"><c>GetDoubleClickTime</c>, entre os dois botões pressionados.</param>
+// Métricas do sistema já no DPI do monitor onde o botão foi pressionado.
+// Arraste = SM_CXDRAG/SM_CYDRAG (px pra cada lado do ponto de pressão).
+// CliqueDuplo = SM_CXDOUBLECLK/SM_CYDOUBLECLK (retângulo centrado no 1º clique) e GetDoubleClickTime.
 public sealed record MetricasDeGesto(int ArrasteX, int ArrasteY, int CliqueDuploLargura, int CliqueDuploAltura, int TempoDeCliqueDuploMs)
 {
-    /// <summary>Valores padrão do Windows a 96 DPI.</summary>
+    // Padrão do Windows a 96 DPI.
     public static readonly MetricasDeGesto Padrao = new(4, 4, 4, 4, 500);
 }
 
-/// <summary>
-/// Evento de ponteiro normalizado pelo adaptador (ARCHITECTURE.md 2.6, tabela de eventos): só
-/// chega o que o Windows entrega às janelas do Buzzy ou à captura de um gesto começado nele.
-/// Coordenadas em pixels físicos do desktop virtual; <paramref name="Ms"/> é um relógio
-/// monotônico em milissegundos.
-/// </summary>
+// Só chega o que o Windows entrega às janelas do Buzzy ou à captura de um gesto começado nele.
+// Pixels físicos do desktop virtual; Ms é relógio monotônico.
 public abstract record EventoDePonteiro(long Ms);
 
-/// <summary><c>POINTER_DOWN(p, botão)</c>, com as métricas do DPI do monitor do ponto.</summary>
 public sealed record PonteiroPressionado(PontoPx Ponto, BotaoDoPonteiro Botao, long Ms, MetricasDeGesto Metricas) : EventoDePonteiro(Ms);
 
-/// <summary>
-/// <c>POINTER_MOVE(p)</c>. <paramref name="EsquerdoPressionado"/> vem da própria mensagem
-/// (<c>MK_LBUTTON</c>): com o ClickLock ligado, o Windows mantém o botão logicamente pressionado.
-/// </summary>
+// EsquerdoPressionado vem do MK_LBUTTON da mensagem: com ClickLock, o Windows mantém o botão
+// logicamente pressionado.
 public sealed record PonteiroMovido(PontoPx Ponto, bool EsquerdoPressionado, long Ms) : EventoDePonteiro(Ms);
 
-/// <summary><c>POINTER_UP(p, botão)</c>.</summary>
 public sealed record PonteiroSolto(PontoPx Ponto, BotaoDoPonteiro Botao, long Ms) : EventoDePonteiro(Ms);
 
-/// <summary><c>CAPTURE_LOST</c>: outra janela ficou com o mouse (Alt+Tab, UAC, tecla Windows).</summary>
+// Outra janela ficou com o mouse (Alt+Tab, UAC, tecla Windows).
 public sealed record CapturaPerdida(long Ms) : EventoDePonteiro(Ms);
 
-/// <summary>Resultado de um evento de ponteiro.</summary>
-/// <param name="Gestos">Gestos para a fila do núcleo, na ordem.</param>
-/// <param name="Capturar">
-/// Se o adaptador mantém a captura do mouse depois deste evento: verdadeiro do botão esquerdo
-/// pressionado até o fim do gesto (ARCHITECTURE.md 2.7, passo 1 do ciclo).
-/// </param>
+// Capturar: manter a captura do mouse, do esquerdo pressionado até o fim do gesto.
 public sealed record Arbitragem(IReadOnlyList<Evento> Gestos, bool Capturar);
 
-/// <summary>
-/// Arbitragem de input (ARCHITECTURE.md 2.2 e 2.7): converte eventos de ponteiro nos gestos
-/// <c>PRESS</c>, <c>CLICK</c>, <c>DOUBLE_CLICK</c>, <c>DRAG_START</c>, <c>DRAG_MOVE</c>,
-/// <c>DRAG_END</c>, <c>DRAG_CANCEL</c> e <c>CONTEXT_MENU</c>, com as regras do Windows:
-/// <list type="bullet">
-/// <item>arraste quando o cursor sai do retângulo <c>SM_CXDRAG</c> × <c>SM_CYDRAG</c> de cada lado
-/// do ponto de pressão; soltar dentro dele é clique, sem limite de tempo (vale para o ClickLock);</item>
-/// <item>clique duplo quando o segundo botão pressionado chega antes de <c>GetDoubleClickTime</c>
-/// e a menos de meio <c>SM_CXDOUBLECLK</c> × <c>SM_CYDOUBLECLK</c> do primeiro; o primeiro clique
-/// sai na hora, sem esperar o segundo;</item>
-/// <item>botão direito solto fora de um gesto do esquerdo pede o menu;</item>
-/// <item>captura perdida, novo botão pressionado sem o soltar anterior ou movimento sem o botão
-/// esquerdo encerram o gesto com <c>DRAG_CANCEL</c>: nada fica preso ao cursor.</item>
-/// </list>
-/// Não lê relógio nem sistema: tempo e métricas entram nos eventos. Não é seguro para várias
-/// threads; a raiz de composição o usa só na thread da interface.
-/// </summary>
+// Transforma eventos de ponteiro em gestos com as regras do Windows:
+// - arraste quando sai do retângulo SM_CXDRAG x SM_CYDRAG; soltar dentro é clique, sem limite
+//   de tempo (por causa do ClickLock);
+// - clique duplo se o 2º press vem antes de GetDoubleClickTime e a menos de meio retângulo de
+//   clique duplo; o 1º clique sai na hora, sem esperar;
+// - direito solto fora de um gesto do esquerdo abre o menu;
+// - captura perdida, press sem o soltar anterior ou movimento sem o esquerdo viram DragCancel,
+//   pra nada ficar grudado no cursor.
+// Não lê relógio nem sistema. Não é thread-safe: só a thread da UI usa.
 public sealed class ArbitroDeGestos
 {
     private enum Fase
@@ -99,10 +63,8 @@ public sealed class ArbitroDeGestos
     private bool _segundoClique;
     private Clique? _ultimoClique;
 
-    /// <summary>Se há um gesto do botão esquerdo em curso (pressionado ou arrastando).</summary>
     public bool EmGesto => _fase != Fase.Livre;
 
-    /// <summary>Se o gesto em curso já passou do limiar de arraste.</summary>
     public bool Arrastando => _fase == Fase.Arrastando;
 
     public Arbitragem Receber(EventoDePonteiro evento)
@@ -115,7 +77,7 @@ public sealed class ArbitroDeGestos
                 Pressionar(p, gestos);
                 break;
             case PonteiroPressionado:
-                // Botão direito: o menu só abre ao soltar (ARCHITECTURE.md 2.7, passo 5).
+                // Direito: o menu só abre ao soltar.
                 break;
             case PonteiroMovido m:
                 Mover(m, gestos);
@@ -136,10 +98,8 @@ public sealed class ArbitroDeGestos
         return new Arbitragem(gestos, EmGesto);
     }
 
-    /// <summary>
-    /// Esquece o gesto em curso sem emitir nada. Para quando o núcleo já o encerrou por conta
-    /// própria (esconder ou sair no meio do arraste) e o adaptador soltou a captura.
-    /// </summary>
+    // Esquece o gesto sem emitir nada: o núcleo já encerrou (esconder ou sair no meio do arraste)
+    // e a captura já foi solta.
     public void Reiniciar()
     {
         _fase = Fase.Livre;
@@ -148,8 +108,7 @@ public sealed class ArbitroDeGestos
 
     private void Pressionar(PonteiroPressionado p, List<Evento> gestos)
     {
-        // Um soltar que nunca chegou (captura perdida sem aviso): o gesto anterior termina
-        // como cancelado antes de o novo começar.
+        // Se o soltar anterior nunca chegou, cancela o gesto velho antes do novo.
         Cancelar(gestos);
 
         _segundoClique = CompletaCliqueDuplo(p);
@@ -165,8 +124,7 @@ public sealed class ArbitroDeGestos
         if (_fase == Fase.Livre) return;
         if (!m.EsquerdoPressionado)
         {
-            // O botão já não está pressionado e o soltar não chegou: encerrar em vez de deixar
-            // o personagem grudado no cursor (critério 4 da Fase 3).
+            // Botão solto sem o evento de soltar: encerra pra não grudar no cursor.
             Cancelar(gestos);
             return;
         }
@@ -185,18 +143,17 @@ public sealed class ArbitroDeGestos
         switch (_fase)
         {
             case Fase.Livre:
-                // O botão foi pressionado noutra janela; nada a fazer.
+                // Pressionado noutra janela.
                 return;
             case Fase.Pressionado when ForaDoLimiar(ponto):
-                // Gesto rápido: soltou fora do retângulo sem nenhum movimento no meio. É arraste,
-                // e o personagem vai para onde o botão foi solto.
+                // Gesto rápido: soltou longe sem nenhum move no meio. Conta como arraste.
                 gestos.Add(new DragStart());
                 gestos.Add(new DragEnd(ponto));
                 _ultimoClique = null;
                 break;
             case Fase.Pressionado when _segundoClique:
                 gestos.Add(new DoubleClick());
-                // Um terceiro clique começa uma sequência nova, como no Windows.
+                // O 3º clique começa sequência nova, como no Windows.
                 _ultimoClique = null;
                 break;
             case Fase.Pressionado:
@@ -219,21 +176,17 @@ public sealed class ArbitroDeGestos
         _ultimoClique = null;
     }
 
-    /// <summary>"Pixels de cada lado": sai do retângulo quem anda mais que o limiar num dos eixos.</summary>
+    // Limiar vale pra cada lado: sai quem anda mais que ele em qualquer eixo.
     private bool ForaDoLimiar(PontoPx p)
         => Math.Abs((long)p.X - _pressao.X) > Math.Abs(_metricas.ArrasteX)
         || Math.Abs((long)p.Y - _pressao.Y) > Math.Abs(_metricas.ArrasteY);
 
-    /// <summary>
-    /// A regra do Windows para o segundo botão pressionado: menos que o tempo de clique duplo
-    /// desde o primeiro e menos que meio retângulo de clique duplo de distância dele.
-    /// </summary>
     private bool CompletaCliqueDuplo(PonteiroPressionado p)
     {
         if (_ultimoClique is not { } primeiro) return false;
         long decorrido = p.Ms - primeiro.Ms;
         if (decorrido < 0 || decorrido >= primeiro.Metricas.TempoDeCliqueDuploMs) return false;
-        // Metade inteira, como o próprio Windows compara (4 px de largura aceitam 1 px de distância).
+        // Metade inteira, como o Windows: 4 px de largura aceitam 1 px de distância.
         return Math.Abs((long)p.Ponto.X - primeiro.Ponto.X) < Math.Abs(primeiro.Metricas.CliqueDuploLargura) / 2
             && Math.Abs((long)p.Ponto.Y - primeiro.Ponto.Y) < Math.Abs(primeiro.Metricas.CliqueDuploAltura) / 2;
     }

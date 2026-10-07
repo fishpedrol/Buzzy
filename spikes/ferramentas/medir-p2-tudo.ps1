@@ -1,20 +1,17 @@
 ﻿<#
-    medir-p2-tudo.ps1 — roda a sequência completa de medição de P2.
+    medir-p2-tudo.ps1 — roda toda a sequência de medição de desempenho (~92 min).
 
-    Ordem, conforme o pedido da Etapa 0B:
-      1. repouso, 60 min, sem timer nenhum          (intervalo de amostragem 5 s)
-      2. animação a 10 quadros/s, 10 min            (intervalo 1 s, como em DEC-011 M1)
-      3. animação a 60 quadros/s, 10 min, DispatcherTimer
-      4. animação a 60 quadros/s, 10 min, pelo compositor do WPF
+    Uso: .\medir-p2-tudo.ps1 [-MinutosRepouso 60] [-MinutosAnimacao 10]
 
-    O item 4 existe porque a medição curta mostrou DispatcherTimer entregando cerca de
-    39 quadros por segundo quando se pediam 60; a causa não foi isolada.
-    Medir os dois caminhos separa "60 pedidos" de "60 entregues".
+    Ordem:
+      1. repouso, sem timer nenhum         (amostra a cada 5 s)
+      2. animação a 10 qps                 (amostra a cada 1 s)
+      3. animação a 60 qps, DispatcherTimer
+      4. animação a 60 qps, pelo compositor do WPF
+    O 4 existe porque o DispatcherTimer pedindo 60 entregou ~39; medir os dois separa
+    "60 pedidos" de "60 entregues".
 
-    Duração total aproximada: 92 minutos, contando os aquecimentos descartados.
-
-    Este script apaga os logs e relatórios anteriores de P2 para que a evidência final
-    venha só desta rodada. Não toca nos resultados de P1 nem de P3.
+    Apaga os p2-* anteriores pra evidência ser só desta rodada; não mexe nos outros testes.
 #>
 
 [CmdletBinding()]
@@ -58,7 +55,7 @@ foreach ($e in $etapas) {
         Anotar "ERRO em $($e.Modo): $($_.Exception.Message)"
     }
 
-    # Deixa a máquina assentar entre etapas, para a próxima não herdar atividade da anterior.
+    # Deixa a máquina assentar pra próxima etapa não herdar atividade da anterior.
     Start-Sleep -Seconds 20
 }
 

@@ -2,10 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace SondaP3;
 
-/// <summary>
-/// Chamadas ao Windows do harness. Só compara identificadores de janela e lê geometria de
-/// janelas do próprio teste; não lê título, texto, pixels nem conteúdo de outros aplicativos.
-/// </summary>
+// Só compara HWNDs e lê geometria das janelas do teste; nada de título, texto ou pixels alheios.
 internal static class Nativo
 {
     [StructLayout(LayoutKind.Sequential)]
@@ -50,8 +47,8 @@ internal static class Nativo
         public nint dwExtraInfo;
     }
 
-    // INPUT em x64 tem 40 bytes: type no deslocamento 0 e a união a partir do 8.
-    // Um campo a mais faz o Windows recusar todos os eventos em silêncio.
+    // Em x64 são 40 bytes: type no 0 e a união a partir do 8. Tamanho errado e o Windows
+    // recusa todos os eventos sem avisar.
     [StructLayout(LayoutKind.Explicit, Size = 40)]
     internal struct INPUT
     {
@@ -196,10 +193,7 @@ internal static class Nativo
         return v != 0;
     }
 
-    /// <summary>
-    /// Liga ou desliga o ClickLock SÓ EM MEMÓRIA: fWinIni = 0, nada é gravado no perfil
-    /// do usuário nem difundido às outras janelas.
-    /// </summary>
+    // Só em memória: fWinIni = 0 não grava no perfil nem avisa as outras janelas.
     internal static void DefinirClickLock(bool ligado)
         => SpiSetValor(SPI_SETMOUSECLICKLOCK, 0, ligado ? 1 : 0, 0);
 
@@ -210,25 +204,19 @@ internal static class Nativo
         return v;
     }
 
-    /// <summary>
-    /// Instante do último input do sistema, de qualquer dispositivo e também o injetado, no
-    /// relógio de GetTickCount (ms, 32 bits); null se a consulta falhar. GetLastInputInfo diz
-    /// só QUANDO houve input: nunca qual tecla, botão ou dispositivo. Nada aqui lê teclas.
-    /// </summary>
+    // Último input de qualquer dispositivo, injetado incluso, em ms do GetTickCount (32 bits).
+    // Diz só QUANDO, nunca qual tecla ou botão. Null se falhar.
     internal static uint? UltimoInput()
     {
         var info = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>() };
         return GetLastInputInfo(ref info) ? info.dwTime : null;
     }
 
-    /// <summary>Agora, no mesmo relógio de GetLastInputInfo (GetTickCount, ms, 32 bits).</summary>
+    // Mesmo relógio do GetLastInputInfo.
     internal static uint Agora() => unchecked((uint)Environment.TickCount);
 
-    /// <summary>
-    /// Quantos ms <paramref name="instante"/> vem depois de <paramref name="referencia"/>, com
-    /// sinal (negativo se vier antes) e correto na volta do contador de 32 bits. A conta sem
-    /// sinal transformaria um input registrado 1 ms "no futuro" em 49 dias de ociosidade.
-    /// </summary>
+    // Com sinal e certo na volta do contador de 32 bits. Sem sinal, um input 1 ms "no futuro"
+    // viraria 49 dias de ociosidade.
     internal static int MsDepoisDe(uint instante, uint referencia) => unchecked((int)(instante - referencia));
 
     internal static MONITORINFOEX? Monitor(POINT p)

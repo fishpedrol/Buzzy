@@ -3,10 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace SondaP3;
 
-/// <summary>
-/// Leitura dos logs do próprio spike (protótipo e receptor). São arquivos de texto que os
-/// processos de teste acrescentam linha a linha; nada aqui lê outro aplicativo.
-/// </summary>
+// Lê só os logs do próprio spike (protótipo e receptor), nunca outro app.
 internal sealed class LogArquivo(string caminho)
 {
     internal string Caminho => caminho;
@@ -45,7 +42,7 @@ internal sealed class LogArquivo(string caminho)
     }
 }
 
-/// <summary>Resumo de um gesto, extraído das linhas que o protótipo registrou.</summary>
+// Montado a partir das linhas que o protótipo logou.
 internal sealed record AnaliseGesto(
     int Pressionares,
     int ArrastesIniciados,
@@ -105,7 +102,7 @@ internal sealed record AnaliseGesto(
         + $"fins={Fins} ({string.Join("; ", Motivos)}) captura zero no fim={CapturaZeroNoFim} problemas={Problemas}";
 }
 
-/// <summary>Saída simultânea no console e no relatório em spikes/resultados/.</summary>
+// Escreve no console e em spikes/resultados/ ao mesmo tempo.
 internal sealed class Relatorio : IDisposable
 {
     private readonly StreamWriter _arquivo;

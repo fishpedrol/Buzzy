@@ -1,26 +1,19 @@
 namespace Buzzy.PortaoApis;
 
-/// <summary>Resultado da conferência das importações nativas de um arquivo.</summary>
 internal sealed record AnaliseDeImportacoes(IReadOnlyList<Violacao> Violacoes, IReadOnlyList<Permitida> Permitidas);
 
-/// <summary>Qual lista de permissões vale para um PE nativo.</summary>
 internal enum ListaDePermissoes
 {
-    /// <summary>Nenhuma: as DLLs do produto e qualquer outro PE.</summary>
+    // DLLs do produto e qualquer outro PE.
     Nenhuma,
 
-    /// <summary>O apphost do build dependente do framework (<see cref="PermissoesDoApphost"/>).</summary>
+    // Apphost do build dependente do framework.
     Apphost,
 
-    /// <summary>O host de um pacote de arquivo único (<see cref="PermissoesDoHostDeArquivoUnico"/>).</summary>
     HostDeArquivoUnico,
 }
 
-/// <summary>
-/// Confere as importações nativas de um PE com a lista proibida. Para o apphost, e só para ele, aplica a lista de
-/// permissões explícita de <see cref="PermissoesDoApphost"/>; para o host de um pacote de arquivo único, a de
-/// <see cref="PermissoesDoHostDeArquivoUnico"/>, que também nomeia importações por ordinal.
-/// </summary>
+// Exceções só valem pro apphost ou pro host de arquivo único (que também nomeia ordinais).
 internal static class VerificadorDeImportacoesNativas
 {
     public static AnaliseDeImportacoes Avaliar(string arquivo, IEnumerable<ImportacaoNativa> importacoes, bool ehApphost)
@@ -53,8 +46,7 @@ internal static class VerificadorDeImportacoesNativas
             {
                 if (importacao.PorOrdinal)
                 {
-                    // Por ordinal, a função não pode ser conferida pelo nome; só uma permissão nomeada (o host de arquivo
-                    // único, com o nome tirado da tabela de exportação do Windows) a aceita.
+                    // Ordinal não dá pra conferir pelo nome; só passa com permissão nomeada (host de arquivo único).
                     if (Permissao(importacao) is { } nomeada)
                         permitidas.Add(new Permitida(arquivo, api, Categoria.CodigoDinamico, nomeada));
                     else

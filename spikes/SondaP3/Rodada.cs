@@ -7,13 +7,10 @@ namespace SondaP3;
 
 internal sealed record Veredito(string Cenario, string Resultado, string Detalhe);
 
-/// <summary>
-/// Uma rodada completa de P3 sintético: abre o receptor (o "aplicativo do usuário"), dá o
-/// foco a ele, abre o protótipo por cima e exercita os cenários, digitando um marcador no
-/// receptor depois de cada gesto. A prova de que o foco ficou no receptor é o próprio
-/// receptor ter recebido cada marcador, completo, com a janela ativa e a caixa com foco.
-/// Input do mouse ou do teclado que não venha da sonda invalida a rodada (ver Injetor).
-/// </summary>
+// Abre o receptor, dá o foco a ele, abre o protótipo por cima e roda os cenários, digitando
+// um marcador no receptor depois de cada gesto. A prova de que o foco ficou lá é o receptor
+// receber cada marcador inteiro, com a janela ativa e a caixa focada.
+// Input que não for da sonda invalida a rodada.
 internal sealed class Rodada
 {
     private readonly int _numero;
@@ -34,15 +31,13 @@ internal sealed class Rodada
     private int _marcaFoco = -1;
     private int _tempoClickLockMs;
 
-    /// <summary>Alguém usou o mouse ou o teclado durante a rodada: a limpeza não mexe no cursor.</summary>
+    // Com interferência a limpeza não mexe no cursor.
     private bool _interferencia;
 
-    // O receptor registra o texto mascarado: só [A-Za-z0-9;-], o resto vira '?'. Por isso os
-    // marcadores usam só esse alfabeto e não há separador nem escape a desfazer.
+    // O receptor só loga [A-Za-z0-9;-] e troca o resto por '?', então os marcadores usam só
+    // esse alfabeto e não há escape a desfazer.
     private static readonly Regex ReTexto = new(@"RECEPTOR\|TEXTO\|(?<t>.*)\|ativa=(?<a>\w+)\|foco=(?<f>\w+)$", RegexOptions.Compiled);
 
-    /// <param name="ultimoInputAntes">instante (GetTickCount) do último input do sistema quando a
-    /// espera de ociosidade terminou; até a primeira injeção, input depois dele é interferência.</param>
     internal Rodada(int numero, string exe, string resultados, Relatorio rel, uint ultimoInputAntes)
     {
         _numero = numero;
@@ -92,9 +87,8 @@ internal sealed class Rodada
 
             CenarioB4("B4a Alt+Tab rápido (4 teclas num lote)", segurado: false);
 
-            // B4b é evidência adicional (Alt segurado, como uma pessoa faz). Se não for
-            // possível devolver o foco ao receptor sem clicar em outra janela, fica
-            // INCONCLUSIVO, e não é tratado como falha de P3.
+            // B4b é extra (Alt segurado, como gente faz). Se não der pra devolver o foco ao
+            // receptor sem clicar em outra janela, fica INCONCLUSIVO, não falha.
             bool reativou;
             try
             {
@@ -155,7 +149,7 @@ internal sealed class Rodada
 
     private void AbrirReceptor()
     {
-        // Monitor principal, com folga das bordas; o protótipo fica dentro deste retângulo.
+        // No monitor principal, longe das bordas; o protótipo abre dentro dele.
         _marcaSessaoReceptor = _logReceptor.Contar();
         _procReceptor = Iniciar("receptor", 200, 150);
 
@@ -174,20 +168,14 @@ internal sealed class Rodada
         _rel.Linha($"   receptor: pid {_procReceptor.Id}, hwnd {_hReceptor}, retângulo {Nativo.Retangulo(_hReceptor)}, ponto de ativação {_alvoReceptor}");
     }
 
-    /// <summary>
-    /// Dá o foco ao receptor sem nunca clicar em outra janela: com um clique sintético no
-    /// próprio receptor, quando o ponto de ativação é dele, ou, só com
-    /// <paramref name="permitirAltTab"/> e se outra janela o cobre (a que o Alt+Tab do B4a
-    /// trouxe para a frente), com um Alt+Tab de volta, que é como uma pessoa retornaria ao
-    /// aplicativo anterior. O Alt+Tab só é enviado se, conferido imediatamente antes, o
-    /// receptor NÃO estiver em primeiro plano e o ponto de ativação estiver coberto por outra
-    /// janela; depois dele, o primeiro plano é conferido aqui e de novo em Digitar, antes de
-    /// qualquer tecla.
-    /// </summary>
+    // Nunca clica em outra janela. Se o ponto de ativação é do receptor, clica nele; senão,
+    // só com permitirAltTab e se outra janela o cobre (a que o Alt+Tab do B4a trouxe), manda um
+    // Alt+Tab de volta, como uma pessoa faria. O primeiro plano é conferido depois aqui e de
+    // novo em Digitar, antes de qualquer tecla.
     private void AtivarReceptor(string motivo, bool permitirAltTab = false)
     {
-        // Topo da ordem Z, sem ativar: só a janela do próprio teste é reordenada. O Windows
-        // pode recusar colocá-la acima da janela em primeiro plano; por isso a conferência abaixo.
+        // Sobe na ordem Z sem ativar. O Windows pode recusar passar da janela em primeiro plano,
+        // por isso a conferência abaixo.
         Nativo.SetWindowPos(_hReceptor, 0, 0, 0, 0, 0, Nativo.SWP_NOMOVE | Nativo.SWP_NOSIZE | Nativo.SWP_NOACTIVATE);
         Thread.Sleep(250);
 
@@ -214,9 +202,8 @@ internal sealed class Rodada
         if (!permitirAltTab)
             throw new FalhaDeTeste($"ativar o receptor ({motivo}): o ponto {_alvoReceptor} está coberto por outra janela. Nada foi clicado.");
 
-        // As duas condições são conferidas de novo imediatamente antes do Alt+Tab, porque o
-        // estado pode ter mudado durante as conferências acima. Com o receptor já na frente, o
-        // Alt+Tab levaria o foco embora dele, para o aplicativo do usuário.
+        // Confere de novo logo antes: se o receptor já estiver na frente, o Alt+Tab levaria o
+        // foco embora pro app do usuário.
         nint frente = Nativo.GetForegroundWindow();
         nint donoDoPonto = Nativo.Raiz(Nativo.WindowFromPoint(_alvoReceptor));
         if (frente == _hReceptor)
@@ -233,7 +220,6 @@ internal sealed class Rodada
 
         _inj.AltTabRapido();
 
-        // Primeiro plano conferido depois do Alt+Tab; Digitar confere de novo antes de digitar.
         if (!EsperarAte(ReceptorNaFrente, 3000))
             throw new FalhaDeTeste($"ativar o receptor ({motivo}): o Alt+Tab de volta não trouxe o receptor ao primeiro plano (frente: {Quem(Nativo.GetForegroundWindow())}).");
         Pausa(300);
@@ -293,17 +279,14 @@ internal sealed class Rodada
         return (sb.ToString(), todos, n);
     }
 
-    /// <summary>Alfabeto que o receptor registra sem máscara: letras ASCII, dígitos, ';' e '-'.</summary>
+    // O que o receptor loga sem máscara.
     private static bool CaractereDeMarcador(char c) => char.IsAsciiLetterOrDigit(c) || c is ';' or '-';
 
-    /// <summary>
-    /// Digita um marcador SÓ se o receptor estiver em primeiro plano, e confere pelo log do
-    /// receptor que cada caractere chegou, na ordem, com a janela ativa e a caixa com foco.
-    /// Aceitação pelo SendInput não conta como entrega.
-    /// </summary>
+    // Só digita com o receptor na frente, e confere no log dele que tudo chegou, em ordem, com
+    // foco. SendInput aceitar não quer dizer que chegou.
     private void Digitar(string marcador)
     {
-        // Um caractere fora do alfabeto chegaria ao log como '?' e nunca bateria com o marcador.
+        // Fora do alfabeto o caractere viraria '?' no log e nunca bateria.
         if (!marcador.All(CaractereDeMarcador))
             throw new FalhaDeTeste($"marcador '{marcador}' fora do alfabeto [A-Za-z0-9;-] que o receptor registra; nada foi digitado.");
 
@@ -410,8 +393,7 @@ internal sealed class Rodada
         AnaliseGesto a = Gesto("B3", g, () =>
         {
             _inj.Descer(g.X, g.Y); Pausa(60);
-            // Salto de 320 px e soltar no MESMO lote atômico: o botão é solto com o cursor
-            // fora do retângulo que a janela ocupava, antes de ela alcançar o cursor.
+            // Salto de 320 px e soltar no mesmo lote: solta fora da janela antes dela alcançar o cursor.
             _inj.Subir(g.X + dx, g.Y + dy); Pausa(500);
         }, fins: 1);
         Nativo.RECT r1 = Nativo.Retangulo(_hSpike);
@@ -428,8 +410,7 @@ internal sealed class Rodada
 
     private void CenarioB6Controle(bool clickLockOriginal)
     {
-        // Controle: o mesmo gesto do B6 com o ClickLock DESLIGADO. Sem a trava, o soltar
-        // depois de segurar é entregue (vira CLIQUE) e os movimentos seguintes não arrastam.
+        // Mesmo gesto do B6 com ClickLock desligado: o soltar chega (vira CLIQUE) e nada arrasta depois.
         if (Nativo.ClickLock()) Nativo.DefinirClickLock(false);
         try
         {
@@ -480,13 +461,13 @@ internal sealed class Rodada
             a = Gesto("B6", g, () =>
             {
                 _inj.Descer(g.X, g.Y); Pausa(segurar);
-                _inj.Subir(g.X, g.Y);            // com a trava, este soltar deve ser engolido
+                _inj.Subir(g.X, g.Y);            // a trava deve engolir este soltar
                 Pausa(400);
                 for (int i = 1; i <= 10; i++) { _inj.Mover(g.X - 12 * i, g.Y); Pausa(40); }
                 Pausa(300);
 
-                // Clique que libera a trava. Se a trava segurou o arraste, a janela acompanhou
-                // o cursor e o ponto está sobre ela; se não, volta para cima da janela parada.
+                // Clique que libera a trava. Se a trava segurou o arraste, a janela veio junto e
+                // o ponto está sobre ela; senão, volta pra cima da janela parada.
                 var liberar = new Nativo.POINT(g.X - 120, g.Y);
                 if (Nativo.Raiz(Nativo.WindowFromPoint(liberar)) != _hSpike)
                 {
@@ -520,7 +501,7 @@ internal sealed class Rodada
         if (principal is not { } p) return null;
         int cy = (p.rcMonitor.Top + p.rcMonitor.Bottom) / 2;
         int cx = (p.rcMonitor.Left + p.rcMonitor.Right) / 2;
-        // À esquerda primeiro: coordenadas negativas são o caso que interessa a P3.
+        // Esquerda primeiro: coordenada negativa é o caso que interessa.
         Nativo.POINT[] candidatos =
         [
             new(p.rcMonitor.Left - 50, cy),
@@ -535,12 +516,9 @@ internal sealed class Rodada
         return null;
     }
 
-    /// <summary>
-    /// Arraste longo em passos de 16 px, conferindo a cada passo que a janela acompanhou o
-    /// cursor. O ponto de agarre fica 20 px dentro da borda esquerda, então, se a janela
-    /// parar de acompanhar, o cursor ainda está sobre ela quando o problema é detectado: o
-    /// botão é solto ali mesmo, e nunca sobre a janela de outro aplicativo.
-    /// </summary>
+    // Passos de 16 px, conferindo que a janela acompanha. O agarre fica 20 px dentro da borda,
+    // então se ela parar o cursor ainda está em cima dela e o botão é solto ali, nunca sobre
+    // janela de outro app.
     private void ArrastarEmPassos(Nativo.POINT de, Nativo.POINT para)
     {
         const int passo = 16;
@@ -660,15 +638,11 @@ internal sealed class Rodada
 
     // ------------------------------------------------------------------ fim
 
-    /// <summary>
-    /// Solta o que a sonda deixou abaixado, devolve o ClickLock ao valor original (configuração
-    /// em memória, não é input) e fecha os processos que ela abriu. O cursor só volta à posição
-    /// original se ninguém mais usou o mouse nem o teclado: depois de interferência, o usuário
-    /// assumiu o mouse e a sonda não o move.
-    /// </summary>
+    // Solta o que ficou abaixado, devolve o ClickLock e fecha os processos. O cursor só volta
+    // pro lugar se ninguém mais mexeu; depois de interferência o mouse é do usuário.
     private void Limpeza(bool clickLockOriginal, Nativo.POINT cursorOriginal)
     {
-        // Conferido antes de soltar as pendências, porque a própria limpeza injeta eventos.
+        // Antes de soltar as pendências, porque a própria limpeza injeta eventos.
         bool usuarioAssumiu = _interferencia || UsuarioUsouOComputador("depois da última injeção");
 
         List<string> pendencias = _inj.SoltarPendencias();
@@ -677,7 +651,7 @@ internal sealed class Rodada
         Nativo.DefinirClickLock(clickLockOriginal);
         bool clickLock = Nativo.ClickLock() == clickLockOriginal;
 
-        // Conferido de novo imediatamente antes de mover o cursor.
+        // De novo, logo antes de mover o cursor.
         usuarioAssumiu = usuarioAssumiu || UsuarioUsouOComputador("durante a limpeza");
         Nativo.POINT c;
         string resultadoCursor, detalheCursor;
@@ -709,11 +683,8 @@ internal sealed class Rodada
             $"protótipo: {spike}; receptor: {receptor}");
     }
 
-    /// <summary>
-    /// Houve input do mouse ou do teclado depois do último evento da sonda? Se houve, marca a
-    /// rodada como INVÁLIDA (uma vez só) e devolve true. Se GetLastInputInfo falhar, devolve
-    /// true sem invalidar: sem saber se alguém está usando o mouse, a sonda não o move.
-    /// </summary>
+    // Se houve input alheio, marca a rodada INVÁLIDA (uma vez) e devolve true. Se o
+    // GetLastInputInfo falhar, devolve true sem invalidar: na dúvida, não mexe no mouse.
     private bool UsuarioUsouOComputador(string quando)
     {
         int? depois = _inj.InputDepoisDaSondaMs();

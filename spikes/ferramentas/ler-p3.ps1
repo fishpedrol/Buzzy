@@ -1,12 +1,11 @@
 ﻿<#
-    ler-p3.ps1 — resume o resultado de P3 a partir do log do protótipo.
+    ler-p3.ps1 — resume o teste de arraste a partir do log do protótipo.
 
-    O que o resumo procura, na ordem em que importa:
-      1. Algum gesto terminou com o foco na nossa janela? Isso reprova P3.
-      2. Os gestos foram classificados certo entre clique e arraste, pelo limiar do sistema?
-      3. A captura terminou sempre por um caminho só?
-      4. Qual a latência medida entre receber o movimento e aplicar a posição (M5)?
-      5. A janela chegou a coordenadas negativas, ou seja, atravessou para o outro monitor?
+    Uso: .\ler-p3.ps1 [-Modo p3|p3-margem]
+
+    Procura, em ordem de importância: gesto que terminou com o foco na nossa janela (reprova),
+    clique x arraste pelo limiar do sistema, captura terminando por um caminho só, latência
+    entre receber o movimento e aplicar a posição, e x negativo (passou pro outro monitor).
 #>
 
 [CmdletBinding()]

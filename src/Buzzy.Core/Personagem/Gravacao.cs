@@ -3,24 +3,20 @@ using System.Text;
 
 namespace Buzzy.Core.Personagem;
 
-/// <summary>
-/// Gravação e reprodução de sequências de eventos (TODO.md, Fase 2): um evento por linha, em
-/// texto na cultura invariante, e a reprodução que devolve, para cada linha, as transições, os
-/// efeitos e o retrato resultante. Os testes comparam essa saída com arquivos de referência.
-///
-/// Formato de entrada: linhas que começam com <c>&gt;</c> trazem um evento, por exemplo
-/// <c>&gt; Press x=1632 y=1000</c>; linhas vazias e começadas por <c>#</c> são comentários.
-/// Topologias são citadas pelo nome. <c>Tick vezes=N</c> aplica N passos de uma vez, e
-/// <c>AutonomyTimer</c> e <c>ItemEffectTimer</c> sem geração usam a geração agendada no momento.
-///
-/// Formato de saída: a linha do evento, depois <c>~</c> para cada transição, <c>!</c> para cada
-/// efeito, <c>x</c> para evento descartado e <c>=</c> com o retrato.
-/// </summary>
+// Grava e reproduz sequências de eventos em texto (cultura invariante); os
+// testes comparam a saída com arquivos de referência.
+//
+// Entrada: "> Press x=1632 y=1000", um evento por linha; vazias e "#" são
+// comentário. Topologia vai pelo nome. "Tick vezes=N" aplica N passos;
+// AutonomyTimer e ItemEffectTimer sem geração usam a agendada no momento.
+//
+// Saída: a linha do evento, depois "~" por transição, "!" por efeito,
+// "x" por descarte e "=" com o retrato.
 public static class Gravacao
 {
     private static readonly CultureInfo Invariante = CultureInfo.InvariantCulture;
 
-    /// <summary>Linha de um evento, sem o prefixo <c>&gt;</c>.</summary>
+    // Sem o prefixo ">".
     public static string Escrever(Evento evento, Func<Topologia, string> nomeDaTopologia)
     {
         ArgumentNullException.ThrowIfNull(evento);
@@ -60,13 +56,11 @@ public static class Gravacao
         };
     }
 
-    /// <summary>Como a emoção dominante "Automática" (nula) aparece no comando <see cref="CmdSetDominantEmotion"/>.</summary>
+    // Emoção dominante nula ("Automática").
     private const string Automatica = "Automatica";
 
-    /// <summary>
-    /// Eventos de uma linha de entrada (sem o prefixo). Devolve mais de um só para
-    /// <c>Tick vezes=N</c>. <paramref name="atual"/> resolve <c>AutonomyTimer</c> e <c>ItemEffectTimer</c> sem geração.
-    /// </summary>
+    // Só "Tick vezes=N" devolve mais de um. O estado atual dá a geração dos
+    // timers que vierem sem ela.
     public static IReadOnlyList<Evento> Ler(string linha, Func<string, Topologia> topologiaPorNome, EstadoDoNucleo atual)
     {
         ArgumentNullException.ThrowIfNull(linha);
@@ -158,7 +152,7 @@ public static class Gravacao
         return [Unico()];
     }
 
-    /// <summary>Linha canônica de um efeito, sem o prefixo <c>!</c>.</summary>
+    // Sem o prefixo "!".
     public static string DescreverEfeito(Efeito efeito)
     {
         ArgumentNullException.ThrowIfNull(efeito);
@@ -180,10 +174,7 @@ public static class Gravacao
         };
     }
 
-    /// <summary>
-    /// Reproduz as linhas de entrada num núcleo novo e devolve a saída canônica: cada linha de
-    /// evento seguida das transições, efeitos, descartes e do retrato.
-    /// </summary>
+    // Roda as linhas num núcleo novo e devolve a saída canônica.
     public static IReadOnlyList<string> Reproduzir(
         ConfiguracaoDoNucleo configuracao, ulong semente, IEnumerable<string> linhas, Func<string, Topologia> topologiaPorNome)
     {
@@ -214,23 +205,18 @@ public static class Gravacao
         return saida;
     }
 
-    /// <summary>
-    /// Posição relativa como <c>chave;fracaoX;fracaoY;ancoraX;ancoraY</c>, sem a tela do monitor. É a
-    /// forma do efeito <see cref="GravarPosicao"/> nas reproduções gravadas.
-    /// </summary>
+    // chave;fracaoX;fracaoY;ancoraX;ancoraY, sem a tela do monitor. Forma do
+    // GravarPosicao nas reproduções.
     public static string DescreverPosicao(PosicaoDoPersonagem p)
     {
         ArgumentNullException.ThrowIfNull(p);
         return string.Create(Invariante, $"{p.ChaveMonitor};{p.FracaoX:0.######};{p.FracaoY:0.######};{p.AncoraAbsoluta.X};{p.AncoraAbsoluta.Y}");
     }
 
-    /// <summary>
-    /// Posição com a tela do monitor, quando ela é conhecida:
-    /// <c>chave;fracaoX;fracaoY;ancoraX;ancoraY;esquerda;topo;direita;base</c>. Sem a tela, ou com uma tela
-    /// vazia (que também é desconhecida, como no settings.json), é igual a <see cref="DescreverPosicao"/>: o
-    /// que se escreve sempre volta por <see cref="LerPosicao"/>. É a forma da posição salva do
-    /// <see cref="Loaded"/>, para a reprodução restaurar pelo retângulo como a partida (Posicionador.Restaurar).
-    /// </summary>
+    // Com a tela do monitor, se conhecida: ...;esquerda;topo;direita;base.
+    // Tela vazia conta como desconhecida (igual ao settings.json) e cai no
+    // formato curto, pra tudo que sai daqui voltar por LerPosicao. Usado no
+    // Loaded, pra reprodução restaurar pelo retângulo como a partida faz.
     public static string DescreverPosicaoCompleta(PosicaoDoPersonagem p)
     {
         ArgumentNullException.ThrowIfNull(p);
@@ -238,7 +224,7 @@ public static class Gravacao
         return string.Create(Invariante, $"{DescreverPosicao(p)};{t.Esquerda};{t.Topo};{t.Direita};{t.Base}");
     }
 
-    /// <summary>Lê as duas formas: 5 campos (tela desconhecida) ou 9 (com a tela do monitor, que não pode ser vazia).</summary>
+    // 5 campos (sem tela) ou 9 (com tela, que não pode ser vazia).
     public static PosicaoDoPersonagem LerPosicao(string texto)
     {
         ArgumentNullException.ThrowIfNull(texto);
@@ -256,23 +242,15 @@ public static class Gravacao
         return posicao with { TelaDoMonitor = tela };
     }
 
-    /// <summary>
-    /// A postura gravada com a posição (esquema v3, DEC-029, item 11), só quando há: <c> esconderijo=Baixo</c> fora de
-    /// nenhum e <c> preso=sim</c> com a marca de preso; sem ela, nada, e as linhas são as de antes (referências gravadas
-    /// 01 a 05 e 07). É a forma do <see cref="Loaded"/> e do efeito <see cref="GravarPosicao"/>.
-    /// </summary>
+    // " esconderijo=X" e " preso=sim" só quando têm valor, pra não mudar as
+    // linhas das referências gravadas antigas.
     private static string DescreverPostura(LadoDoEsconderijo esconderijo, bool preso)
         => (esconderijo != LadoDoEsconderijo.Nenhum ? $" esconderijo={esconderijo}" : "") + (preso ? " preso=sim" : "");
 
-    /// <summary>
-    /// Preferências como <c>energia=Media telaCheia=sim</c>, com <c>travessia=nao</c> só quando a travessia
-    /// está desligada, <c>emocao=Feliz</c> só com a emoção dominante escolhida (DEC-027), <c>topo=nao</c> e
-    /// <c>escala=Grande</c> só fora do padrão (DEC-038), e <c>adultos=Vodka,Cerveja</c> (ou <c>adultos=nenhum</c>) só
-    /// quando a seleção individual não é a dos nove (DEC-041): a ausência vale os nove, como antes da DEC-041, e as
-    /// referências gravadas 01 a 09 continuam as mesmas, mesmo com o padrão do arquivo de configurações mudado. Do mesmo
-    /// jeito, <c>proprio=Baseado,Md</c> (ou <c>proprio=nenhum</c>) só quando o uso por conta própria não é só o do baseado
-    /// (DEC-045): a ausência vale o baseado, o que valia antes.
-    /// </summary>
+    // "energia=Media telaCheia=sim" e o resto só fora do valor antigo, pras
+    // referências gravadas não mudarem. Por isso a ausência de adultos= vale
+    // os nove e a de proprio= vale só o baseado, mesmo com o padrão atual
+    // sendo outro.
     private static string DescreverPreferencias(Preferencias p)
         => $"energia={p.Energia} telaCheia={SimNao(p.ModoTelaCheia)}" + (p.AtravessarMonitores ? "" : " travessia=nao")
             + (p.EmocaoDominante is { } emocao ? $" emocao={emocao}" : "") + (p.ConteudoAdulto ? "" : " adulto=nao")
@@ -280,7 +258,7 @@ public static class Gravacao
             + (p.ItensAdultosHabilitados == Preferencias.TodosOsItensAdultos ? "" : $" adultos={DescreverItensAdultos(p.ItensAdultosHabilitados)}")
             + (p.ItensPorContaPropria == SoOBaseado ? "" : $" proprio={DescreverItensAdultos(p.ItensPorContaPropria)}");
 
-    /// <summary>O uso por conta própria de antes da DEC-045: só o baseado.</summary>
+    // Valor antigo do uso por conta própria.
     private static readonly ConjuntoDeItens SoOBaseado = ConjuntoDeItens.Vazio.Com(Item.Baseado);
 
     private static string DescreverItensAdultos(ConjuntoDeItens itens)
@@ -298,7 +276,7 @@ public static class Gravacao
         return itens;
     }
 
-    /// <summary>Lê o que <see cref="DescreverPreferencias"/> escreve; um campo ausente vale o padrão.</summary>
+    // Campo ausente vale o padrão.
     private static Preferencias LerPreferencias(Dictionary<string, string> campos) => new(
         campos.TryGetValue("energia", out string? e) ? Enum.Parse<NivelDeEnergia>(e) : Preferencias.Padrao.Energia,
         campos.TryGetValue("telaCheia", out string? t) ? SimOuNao("telaCheia", t) : Preferencias.Padrao.ModoTelaCheia,
@@ -312,27 +290,21 @@ public static class Gravacao
         ItensPorContaPropria = campos.TryGetValue("proprio", out string? proprio) ? LerItensAdultos(proprio) : SoOBaseado,
     };
 
-    /// <summary>
-    /// Emoção pelo nome de <see cref="Expressao"/> (ou o número de um valor fora do enum, como os testes de saneamento
-    /// o escrevem), pela lista fechada de <see cref="LerValor{T}"/>; <c>Automatica</c> é a nula.
-    /// </summary>
+    // "Automatica" é a nula.
     private static Expressao? LerEmocao(string valor)
         => valor == Automatica ? null : LerValor<Expressao>("emocao", valor, $"não é uma expressão nem {Automatica}");
 
-    /// <summary>
-    /// Um valor de enum só como a gravação o escreve (<see cref="Enum.ToString()"/>): o nome exato de um valor do enum, ou
-    /// o número de um valor fora dele (os testes de saneamento o gravam assim). É uma lista fechada: sem listas
-    /// ("Feliz,Rindo", que viraria outro valor), sem o número de um valor que tem nome e sem sinal ou zeros à esquerda, que
-    /// <c>Enum.Parse</c> e <c>Enum.TryParse</c> aceitariam. Fora dela, <see cref="FormatException"/>.
-    /// </summary>
+    // Aceita só o que Enum.ToString() escreveria: o nome exato, ou o número de
+    // um valor fora do enum (os testes de saneamento gravam assim). Enum.Parse
+    // aceitaria demais: "Feliz,Rindo" (viraria outro valor), número de valor
+    // com nome, sinal e zeros à esquerda.
     private static T LerValor<T>(string campo, string valor, string motivo) where T : struct, Enum
     {
         foreach (T comNome in Enum.GetValues<T>())
         {
             if (string.Equals(comNome.ToString(), valor, StringComparison.Ordinal)) return comNome;
         }
-        // Um valor com nome se escreve pelo nome: pelo número, só sobra o de um valor fora do enum, escrito sem sinal "+"
-        // nem zeros à esquerda.
+        // Pelo número, só vale valor fora do enum e escrito do jeito canônico.
         if (int.TryParse(valor, NumberStyles.AllowLeadingSign, Invariante, out int numero))
         {
             var foraDoEnum = (T)Enum.ToObject(typeof(T), numero);
@@ -358,7 +330,7 @@ public static class Gravacao
 
     private static string SimNao(bool valor) => valor ? "sim" : "nao";
 
-    /// <summary>Junta linhas com \n, para comparar e gravar arquivos de referência.</summary>
+    // Sempre \n, pra comparar e gravar as referências.
     public static string Juntar(IEnumerable<string> linhas)
     {
         ArgumentNullException.ThrowIfNull(linhas);
