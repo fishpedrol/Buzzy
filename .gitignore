@@ -42,6 +42,8 @@ spikes/resultados/
 # Documentos Markdown novos não são adicionados ao Git, conforme pedido do usuário.
 # Os .md já rastreados continuam no índice até serem removidos separadamente.
 *.md
+# Exceção: o README da raiz é a página do repositório no GitHub.
+!/README.md
 
 # Dependências de ferramentas locais.
 node_modules/
