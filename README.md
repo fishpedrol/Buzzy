@@ -28,11 +28,10 @@ dotnet build src\Buzzy.App\Buzzy.App.csproj -c Release
 .\src\Buzzy.App\bin\Release\net10.0-windows\Buzzy.exe
 ```
 
-O build termina com o portão de segurança (`Resumo: APROVADO`). `tools\testar.ps1` roda o build e a bateria de testes; testes e ferramentas abrem o Buzzy com `--perfil-de-teste NOME`, sem tocar nas configurações reais.
+O build termina com o portão de segurança (`Resumo: APROVADO`), que procura APIs proibidas no código e no manifesto.
 
 - `src/` — o aplicativo (WPF), o núcleo e a parte visual
-- `tests/` — testes automatizados
-- `tools/` — testes, empacotamento e verificações
+- `tools/` — portão de segurança, empacotamento e validação dos clipes
 - `assets/` — arte e identidade visual
 - `spikes/` — protótipos
 
